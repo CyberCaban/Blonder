@@ -77,11 +77,16 @@ fn check_shader_compile_errors(shader: u32) {
     }
 }
 
+#[derive(Debug, Default)]
+struct State {
+    color: (f32, f32, f32, f32),
+    wireframe: bool,
+}
 fn main() {
     println!("Hello, world!");
     let mut glfw = glfw::init_no_callbacks().unwrap();
     let (mut window, events) = init_window(&mut glfw);
-    let mut color = (0.0, 0.0, 0.0, 1.0);
+    let mut state = State::default();
 
     let (shader_program, vao) = unsafe {
         let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
@@ -142,11 +147,16 @@ fn main() {
     };
 
     while !window.should_close() {
-        process_events(&mut window, &events, &mut color);
+        process_events(&mut window, &events, &mut state);
 
+        let State { color, wireframe } = state;
         unsafe {
             gl::ClearColor(color.0, color.1, color.2, color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::PolygonMode(
+                gl::FRONT_AND_BACK,
+                if wireframe { gl::LINE } else { gl::FILL },
+            );
             gl::UseProgram(shader_program);
             gl::BindVertexArray(vao);
             gl::DrawElements(
@@ -162,7 +172,8 @@ fn main() {
     }
 }
 
-fn process_events(window: &mut glfw::Window, events: &Events, color: &mut (f32, f32, f32, f32)) {
+fn process_events(window: &mut glfw::Window, events: &Events, state: &mut State) {
+    let State { color, .. } = state;
     for (msg, event) in glfw::flush_messages(events) {
         println!("Message: {}\nEvent: {:?}", msg, event);
         match event {
@@ -203,6 +214,11 @@ fn process_events(window: &mut glfw::Window, events: &Events, color: &mut (f32, 
                 color.2 += (h * 0.01) as f32;
                 color.2 = color.2.clamp(0.0, 1.0);
                 println!("color BLUE {}", color.2);
+            }
+            WindowEvent::Key(Key::Space, _, Action::Press, _)
+            | WindowEvent::Key(Key::Space, _, Action::Repeat, _) => {
+                state.wireframe = !state.wireframe;
+                println!("Pressed space")
             }
             _ => {}
         }
