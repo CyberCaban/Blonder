@@ -1,6 +1,6 @@
 use std::{ffi::CString, os::raw::c_void, ptr};
 
-use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLsizeiptr};
+use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLsizeiptr, GLuint};
 use glfw::{Action, Context, Glfw, GlfwReceiver, Key, PWindow, WindowEvent};
 
 extern crate gl;
@@ -9,15 +9,12 @@ extern crate glfw;
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
-const VERTICES_NUM: i32 = 3;
+const VERTICES_NUM: i32 = 4;
 const VERTICES_SIZE: i32 = 3;
 const VERTICES: [f32; (VERTICES_NUM * VERTICES_SIZE) as usize] = [
-    -0.5, -0.5, 0.0, 0.5, -0.5, 0.0, -0.5, 0.5,
-    0.5,
-    // -0.5, 0.5, 0.0,
-    // 0.5, 0.5, 0.0,
-    // 0.5, -0.5, 0.5,
+    0.5, 0.5, 0.0, 0.5, -0.5, 0.0, -0.5, -0.5, 0.0, -0.5, 0.5, 0.0,
 ];
+const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
 const VERTEX_SHADER_SOURCE: &str = r#"
     #version 330 core
     layout (location = 0) in vec3 aPos;
@@ -107,10 +104,13 @@ fn main() {
         gl::DeleteShader(vertex_shader);
         gl::DeleteShader(fragment_shader);
 
-        let (mut vbo, mut vao) = (0, 0);
+        let (mut vbo, mut vao, mut ebo) = (0, 0, 0);
         gl::GenVertexArrays(1, &mut vao);
         gl::GenBuffers(1, &mut vbo);
+        gl::GenBuffers(1, &mut ebo);
+
         gl::BindVertexArray(vao);
+
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(
             gl::ARRAY_BUFFER,
@@ -118,15 +118,26 @@ fn main() {
             &VERTICES[0] as *const f32 as *const c_void,
             gl::STATIC_DRAW,
         );
+
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+        gl::BufferData(
+            gl::ELEMENT_ARRAY_BUFFER,
+            (INDICES.len() * std::mem::size_of::<u32>()) as GLsizeiptr,
+            &INDICES[0] as *const u32 as *const c_void,
+            gl::STATIC_DRAW,
+        );
+
         gl::VertexAttribPointer(
             0,
-            VERTICES_NUM,
+            VERTICES_SIZE,
             gl::FLOAT,
             gl::FALSE,
-            (VERTICES_NUM as usize * std::mem::size_of::<GLfloat>()) as GLsizei,
+            (VERTICES_SIZE as usize * std::mem::size_of::<GLfloat>()) as GLsizei,
             ptr::null(),
         );
         gl::EnableVertexAttribArray(0);
+        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+        gl::BindVertexArray(0);
         (shader_program, vao)
     };
 
@@ -138,7 +149,12 @@ fn main() {
             gl::Clear(gl::COLOR_BUFFER_BIT);
             gl::UseProgram(shader_program);
             gl::BindVertexArray(vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, VERTICES_NUM);
+            gl::DrawElements(
+                gl::TRIANGLES,
+                INDICES.len() as i32,
+                gl::UNSIGNED_INT,
+                ptr::null(),
+            );
         }
 
         window.swap_buffers();
