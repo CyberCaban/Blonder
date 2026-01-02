@@ -9,10 +9,22 @@ extern crate glfw;
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
-const VERTICES_NUM: i32 = 4;
+const VERTICES_NUM: i32 = 10;
 const VERTICES_SIZE: i32 = 3;
 const VERTICES: [f32; (VERTICES_NUM * VERTICES_SIZE) as usize] = [
-    0.5, 0.5, 0.0, 0.5, -0.5, 0.0, -0.5, -0.5, 0.0, -0.5, 0.5, 0.0,
+    // first rect
+    0.5, 0.5, 0.0, // 0
+    0.5, -0.5, 0.0, // 1
+    -0.5, -0.5, 0.0, // 2
+    -0.5, 0.5, 0.0, // 3
+    // second triangle
+    -0.6, -0.6, 0.0, // 4
+    0.7, -0.7, 0.0, // 5
+    0.0, -0.9, 0.0, // 6
+    // third triangle
+    0.6, 0.6, 0.0, // 7
+    0.6, -0.6, 0.0, // 8
+    0.8, 0.0, 0.0 // 9
 ];
 const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
 const VERTEX_SHADER_SOURCE: &str = r#"
@@ -165,6 +177,7 @@ fn main() {
                 gl::UNSIGNED_INT,
                 ptr::null(),
             );
+            gl::DrawArrays(gl::TRIANGLES, 4, 6);
         }
 
         window.swap_buffers();
