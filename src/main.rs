@@ -1,6 +1,6 @@
-use std::{ffi::CString, os::raw::c_void, ptr};
+use std::{ffi::CString, mem, os::raw::c_void, ptr};
 
-use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLsizeiptr, GLuint};
+use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLsizeiptr};
 use glfw::{Action, Context, Glfw, GlfwReceiver, Key, PWindow, WindowEvent};
 
 extern crate gl;
@@ -9,7 +9,7 @@ extern crate glfw;
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
-const VERTICES_NUM: i32 = 10;
+const VERTICES_NUM: i32 = 4;
 const VERTICES_SIZE: i32 = 3;
 const VERTICES: [f32; (VERTICES_NUM * VERTICES_SIZE) as usize] = [
     // first rect
@@ -17,14 +17,6 @@ const VERTICES: [f32; (VERTICES_NUM * VERTICES_SIZE) as usize] = [
     0.5, -0.5, 0.0, // 1
     -0.5, -0.5, 0.0, // 2
     -0.5, 0.5, 0.0, // 3
-    // second triangle
-    -0.6, -0.6, 0.0, // 4
-    0.7, -0.7, 0.0, // 5
-    0.0, -0.9, 0.0, // 6
-    // third triangle
-    0.6, 0.6, 0.0, // 7
-    0.6, -0.6, 0.0, // 8
-    0.8, 0.0, 0.0 // 9
 ];
 const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
 const VERTEX_SHADER_SOURCE: &str = r#"
@@ -89,6 +81,29 @@ fn check_shader_compile_errors(shader: u32) {
     }
 }
 
+fn set_buffer_data(vao: u32, vbo: u32, data: &[f32], data_size: u32) {
+    unsafe {
+        gl::BindVertexArray(vao);
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            (data.len() * mem::size_of::<f32>()) as GLsizeiptr,
+            &data[0] as *const f32 as *const c_void,
+            gl::STATIC_DRAW,
+        );
+        gl::VertexAttribPointer(
+            0,
+            data_size as i32,
+            gl::FLOAT,
+            gl::FALSE,
+            (data_size as usize * std::mem::size_of::<f32>()) as GLsizei,
+            ptr::null(),
+        );
+        gl::EnableVertexAttribArray(0);
+    }
+}
+
 #[derive(Debug, Default)]
 struct State {
     color: (f32, f32, f32, f32),
@@ -121,14 +136,26 @@ fn main() {
         gl::DeleteShader(vertex_shader);
         gl::DeleteShader(fragment_shader);
 
-        let (mut vbo, mut vao, mut ebo) = (0, 0, 0);
-        gl::GenVertexArrays(1, &mut vao);
-        gl::GenBuffers(1, &mut vbo);
+        let triangle1: [f32; 9] = [
+            -0.6, -0.6, 0.0, // 4
+            0.7, -0.7, 0.0, // 5
+            0.0, -0.9, 0.0, // 6
+        ];
+        let triangle2: [f32; 9] = [
+            0.6, 0.6, 0.0, // 7
+            0.6, -0.6, 0.0, // 8
+            0.8, 0.0, 0.0, // 9
+        ];
+
+        // first shape
+        let (mut vbo, mut vao, mut ebo) = ([0, 0, 0], [0, 0, 0], 0);
+        gl::GenVertexArrays(3, vao.as_mut_ptr());
+        gl::GenBuffers(3, vbo.as_mut_ptr());
         gl::GenBuffers(1, &mut ebo);
 
-        gl::BindVertexArray(vao);
+        gl::BindVertexArray(vao[0]);
 
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo[0]);
         gl::BufferData(
             gl::ARRAY_BUFFER,
             (VERTICES.len() * std::mem::size_of::<GLfloat>()) as GLsizeiptr,
@@ -153,8 +180,16 @@ fn main() {
             ptr::null(),
         );
         gl::EnableVertexAttribArray(0);
-        gl::BindBuffer(gl::ARRAY_BUFFER, 0);
-        gl::BindVertexArray(0);
+
+        // second shape
+        set_buffer_data(vao[1], vbo[1], &triangle1, 3);
+        set_buffer_data(vao[2], vbo[2], &triangle2, 3);
+
+
+        // unbinding
+        // gl::BindBuffer(gl::ARRAY_BUFFER, 0);
+        // gl::BindVertexArray(0);
+
         (shader_program, vao)
     };
 
@@ -170,14 +205,18 @@ fn main() {
                 if wireframe { gl::LINE } else { gl::FILL },
             );
             gl::UseProgram(shader_program);
-            gl::BindVertexArray(vao);
+            gl::BindVertexArray(vao[0]);
             gl::DrawElements(
                 gl::TRIANGLES,
                 INDICES.len() as i32,
                 gl::UNSIGNED_INT,
                 ptr::null(),
             );
-            gl::DrawArrays(gl::TRIANGLES, 4, 6);
+
+            gl::BindVertexArray(vao[1]);
+            gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::BindVertexArray(vao[2]);
+            gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
 
         window.swap_buffers();
