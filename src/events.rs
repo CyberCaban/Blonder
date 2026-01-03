@@ -53,8 +53,7 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
                 color.2 = color.2.clamp(0.0, 1.0);
                 println!("color BLUE {}", color.2);
             }
-            WindowEvent::Key(Key::Space, _, Action::Press, _)
-            | WindowEvent::Key(Key::Space, _, Action::Repeat, _) => {
+            WindowEvent::Key(Key::Space, _, Action::Press | Action::Repeat, _) => {
                 state.wireframe = !state.wireframe;
                 println!("Pressed space")
             }

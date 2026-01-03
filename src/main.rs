@@ -6,7 +6,11 @@ use gl::types::{GLchar, GLint, GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
 use crate::{
-    events::process_events, log::setup_logger, shader::Shader, state::{Events, State}, texture::Texture
+    events::process_events,
+    log::setup_logger,
+    shader::Shader,
+    state::{Events, State},
+    texture::{Texture, TextureConfig},
 };
 
 extern crate gl;
@@ -14,8 +18,8 @@ extern crate glfw;
 
 mod events;
 mod log;
-mod state;
 mod shader;
+mod state;
 mod texture;
 
 const WIDTH: u32 = 800;
@@ -33,10 +37,10 @@ const VERTICES_SIZE: i32 = 3;
 #[rustfmt::skip]
 const VERTICES: [Vertex; (VERTICES_NUM) as usize] = [
     // first rect
-    Vertex { position: [0.5, 0.5, 0.0], color: [1.0, 0.0, 0.0], uv: [1.0, 1.0] }, // 0
-    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0], uv: [1.0, 0.0] }, // 1
+    Vertex { position: [0.5, 0.5, 0.0], color: [1.0, 0.0, 0.0], uv: [2.0, 2.0] }, // 0
+    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0], uv: [2.0, 0.0] }, // 1
     Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0], uv: [0.0, 0.0] }, // 2
-    Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 0.0, 1.0], uv: [0.0, 1.0] }, // 3
+    Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 0.0, 1.0], uv: [0.0, 2.0] }, // 3
 ];
 const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
 
@@ -102,12 +106,24 @@ fn main() -> Result<()> {
     let (mut window, events) = init_window(&mut glfw)?;
     let mut state = State::default();
 
-
     let shader_program = vec![
         Shader::new("shaders/vert_tex.glsl", "shaders/frag_tex.glsl")?,
         Shader::new("shaders/vert.glsl", "shaders/frag.glsl")?,
-        ];
-    let texture = Texture::new("textures/skebob.png")?;
+    ];
+    let texture = [
+        {
+            let tex = Texture::with_config(
+                "textures/liminal_space.png",
+                TextureConfig {
+                    wrap_s: gl::MIRRORED_REPEAT as i32,
+                    wrap_t: gl::MIRRORED_REPEAT as i32,
+                },
+            )?;
+            // tex.set_wrap_h(gl::CLAMP_TO_EDGE as i32);
+            tex
+        },
+        Texture::new("textures/cooler.png")?,
+    ];
     let vao = unsafe {
         #[rustfmt::skip]
         let triangle1: [Vertex; 3] = [
@@ -194,7 +210,9 @@ fn main() -> Result<()> {
     while !window.should_close() {
         process_events(&mut window, &events, &mut state);
 
-        let State { color, wireframe, .. } = state;
+        let State {
+            color, wireframe, ..
+        } = state;
         unsafe {
             gl::ClearColor(color.0, color.1, color.2, color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT);
@@ -208,7 +226,12 @@ fn main() -> Result<()> {
             // Draw calls and such
             shader_program[0].use_shader();
             shader_program[0].set_float("xpos", color.3);
-            texture.use_texture();
+            shader_program[0].set_int("texture1", 0);
+            shader_program[0].set_int("texture2", 1);
+            gl::ActiveTexture(gl::TEXTURE0);
+            texture[0].use_texture();
+            gl::ActiveTexture(gl::TEXTURE1);
+            texture[1].use_texture();
             gl::BindVertexArray(vao[0]);
             gl::DrawElements(
                 gl::TRIANGLES,

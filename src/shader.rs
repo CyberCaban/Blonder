@@ -28,6 +28,12 @@ impl Shader {
             gl::Uniform1f(gl::GetUniformLocation(self.id, name.as_ptr()), value);
         }
     }
+    pub fn set_int(&self, name: &str, value: i32) {
+        let name = CString::new(name).unwrap();
+        unsafe {
+            gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value);
+        }
+    }
     fn check_shader_compile_errors(shader: u32) {
         unsafe {
             let mut success = gl::FALSE as GLint;

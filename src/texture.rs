@@ -3,19 +3,33 @@ use std::os::raw::c_void;
 use anyhow::{Context, Result};
 use image::GenericImage;
 
+#[derive(Debug)]
+pub struct TextureConfig {
+    pub wrap_s: i32,
+    pub wrap_t: i32,
+}
+impl Default for TextureConfig {
+    fn default() -> Self {
+        TextureConfig {
+            wrap_s: gl::REPEAT as i32,
+            wrap_t: gl::REPEAT as i32,
+        }
+    }
+}
+
 pub struct Texture {
     id: u32,
 }
 
 impl Texture {
-    pub fn new(texture_path: &str) -> Result<Self> {
+    pub fn with_config(texture_path: &str, config: TextureConfig) -> Result<Self> {
         let mut texture = 0;
         unsafe {
             gl::GenTextures(1, &mut texture);
             gl::BindTexture(gl::TEXTURE_2D, texture);
 
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, config.wrap_s);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, config.wrap_t);
             // texture filtering
             // LINEAR or NEAREST
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
@@ -48,6 +62,9 @@ impl Texture {
             gl::GenerateMipmap(gl::TEXTURE_2D);
         }
         Ok(Self { id: texture })
+    }
+    pub fn new(texture_path: &str) -> Result<Self> {
+        Self::with_config(texture_path, TextureConfig::default())
     }
     pub fn use_texture(&self) {
         unsafe {
