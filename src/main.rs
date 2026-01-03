@@ -37,9 +37,10 @@ const VERTEX_SHADER_SOURCE: &str = r#"
 
 const FRAGMENT_SHADER_SOURCE: &str = r#"
     #version 330 core
+    uniform vec4 ourColor;
     out vec4 FragColor;
     void main() {
-       FragColor = vec4(1.0f, 0.5f, 0.2f, 1.0f);
+       FragColor = ourColor;
     }
 "#;
 
@@ -223,6 +224,13 @@ fn main() {
                 if wireframe { gl::LINE } else { gl::FILL },
             );
             gl::UseProgram(shader_program[0]);
+            let time = glfw.get_time() as f32;
+            let green = (time.sin() / 2.0) + 0.5;
+            let our_color = CString::new("ourColor").unwrap();
+            let vertex_color_location =
+                gl::GetUniformLocation(shader_program[0], our_color.as_ptr());
+            gl::Uniform4f(vertex_color_location, 0.0, green, 0.0, 1.0);
+            // gl::Uniform3f(1, v0, v1, v2);
             gl::BindVertexArray(vao[0]);
             gl::DrawElements(
                 gl::TRIANGLES,
