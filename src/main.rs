@@ -1,10 +1,13 @@
-use std::{ffi::CString, mem, os::raw::c_void, ptr};
+use std::{ffi::CString, os::raw::c_void, ptr};
 
+use ::log::{error, info, warn};
+use anyhow::{Context as _, Result};
 use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLsizeiptr};
-use glfw::{Action, Context, Glfw, GlfwReceiver, Key, PWindow, WindowEvent};
+use glfw::{Context, Glfw, PWindow};
 
 use crate::{
     events::process_events,
+    log::setup_logger,
     state::{Events, State},
 };
 
@@ -12,6 +15,7 @@ extern crate gl;
 extern crate glfw;
 
 mod events;
+mod log;
 mod state;
 
 const WIDTH: u32 = 800;
@@ -52,14 +56,14 @@ const FRAGMENT_SHADER_SOURCE_YELLOW: &str = r#"
     }
 "#;
 
-fn init_window(glfw: &mut Glfw) -> (PWindow, Events) {
+fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
         glfw::OpenGlProfileHint::Core,
     ));
     let (mut window, events) = glfw
         .create_window(WIDTH, HEIGHT, "Hello", glfw::WindowMode::Windowed)
-        .expect("Failed to create window");
+        .context("Failed to create window")?;
     window.make_current();
     window.set_key_polling(true);
     window.set_mouse_button_polling(true);
@@ -72,7 +76,7 @@ fn init_window(glfw: &mut Glfw) -> (PWindow, Events) {
             .map(|ptr| ptr as *const c_void)
             .unwrap_or(std::ptr::null())
     });
-    (window, events)
+    Ok((window, events))
 }
 
 fn check_shader_compile_errors(shader: u32) {
@@ -88,7 +92,7 @@ fn check_shader_compile_errors(shader: u32) {
                 ptr::null_mut(),
                 info_log.as_mut_ptr() as *mut GLchar,
             );
-            println!(
+            error!(
                 "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n{}",
                 str::from_utf8(&info_log).unwrap()
             );
@@ -144,10 +148,11 @@ fn set_buffer_data(vao: u32, vbo: u32, data: &[f32], data_size: u32) {
     }
 }
 
-fn main() {
-    println!("Hello, world!");
-    let mut glfw = glfw::init_no_callbacks().expect("Failed to init glfw");
-    let (mut window, events) = init_window(&mut glfw);
+fn main() -> Result<()> {
+    setup_logger()?;
+    info!("Hello, world!");
+    let mut glfw = glfw::init_no_callbacks().context("Failed to init glfw")?;
+    let (mut window, events) = init_window(&mut glfw)?;
     let mut state = State::default();
 
     let (shader_program, vao) = unsafe {
@@ -229,8 +234,10 @@ fn main() {
             let our_color = CString::new("ourColor").unwrap();
             let vertex_color_location =
                 gl::GetUniformLocation(shader_program[0], our_color.as_ptr());
+            if vertex_color_location == -1 {
+                warn!("Could not find uniform location {}", shader_program[0]);
+            }
             gl::Uniform4f(vertex_color_location, 0.0, green, 0.0, 1.0);
-            // gl::Uniform3f(1, v0, v1, v2);
             gl::BindVertexArray(vao[0]);
             gl::DrawElements(
                 gl::TRIANGLES,
@@ -249,4 +256,5 @@ fn main() {
         window.swap_buffers();
         glfw.poll_events();
     }
+    Ok(())
 }

@@ -156,12 +156,17 @@ dependencies = [
 name = "blonder"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
  "cgmath",
+ "fern",
  "gl",
  "glfw",
+ "humantime",
  "image 0.19.0",
+ "log",
  "num",
  "rand 0.5.6",
+ "thiserror",
  "tobj",
 ]
 
@@ -378,6 +383,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "fern"
+version = "0.7.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4316185f709b23713e41e3195f90edef7fb00c3ed4adc79769cf09cc762a3b29"
+dependencies = [
+ "log",
+]
+
+[[package]]
 name = "find-msvc-tools"
 version = "0.1.6"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -486,6 +500,12 @@ dependencies = [
  "crunchy",
  "zerocopy",
 ]
+
+[[package]]
+name = "humantime"
+version = "2.3.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "135b12329e5e3ce057a9f972339ea52bc954fe1e9358ef27f95e89716fbc5424"
 
 [[package]]
 name = "image"
