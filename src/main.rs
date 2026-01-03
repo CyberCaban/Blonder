@@ -3,8 +3,16 @@ use std::{ffi::CString, mem, os::raw::c_void, ptr};
 use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLsizeiptr};
 use glfw::{Action, Context, Glfw, GlfwReceiver, Key, PWindow, WindowEvent};
 
+use crate::{
+    events::process_events,
+    state::{Events, State},
+};
+
 extern crate gl;
 extern crate glfw;
+
+mod events;
+mod state;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -35,7 +43,13 @@ const FRAGMENT_SHADER_SOURCE: &str = r#"
     }
 "#;
 
-type Events = GlfwReceiver<(f64, WindowEvent)>;
+const FRAGMENT_SHADER_SOURCE_YELLOW: &str = r#"
+    #version 330 core
+    out vec4 FragColor;
+    void main() {
+       FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);
+    }
+"#;
 
 fn init_window(glfw: &mut Glfw) -> (PWindow, Events) {
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -64,7 +78,7 @@ fn check_shader_compile_errors(shader: u32) {
     unsafe {
         let mut success = gl::FALSE as GLint;
         let mut info_log = Vec::with_capacity(512);
-        info_log.set_len(512 - 1); // subtract 1 to skip the trailing null character
+        // info_log.set_len(512 - 1); // subtract 1 to skip the trailing null character
         gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
         if success != gl::TRUE as GLint {
             gl::GetShaderInfoLog(
@@ -81,6 +95,31 @@ fn check_shader_compile_errors(shader: u32) {
     }
 }
 
+fn create_shader_program(vertex_source: &str, fragment_source: &str) -> u32 {
+    unsafe {
+        let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
+        let c_str_vert = CString::new(vertex_source.as_bytes()).unwrap();
+        gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
+        gl::CompileShader(vertex_shader);
+        check_shader_compile_errors(vertex_shader);
+
+        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
+        let c_str_vert = CString::new(fragment_source.as_bytes()).unwrap();
+        gl::ShaderSource(fragment_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
+        gl::CompileShader(fragment_shader);
+        check_shader_compile_errors(fragment_shader);
+
+        let shader_program = gl::CreateProgram();
+        gl::AttachShader(shader_program, vertex_shader);
+        gl::AttachShader(shader_program, fragment_shader);
+        gl::LinkProgram(shader_program);
+        gl::UseProgram(shader_program);
+        gl::DeleteShader(vertex_shader);
+        gl::DeleteShader(fragment_shader);
+        shader_program
+    }
+}
+
 fn set_buffer_data(vao: u32, vbo: u32, data: &[f32], data_size: u32) {
     unsafe {
         gl::BindVertexArray(vao);
@@ -88,7 +127,7 @@ fn set_buffer_data(vao: u32, vbo: u32, data: &[f32], data_size: u32) {
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(
             gl::ARRAY_BUFFER,
-            (data.len() * mem::size_of::<f32>()) as GLsizeiptr,
+            std::mem::size_of_val(data) as GLsizeiptr,
             &data[0] as *const f32 as *const c_void,
             gl::STATIC_DRAW,
         );
@@ -104,37 +143,16 @@ fn set_buffer_data(vao: u32, vbo: u32, data: &[f32], data_size: u32) {
     }
 }
 
-#[derive(Debug, Default)]
-struct State {
-    color: (f32, f32, f32, f32),
-    wireframe: bool,
-}
 fn main() {
     println!("Hello, world!");
-    let mut glfw = glfw::init_no_callbacks().unwrap();
+    let mut glfw = glfw::init_no_callbacks().expect("Failed to init glfw");
     let (mut window, events) = init_window(&mut glfw);
     let mut state = State::default();
 
     let (shader_program, vao) = unsafe {
-        let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
-        let c_str_vert = CString::new(VERTEX_SHADER_SOURCE.as_bytes()).unwrap();
-        gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), 0 as *const _);
-        gl::CompileShader(vertex_shader);
-        check_shader_compile_errors(vertex_shader);
-
-        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
-        let c_str_vert = CString::new(FRAGMENT_SHADER_SOURCE.as_bytes()).unwrap();
-        gl::ShaderSource(fragment_shader, 1, &c_str_vert.as_ptr(), 0 as *const _);
-        gl::CompileShader(fragment_shader);
-        check_shader_compile_errors(fragment_shader);
-
-        let shader_program = gl::CreateProgram();
-        gl::AttachShader(shader_program, vertex_shader);
-        gl::AttachShader(shader_program, fragment_shader);
-        gl::LinkProgram(shader_program);
-        gl::UseProgram(shader_program);
-        gl::DeleteShader(vertex_shader);
-        gl::DeleteShader(fragment_shader);
+        let shader_program = create_shader_program(VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE);
+        let shader_program2 =
+            create_shader_program(VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE_YELLOW);
 
         let triangle1: [f32; 9] = [
             -0.6, -0.6, 0.0, // 4
@@ -183,14 +201,14 @@ fn main() {
 
         // second shape
         set_buffer_data(vao[1], vbo[1], &triangle1, 3);
+        // third shape
         set_buffer_data(vao[2], vbo[2], &triangle2, 3);
-
 
         // unbinding
         // gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         // gl::BindVertexArray(0);
 
-        (shader_program, vao)
+        (vec![shader_program, shader_program2], vao)
     };
 
     while !window.should_close() {
@@ -204,7 +222,7 @@ fn main() {
                 gl::FRONT_AND_BACK,
                 if wireframe { gl::LINE } else { gl::FILL },
             );
-            gl::UseProgram(shader_program);
+            gl::UseProgram(shader_program[0]);
             gl::BindVertexArray(vao[0]);
             gl::DrawElements(
                 gl::TRIANGLES,
@@ -215,64 +233,12 @@ fn main() {
 
             gl::BindVertexArray(vao[1]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::UseProgram(shader_program[1]);
             gl::BindVertexArray(vao[2]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
 
         window.swap_buffers();
         glfw.poll_events();
-    }
-}
-
-fn process_events(window: &mut glfw::Window, events: &Events, state: &mut State) {
-    let State { color, .. } = state;
-    for (msg, event) in glfw::flush_messages(events) {
-        println!("Message: {}\nEvent: {:?}", msg, event);
-        match event {
-            WindowEvent::FileDrop(param) => {
-                for p in param {
-                    println!("{}", p.to_string_lossy());
-                }
-                println!("Decrement color BLUE {}", color.2);
-            }
-            glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
-                gl::Viewport(0, 0, width, height);
-            },
-            glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
-                window.set_should_close(true)
-            }
-
-            WindowEvent::Key(Key::A, _, Action::Press, _) => {
-                color.0 += 0.1;
-                color.0 = color.0.clamp(0.0, 1.0);
-                println!("Increment color RED {}", color.0);
-            }
-            WindowEvent::Key(Key::D, _, Action::Press, _) => {
-                color.0 -= 0.1;
-                color.0 = color.0.clamp(0.0, 1.0);
-                println!("Decrement color RED {}", color.0);
-            }
-            WindowEvent::Key(Key::W, _, Action::Press, _) => {
-                color.1 += 0.1;
-                color.1 = color.1.clamp(0.0, 1.0);
-                println!("Increment color GREEN {}", color.1);
-            }
-            WindowEvent::Key(Key::S, _, Action::Press, _) => {
-                color.1 -= 0.1;
-                color.1 = color.1.clamp(0.0, 1.0);
-                println!("Decrement color GREEN {}", color.1);
-            }
-            WindowEvent::Scroll(w, h) => {
-                color.2 += (h * 0.01) as f32;
-                color.2 = color.2.clamp(0.0, 1.0);
-                println!("color BLUE {}", color.2);
-            }
-            WindowEvent::Key(Key::Space, _, Action::Press, _)
-            | WindowEvent::Key(Key::Space, _, Action::Repeat, _) => {
-                state.wireframe = !state.wireframe;
-                println!("Pressed space")
-            }
-            _ => {}
-        }
     }
 }
