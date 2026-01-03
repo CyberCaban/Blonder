@@ -1,14 +1,12 @@
 use std::{ffi::CString, mem::offset_of, os::raw::c_void, ptr};
 
-use ::log::{error, info, warn};
+use ::log::{error, info};
 use anyhow::{Context as _, Result};
-use gl::types::{GLchar, GLfloat, GLint, GLsizei, GLsizeiptr};
+use gl::types::{GLchar, GLint, GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
 use crate::{
-    events::process_events,
-    log::setup_logger,
-    state::{Events, State},
+    events::process_events, log::setup_logger, shader::Shader, state::{Events, State}
 };
 
 extern crate gl;
@@ -17,6 +15,7 @@ extern crate glfw;
 mod events;
 mod log;
 mod state;
+mod shader;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -38,33 +37,6 @@ const VERTICES: [Vertex; (VERTICES_NUM) as usize] = [
     Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 0.0, 1.0], }, // 3
 ];
 const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
-const VERTEX_SHADER_SOURCE: &str = r#"
-    #version 330 core
-    layout (location = 0) in vec3 aPos;
-    layout (location = 1) in vec3 aColor;
-    out vec3 ourColor;
-    void main() {
-       gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
-       ourColor = aColor;
-    }
-"#;
-
-const FRAGMENT_SHADER_SOURCE: &str = r#"
-    #version 330 core
-    out vec4 FragColor;
-    in vec3 ourColor;
-    void main() {
-       FragColor = vec4(ourColor, 1.0);
-    }
-"#;
-
-const FRAGMENT_SHADER_SOURCE_YELLOW: &str = r#"
-    #version 330 core
-    out vec4 FragColor;
-    void main() {
-       FragColor = vec4(1.0f, 1.0f, 0.0f, 1.0f);
-    }
-"#;
 
 fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -87,52 +59,6 @@ fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
             .unwrap_or(std::ptr::null())
     });
     Ok((window, events))
-}
-
-fn check_shader_compile_errors(shader: u32) {
-    unsafe {
-        let mut success = gl::FALSE as GLint;
-        let mut info_log = Vec::with_capacity(512);
-        // info_log.set_len(512 - 1); // subtract 1 to skip the trailing null character
-        gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
-        if success != gl::TRUE as GLint {
-            gl::GetShaderInfoLog(
-                shader,
-                512,
-                ptr::null_mut(),
-                info_log.as_mut_ptr() as *mut GLchar,
-            );
-            error!(
-                "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n{}",
-                str::from_utf8(&info_log).unwrap()
-            );
-        }
-    }
-}
-
-fn create_shader_program(vertex_source: &str, fragment_source: &str) -> u32 {
-    unsafe {
-        let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
-        let c_str_vert = CString::new(vertex_source.as_bytes()).unwrap();
-        gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
-        gl::CompileShader(vertex_shader);
-        check_shader_compile_errors(vertex_shader);
-
-        let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
-        let c_str_vert = CString::new(fragment_source.as_bytes()).unwrap();
-        gl::ShaderSource(fragment_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
-        gl::CompileShader(fragment_shader);
-        check_shader_compile_errors(fragment_shader);
-
-        let shader_program = gl::CreateProgram();
-        gl::AttachShader(shader_program, vertex_shader);
-        gl::AttachShader(shader_program, fragment_shader);
-        gl::LinkProgram(shader_program);
-        gl::UseProgram(shader_program);
-        gl::DeleteShader(vertex_shader);
-        gl::DeleteShader(fragment_shader);
-        shader_program
-    }
 }
 
 fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex], data_size: u32) {
@@ -175,21 +101,19 @@ fn main() -> Result<()> {
     let mut state = State::default();
 
     let (shader_program, vao) = unsafe {
-        let shader_program = create_shader_program(VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE);
-        let shader_program2 =
-            create_shader_program(VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE_YELLOW);
+        let shader_program = Shader::new("shaders/vert.glsl", "shaders/frag.glsl")?;
 
         #[rustfmt::skip]
         let triangle1: [Vertex; 3] = [
-            Vertex { position: [-0.6, -0.6, 0.0, ], color: [1.0,0.0,0.0] },// 4
-            Vertex { position: [0.7, -0.7, 0.0, ], color: [0.0,0.5,0.3]},// 5
-            Vertex { position: [0.0, -0.9, 0.0,], color: [0.3,0.0,0.4]}, // 6
+            Vertex { position: [-0.6, -0.6, 0.0], color: [1.0, 0.0, 0.0] },// 4
+            Vertex { position: [0.7, -0.7, 0.0], color: [0.0, 0.5, 0.3] },// 5
+            Vertex { position: [0.0, -0.9, 0.0], color: [0.3, 0.0, 0.4] }, // 6
         ];
         #[rustfmt::skip]
         let triangle2: [Vertex; 3] = [
-            Vertex { position: [0.6, 0.6, 0.0,], color: [0.0,0.6,0.0]}, // 7
-            Vertex { position: [0.6, -0.6, 0.0,], color: [0.0,0.3,0.8]}, // 8
-            Vertex { position: [0.8, 0.0, 0.0,], color: [0.0,0.2,0.6]}, // 9
+            Vertex { position: [0.6, 0.6, 0.0], color: [0.0, 0.6, 0.0] }, // 7
+            Vertex { position: [0.6, -0.6, 0.0], color: [0.0, 0.3, 0.8] }, // 8
+            Vertex { position: [0.8, 0.0, 0.0], color: [0.0, 0.2, 0.6] }, // 9
         ];
 
         // first shape
@@ -247,7 +171,7 @@ fn main() -> Result<()> {
         // gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         // gl::BindVertexArray(0);
 
-        (vec![shader_program, shader_program2], vao)
+        (vec![shader_program], vao)
     };
 
     while !window.should_close() {
@@ -261,7 +185,7 @@ fn main() -> Result<()> {
                 gl::FRONT_AND_BACK,
                 if wireframe { gl::LINE } else { gl::FILL },
             );
-            gl::UseProgram(shader_program[0]);
+            shader_program[0].use_shader();
             // let time = glfw.get_time() as f32;
             // let green = (time.sin() / 2.0) + 0.5;
             // let our_color = CString::new("iColor").unwrap();

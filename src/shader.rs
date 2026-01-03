@@ -1,0 +1,70 @@
+use std::{ffi::CString, fs::File, io::Read, ptr};
+
+use anyhow::Result;
+use gl::types::{GLchar, GLint};
+use log::error;
+
+pub struct Shader {
+    id: u32,
+}
+
+impl Shader {
+    pub fn new(vertex_path: &str, fragment_path: &str) -> Result<Self> {
+        let mut vertex_source = String::new();
+        let mut fragment_source = String::new();
+        File::open(vertex_path)?.read_to_string(&mut vertex_source)?;
+        File::open(fragment_path)?.read_to_string(&mut fragment_source)?;
+        let id = Self::create_shader_program(&vertex_source, &fragment_source);
+        Ok(Self { id })
+    }
+    pub fn use_shader(&self) {
+        unsafe {
+            gl::UseProgram(self.id);
+        }
+    }
+    fn check_shader_compile_errors(shader: u32) {
+        unsafe {
+            let mut success = gl::FALSE as GLint;
+            let mut info_log = Vec::with_capacity(512);
+            // info_log.set_len(512 - 1); // subtract 1 to skip the trailing null character
+            gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
+            if success != gl::TRUE as GLint {
+                gl::GetShaderInfoLog(
+                    shader,
+                    512,
+                    ptr::null_mut(),
+                    info_log.as_mut_ptr() as *mut GLchar,
+                );
+                error!(
+                    "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n{}",
+                    str::from_utf8(&info_log).unwrap()
+                );
+            }
+        }
+    }
+
+    fn create_shader_program(vertex_source: &str, fragment_source: &str) -> u32 {
+        unsafe {
+            let vertex_shader = gl::CreateShader(gl::VERTEX_SHADER);
+            let c_str_vert = CString::new(vertex_source.as_bytes()).unwrap();
+            gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
+            gl::CompileShader(vertex_shader);
+            Self::check_shader_compile_errors(vertex_shader);
+
+            let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
+            let c_str_vert = CString::new(fragment_source.as_bytes()).unwrap();
+            gl::ShaderSource(fragment_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
+            gl::CompileShader(fragment_shader);
+            Self::check_shader_compile_errors(fragment_shader);
+
+            let shader_program = gl::CreateProgram();
+            gl::AttachShader(shader_program, vertex_shader);
+            gl::AttachShader(shader_program, fragment_shader);
+            gl::LinkProgram(shader_program);
+            gl::UseProgram(shader_program);
+            gl::DeleteShader(vertex_shader);
+            gl::DeleteShader(fragment_shader);
+            shader_program
+        }
+    }
+}
