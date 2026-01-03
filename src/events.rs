@@ -41,11 +41,11 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
                 println!("Decrement color GREEN {}", color.1);
             }
             WindowEvent::Key(Key::Up, _, Action::Press | Action::Repeat, _) => {
-                color.3 += 0.1;
+                color.3 += 0.01;
                 println!("Increment param {}", color.3);
             }
             WindowEvent::Key(Key::Down, _, Action::Press | Action::Repeat, _) => {
-                color.3 -= 0.1;
+                color.3 -= 0.01;
                 println!("Decrement param {}", color.3);
             }
             WindowEvent::Scroll(w, h) => {

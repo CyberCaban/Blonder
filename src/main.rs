@@ -6,7 +6,7 @@ use gl::types::{GLchar, GLint, GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
 use crate::{
-    events::process_events, log::setup_logger, shader::Shader, state::{Events, State}
+    events::process_events, log::setup_logger, shader::Shader, state::{Events, State}, texture::Texture
 };
 
 extern crate gl;
@@ -16,6 +16,7 @@ mod events;
 mod log;
 mod state;
 mod shader;
+mod texture;
 
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
@@ -23,6 +24,7 @@ const HEIGHT: u32 = 600;
 #[repr(C)]
 struct Vertex {
     position: [f32; 3],
+    uv: [f32; 2],
     color: [f32; 3],
 }
 
@@ -31,10 +33,10 @@ const VERTICES_SIZE: i32 = 3;
 #[rustfmt::skip]
 const VERTICES: [Vertex; (VERTICES_NUM) as usize] = [
     // first rect
-    Vertex { position: [0.5, 0.5, 0.0], color: [1.0, 0.0, 0.0], }, // 0
-    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0], }, // 1
-    Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0], }, // 2
-    Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 0.0, 1.0], }, // 3
+    Vertex { position: [0.5, 0.5, 0.0], color: [1.0, 0.0, 0.0], uv: [1.0, 1.0] }, // 0
+    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0], uv: [1.0, 0.0] }, // 1
+    Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0], uv: [0.0, 0.0] }, // 2
+    Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 0.0, 1.0], uv: [0.0, 1.0] }, // 3
 ];
 const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
 
@@ -100,20 +102,24 @@ fn main() -> Result<()> {
     let (mut window, events) = init_window(&mut glfw)?;
     let mut state = State::default();
 
-    let (shader_program, vao) = unsafe {
-        let shader_program = Shader::new("shaders/vert.glsl", "shaders/frag.glsl")?;
 
+    let shader_program = vec![
+        Shader::new("shaders/vert_tex.glsl", "shaders/frag_tex.glsl")?,
+        Shader::new("shaders/vert.glsl", "shaders/frag.glsl")?,
+        ];
+    let texture = Texture::new("textures/skebob.png")?;
+    let vao = unsafe {
         #[rustfmt::skip]
         let triangle1: [Vertex; 3] = [
-            Vertex { position: [-0.6, -0.6, 0.0], color: [1.0, 0.0, 0.0] },// 4
-            Vertex { position: [0.7, -0.7, 0.0], color: [0.0, 0.5, 0.3] },// 5
-            Vertex { position: [0.0, -0.9, 0.0], color: [0.3, 0.0, 0.4] }, // 6
+            Vertex { position: [-0.6, -0.6, 0.0], color: [1.0, 0.0, 0.0], uv: [0.0, 0.0] },// 4
+            Vertex { position: [0.7, -0.7, 0.0], color: [0.0, 0.5, 0.3], uv: [1.0, 0.0] },// 5
+            Vertex { position: [0.0, -0.9, 0.0], color: [0.3, 0.0, 0.4], uv: [1.0, 1.0] }, // 6
         ];
         #[rustfmt::skip]
         let triangle2: [Vertex; 3] = [
-            Vertex { position: [0.6, 0.6, 0.0], color: [0.0, 0.6, 0.0] }, // 7
-            Vertex { position: [0.6, -0.6, 0.0], color: [0.0, 0.3, 0.8] }, // 8
-            Vertex { position: [0.8, 0.0, 0.0], color: [0.0, 0.2, 0.6] }, // 9
+            Vertex { position: [0.6, 0.6, 0.0], color: [0.0, 0.6, 0.0], uv: [0.0, 0.0] }, // 7
+            Vertex { position: [0.6, -0.6, 0.0], color: [0.0, 0.3, 0.8], uv: [0.0, 0.0] }, // 8
+            Vertex { position: [1.0, 0.0, 0.0], color: [0.0, 0.2, 0.6], uv: [0.0, 0.0] }, // 9
         ];
 
         // first shape
@@ -162,6 +168,17 @@ fn main() -> Result<()> {
         );
         gl::EnableVertexAttribArray(1);
 
+        // texture
+        gl::VertexAttribPointer(
+            2,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            (std::mem::size_of::<Vertex>()) as GLsizei,
+            offset_of!(Vertex, uv) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(2);
+
         // second shape
         set_buffer_data(vao[1], vbo[1], &triangle1, 3);
         // third shape
@@ -171,31 +188,27 @@ fn main() -> Result<()> {
         // gl::BindBuffer(gl::ARRAY_BUFFER, 0);
         // gl::BindVertexArray(0);
 
-        (vec![shader_program], vao)
+        vao
     };
 
     while !window.should_close() {
         process_events(&mut window, &events, &mut state);
 
-        let State { color, wireframe } = state;
+        let State { color, wireframe, .. } = state;
         unsafe {
             gl::ClearColor(color.0, color.1, color.2, color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT);
+
+            // configurable parameters
             gl::PolygonMode(
                 gl::FRONT_AND_BACK,
                 if wireframe { gl::LINE } else { gl::FILL },
             );
+
+            // Draw calls and such
             shader_program[0].use_shader();
-            // let time = glfw.get_time() as f32;
-            // let green = (time.sin() / 2.0) + 0.5;
-            // let our_color = CString::new("iColor").unwrap();
-            // let vertex_color_location =
-            //     gl::GetUniformLocation(shader_program[0], our_color.as_ptr());
-            // if vertex_color_location == -1 {
-            //     warn!("Could not find uniform location {}", shader_program[0]);
-            // }
-            // gl::Uniform4f(vertex_color_location, 0.0, green, 0.0, 1.0);
             shader_program[0].set_float("xpos", color.3);
+            texture.use_texture();
             gl::BindVertexArray(vao[0]);
             gl::DrawElements(
                 gl::TRIANGLES,
@@ -204,7 +217,8 @@ fn main() -> Result<()> {
                 ptr::null(),
             );
 
-            // gl::UseProgram(shader_program[1]);
+            Texture::use_empty_texture();
+            shader_program[1].use_shader();
             gl::BindVertexArray(vao[1]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::BindVertexArray(vao[2]);
