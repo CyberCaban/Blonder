@@ -195,6 +195,7 @@ fn main() -> Result<()> {
             //     warn!("Could not find uniform location {}", shader_program[0]);
             // }
             // gl::Uniform4f(vertex_color_location, 0.0, green, 0.0, 1.0);
+            shader_program[0].set_float("xpos", color.3);
             gl::BindVertexArray(vao[0]);
             gl::DrawElements(
                 gl::TRIANGLES,

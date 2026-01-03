@@ -22,6 +22,12 @@ impl Shader {
             gl::UseProgram(self.id);
         }
     }
+    pub fn set_float(&self, name: &str, value: f32) {
+        let name = CString::new(name).unwrap();
+        unsafe {
+            gl::Uniform1f(gl::GetUniformLocation(self.id, name.as_ptr()), value);
+        }
+    }
     fn check_shader_compile_errors(shader: u32) {
         unsafe {
             let mut success = gl::FALSE as GLint;
