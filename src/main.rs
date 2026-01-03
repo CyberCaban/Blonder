@@ -1,9 +1,9 @@
-use std::{ffi::CString, mem::offset_of, os::raw::c_void, ptr};
+use std::{mem::offset_of, os::raw::c_void, ptr};
 
-use ::log::{error, info};
+use ::log::info;
 use anyhow::{Context as _, Result};
-use cgmath::{Deg, Rad, prelude::*};
-use gl::types::{GLchar, GLint, GLsizei, GLsizeiptr};
+use cgmath::Deg;
+use gl::types::{GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
 use crate::{
@@ -11,7 +11,7 @@ use crate::{
     log::setup_logger,
     shader::Shader,
     state::{Events, State},
-    texture::{Texture, TextureConfig},
+    texture::Texture,
 };
 
 extern crate gl;
@@ -120,9 +120,6 @@ fn main() -> Result<()> {
         Texture::new("textures/cooler.png")?,
     ];
 
-    shader_program[0].set_int("texture1", 0);
-    shader_program[0].set_int("texture2", 1);
-
     let vao = unsafe {
         #[rustfmt::skip]
         let triangle1: [Vertex; 3] = [
@@ -221,13 +218,14 @@ fn main() -> Result<()> {
                 gl::FRONT_AND_BACK,
                 if wireframe { gl::LINE } else { gl::FILL },
             );
-            state.transform_matrix = Mat4::from_translation(Vec3::unit_y() * 0.5)
+            state.transform_matrix = Mat4::from_translation(Vec3::unit_y() * 0.1)
                 * Mat4::from_axis_angle(Vec3::unit_z(), Deg((glfw.get_time() * 75.0) as f32));
 
             // Draw calls and such
             shader_program[0].use_shader();
-            shader_program[0].set_float("xpos", color.3);
             shader_program[0].set_mat4("transform", &state.transform_matrix);
+            shader_program[0].set_int("texture1", 0);
+            shader_program[0].set_int("texture2", 1);
             gl::ActiveTexture(gl::TEXTURE0);
             texture[0].use_texture();
             gl::ActiveTexture(gl::TEXTURE1);

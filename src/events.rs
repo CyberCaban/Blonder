@@ -1,14 +1,10 @@
 use glfw::{Action, Key, WindowEvent};
 
-use crate::{
-    Mat4, Vec3,
-    state::{Events, State},
-};
+use crate::state::{Events, State};
 
 pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut State) {
     let State { color, .. } = state;
     for (msg, event) in glfw::flush_messages(events) {
-        println!("Message: {}\nEvent: {:?}", msg, event);
         match event {
             WindowEvent::FileDrop(param) => {
                 for p in param {

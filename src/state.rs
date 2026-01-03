@@ -1,6 +1,5 @@
-use std::default;
 
-use cgmath::{Deg, Matrix4, SquareMatrix, Vector3};
+use cgmath::{Matrix4, SquareMatrix, Vector3};
 use glfw::{GlfwReceiver, WindowEvent};
 extern crate gl;
 

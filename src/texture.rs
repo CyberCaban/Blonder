@@ -1,6 +1,6 @@
 use std::os::raw::c_void;
 
-use anyhow::{Context, Result};
+use anyhow::Result;
 use image::GenericImage;
 
 #[derive(Debug)]
