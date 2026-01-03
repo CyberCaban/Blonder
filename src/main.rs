@@ -135,15 +135,15 @@ fn create_shader_program(vertex_source: &str, fragment_source: &str) -> u32 {
     }
 }
 
-fn set_buffer_data(vao: u32, vbo: u32, data: &[f32], data_size: u32) {
+fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex], data_size: u32) {
     unsafe {
         gl::BindVertexArray(vao);
 
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(
             gl::ARRAY_BUFFER,
-            std::mem::size_of_val(data) as GLsizeiptr,
-            &data[0] as *const f32 as *const c_void,
+            (data.len() * std::mem::size_of::<Vertex>()) as GLsizeiptr,
+            &data[0] as *const _ as *const c_void,
             gl::STATIC_DRAW,
         );
         gl::VertexAttribPointer(
@@ -151,10 +151,19 @@ fn set_buffer_data(vao: u32, vbo: u32, data: &[f32], data_size: u32) {
             data_size as i32,
             gl::FLOAT,
             gl::FALSE,
-            (data_size as usize * std::mem::size_of::<f32>()) as GLsizei,
-            ptr::null(),
+            (std::mem::size_of::<Vertex>()) as GLsizei,
+            offset_of!(Vertex, position) as *const c_void,
         );
         gl::EnableVertexAttribArray(0);
+        gl::VertexAttribPointer(
+            1,
+            data_size as i32,
+            gl::FLOAT,
+            gl::FALSE,
+            (std::mem::size_of::<Vertex>()) as GLsizei,
+            offset_of!(Vertex, color) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(1);
     }
 }
 
@@ -170,15 +179,17 @@ fn main() -> Result<()> {
         let shader_program2 =
             create_shader_program(VERTEX_SHADER_SOURCE, FRAGMENT_SHADER_SOURCE_YELLOW);
 
-        let triangle1: [f32; 9] = [
-            -0.6, -0.6, 0.0, // 4
-            0.7, -0.7, 0.0, // 5
-            0.0, -0.9, 0.0, // 6
+        #[rustfmt::skip]
+        let triangle1: [Vertex; 3] = [
+            Vertex { position: [-0.6, -0.6, 0.0, ], color: [1.0,0.0,0.0] },// 4
+            Vertex { position: [0.7, -0.7, 0.0, ], color: [0.0,0.5,0.3]},// 5
+            Vertex { position: [0.0, -0.9, 0.0,], color: [0.3,0.0,0.4]}, // 6
         ];
-        let triangle2: [f32; 9] = [
-            0.6, 0.6, 0.0, // 7
-            0.6, -0.6, 0.0, // 8
-            0.8, 0.0, 0.0, // 9
+        #[rustfmt::skip]
+        let triangle2: [Vertex; 3] = [
+            Vertex { position: [0.6, 0.6, 0.0,], color: [0.0,0.6,0.0]}, // 7
+            Vertex { position: [0.6, -0.6, 0.0,], color: [0.0,0.3,0.8]}, // 8
+            Vertex { position: [0.8, 0.0, 0.0,], color: [0.0,0.2,0.6]}, // 9
         ];
 
         // first shape
@@ -268,7 +279,7 @@ fn main() -> Result<()> {
                 ptr::null(),
             );
 
-            gl::UseProgram(shader_program[1]);
+            // gl::UseProgram(shader_program[1]);
             gl::BindVertexArray(vao[1]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::BindVertexArray(vao[2]);
