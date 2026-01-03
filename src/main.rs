@@ -1,4 +1,4 @@
-use std::{ffi::CString, os::raw::c_void, ptr};
+use std::{ffi::CString, mem::offset_of, os::raw::c_void, ptr};
 
 use ::log::{error, info, warn};
 use anyhow::{Context as _, Result};
@@ -21,30 +21,40 @@ mod state;
 const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
+#[repr(C)]
+struct Vertex {
+    position: [f32; 3],
+    color: [f32; 3],
+}
+
 const VERTICES_NUM: i32 = 4;
 const VERTICES_SIZE: i32 = 3;
-const VERTICES: [f32; (VERTICES_NUM * VERTICES_SIZE) as usize] = [
+#[rustfmt::skip]
+const VERTICES: [Vertex; (VERTICES_NUM) as usize] = [
     // first rect
-    0.5, 0.5, 0.0, // 0
-    0.5, -0.5, 0.0, // 1
-    -0.5, -0.5, 0.0, // 2
-    -0.5, 0.5, 0.0, // 3
+    Vertex { position: [0.5, 0.5, 0.0], color: [1.0, 0.0, 0.0], }, // 0
+    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0], }, // 1
+    Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0], }, // 2
+    Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 0.0, 1.0], }, // 3
 ];
 const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
 const VERTEX_SHADER_SOURCE: &str = r#"
     #version 330 core
     layout (location = 0) in vec3 aPos;
+    layout (location = 1) in vec3 aColor;
+    out vec3 ourColor;
     void main() {
        gl_Position = vec4(aPos.x, aPos.y, aPos.z, 1.0);
+       ourColor = aColor;
     }
 "#;
 
 const FRAGMENT_SHADER_SOURCE: &str = r#"
     #version 330 core
-    uniform vec4 ourColor;
     out vec4 FragColor;
+    in vec3 ourColor;
     void main() {
-       FragColor = ourColor;
+       FragColor = vec4(ourColor, 1.0);
     }
 "#;
 
@@ -182,8 +192,8 @@ fn main() -> Result<()> {
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo[0]);
         gl::BufferData(
             gl::ARRAY_BUFFER,
-            (VERTICES.len() * std::mem::size_of::<GLfloat>()) as GLsizeiptr,
-            &VERTICES[0] as *const f32 as *const c_void,
+            (VERTICES.len() * std::mem::size_of::<Vertex>()) as GLsizeiptr,
+            &VERTICES[0] as *const _ as *const c_void,
             gl::STATIC_DRAW,
         );
 
@@ -195,15 +205,27 @@ fn main() -> Result<()> {
             gl::STATIC_DRAW,
         );
 
+        // position
         gl::VertexAttribPointer(
             0,
             VERTICES_SIZE,
             gl::FLOAT,
             gl::FALSE,
-            (VERTICES_SIZE as usize * std::mem::size_of::<GLfloat>()) as GLsizei,
-            ptr::null(),
+            (std::mem::size_of::<Vertex>()) as GLsizei,
+            offset_of!(Vertex, position) as *const c_void,
         );
         gl::EnableVertexAttribArray(0);
+
+        // color
+        gl::VertexAttribPointer(
+            1,
+            VERTICES_SIZE,
+            gl::FLOAT,
+            gl::FALSE,
+            (std::mem::size_of::<Vertex>()) as GLsizei,
+            offset_of!(Vertex, color) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(1);
 
         // second shape
         set_buffer_data(vao[1], vbo[1], &triangle1, 3);
@@ -229,15 +251,15 @@ fn main() -> Result<()> {
                 if wireframe { gl::LINE } else { gl::FILL },
             );
             gl::UseProgram(shader_program[0]);
-            let time = glfw.get_time() as f32;
-            let green = (time.sin() / 2.0) + 0.5;
-            let our_color = CString::new("ourColor").unwrap();
-            let vertex_color_location =
-                gl::GetUniformLocation(shader_program[0], our_color.as_ptr());
-            if vertex_color_location == -1 {
-                warn!("Could not find uniform location {}", shader_program[0]);
-            }
-            gl::Uniform4f(vertex_color_location, 0.0, green, 0.0, 1.0);
+            // let time = glfw.get_time() as f32;
+            // let green = (time.sin() / 2.0) + 0.5;
+            // let our_color = CString::new("iColor").unwrap();
+            // let vertex_color_location =
+            //     gl::GetUniformLocation(shader_program[0], our_color.as_ptr());
+            // if vertex_color_location == -1 {
+            //     warn!("Could not find uniform location {}", shader_program[0]);
+            // }
+            // gl::Uniform4f(vertex_color_location, 0.0, green, 0.0, 1.0);
             gl::BindVertexArray(vao[0]);
             gl::DrawElements(
                 gl::TRIANGLES,
@@ -246,9 +268,9 @@ fn main() -> Result<()> {
                 ptr::null(),
             );
 
+            gl::UseProgram(shader_program[1]);
             gl::BindVertexArray(vao[1]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
-            gl::UseProgram(shader_program[1]);
             gl::BindVertexArray(vao[2]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
         }
