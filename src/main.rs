@@ -2,6 +2,7 @@ use std::{ffi::CString, mem::offset_of, os::raw::c_void, ptr};
 
 use ::log::{error, info};
 use anyhow::{Context as _, Result};
+use cgmath::{Deg, Rad, prelude::*};
 use gl::types::{GLchar, GLint, GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
@@ -32,15 +33,18 @@ struct Vertex {
     color: [f32; 3],
 }
 
+type Mat4 = cgmath::Matrix4<f32>;
+type Vec3 = cgmath::Vector3<f32>;
+
 const VERTICES_NUM: i32 = 4;
 const VERTICES_SIZE: i32 = 3;
 #[rustfmt::skip]
 const VERTICES: [Vertex; (VERTICES_NUM) as usize] = [
     // first rect
-    Vertex { position: [0.5, 0.5, 0.0], color: [1.0, 0.0, 0.0], uv: [2.0, 2.0] }, // 0
-    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0], uv: [2.0, 0.0] }, // 1
+    Vertex { position: [0.5, 0.5, 0.0], color: [1.0, 0.0, 0.0], uv: [1.0, 1.0] }, // 0
+    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0], uv: [1.0, 0.0] }, // 1
     Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0], uv: [0.0, 0.0] }, // 2
-    Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 0.0, 1.0], uv: [0.0, 2.0] }, // 3
+    Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 0.0, 1.0], uv: [0.0, 1.0] }, // 3
 ];
 const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
 
@@ -49,6 +53,7 @@ fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
         glfw::OpenGlProfileHint::Core,
     ));
+    glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
     let (mut window, events) = glfw
         .create_window(WIDTH, HEIGHT, "Hello", glfw::WindowMode::Windowed)
         .context("Failed to create window")?;
@@ -111,19 +116,13 @@ fn main() -> Result<()> {
         Shader::new("shaders/vert.glsl", "shaders/frag.glsl")?,
     ];
     let texture = [
-        {
-            let tex = Texture::with_config(
-                "textures/liminal_space.png",
-                TextureConfig {
-                    wrap_s: gl::MIRRORED_REPEAT as i32,
-                    wrap_t: gl::MIRRORED_REPEAT as i32,
-                },
-            )?;
-            // tex.set_wrap_h(gl::CLAMP_TO_EDGE as i32);
-            tex
-        },
+        Texture::new("textures/liminal_space.png")?,
         Texture::new("textures/cooler.png")?,
     ];
+
+    shader_program[0].set_int("texture1", 0);
+    shader_program[0].set_int("texture2", 1);
+
     let vao = unsafe {
         #[rustfmt::skip]
         let triangle1: [Vertex; 3] = [
@@ -222,12 +221,13 @@ fn main() -> Result<()> {
                 gl::FRONT_AND_BACK,
                 if wireframe { gl::LINE } else { gl::FILL },
             );
+            state.transform_matrix = Mat4::from_translation(Vec3::unit_y() * 0.5)
+                * Mat4::from_axis_angle(Vec3::unit_z(), Deg((glfw.get_time() * 75.0) as f32));
 
             // Draw calls and such
             shader_program[0].use_shader();
             shader_program[0].set_float("xpos", color.3);
-            shader_program[0].set_int("texture1", 0);
-            shader_program[0].set_int("texture2", 1);
+            shader_program[0].set_mat4("transform", &state.transform_matrix);
             gl::ActiveTexture(gl::TEXTURE0);
             texture[0].use_texture();
             gl::ActiveTexture(gl::TEXTURE1);

@@ -1,6 +1,7 @@
 use std::{ffi::CString, fs::File, io::Read, ptr};
 
 use anyhow::Result;
+use cgmath::{Matrix, Matrix4};
 use gl::types::{GLchar, GLint};
 use log::error;
 
@@ -32,6 +33,17 @@ impl Shader {
         let name = CString::new(name).unwrap();
         unsafe {
             gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value);
+        }
+    }
+    pub fn set_mat4(&self, name: &str, value: &Matrix4<f32>) {
+        let name = CString::new(name).unwrap();
+        unsafe {
+            gl::UniformMatrix4fv(
+                gl::GetUniformLocation(self.id, name.as_ptr()),
+                1,
+                gl::FALSE,
+                value.as_ptr(),
+            );
         }
     }
     fn check_shader_compile_errors(shader: u32) {

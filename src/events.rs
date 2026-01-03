@@ -1,6 +1,9 @@
 use glfw::{Action, Key, WindowEvent};
 
-use crate::state::{Events, State};
+use crate::{
+    Mat4, Vec3,
+    state::{Events, State},
+};
 
 pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut State) {
     let State { color, .. } = state;
@@ -41,12 +44,16 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
                 println!("Decrement color GREEN {}", color.1);
             }
             WindowEvent::Key(Key::Up, _, Action::Press | Action::Repeat, _) => {
-                color.3 += 0.01;
-                println!("Increment param {}", color.3);
+                println!("{:?}", state.transform_matrix);
+                // state.transform_matrix =
+                //     state.transform_matrix + Mat4::from_translation(Vec3::unit_y() * 0.1);
+                println!("Increment param {:?}", state.transform_matrix.y);
             }
             WindowEvent::Key(Key::Down, _, Action::Press | Action::Repeat, _) => {
-                color.3 -= 0.01;
-                println!("Decrement param {}", color.3);
+                println!("{:?}", state.transform_matrix);
+                // state.transform_matrix =
+                //     state.transform_matrix - Mat4::from_translation(Vec3::unit_y() * 0.1);
+                println!("Decrement param {:?}", state.transform_matrix.y);
             }
             WindowEvent::Scroll(w, h) => {
                 color.2 += (h * 0.01) as f32;
