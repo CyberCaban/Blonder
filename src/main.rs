@@ -9,6 +9,11 @@ use glfw::{Context, Glfw, PWindow};
 use crate::{
     events::process_events,
     log::setup_logger,
+    models::serpinsky::Serpinsky,
+    render::{
+        helpers::{Mat4, Vec3, init_window, set_buffer_data},
+        vertex::Vertex,
+    },
     shader::Shader,
     state::{Events, Screen, State},
     texture::Texture,
@@ -19,23 +24,11 @@ extern crate glfw;
 
 mod events;
 mod log;
+mod models;
+mod render;
 mod shader;
 mod state;
 mod texture;
-
-const WIDTH: u32 = 800;
-const HEIGHT: u32 = 600;
-
-#[repr(C)]
-#[derive(Debug, Clone)]
-struct Vertex {
-    position: [f32; 3],
-    uv: [f32; 2],
-    color: [f32; 3],
-}
-
-type Mat4 = cgmath::Matrix4<f32>;
-type Vec3 = cgmath::Vector3<f32>;
 
 const VERTICES_NUM: i32 = 4;
 const VERTICES_SIZE: i32 = 3;
@@ -48,154 +41,6 @@ const VERTICES: [Vertex; (VERTICES_NUM) as usize] = [
     Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 1.0, 1.0], uv: [0.0, 1.0] }, // 3
 ];
 const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
-
-fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
-    glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
-    glfw.window_hint(glfw::WindowHint::OpenGlProfile(
-        glfw::OpenGlProfileHint::Core,
-    ));
-    glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
-    let (mut window, events) = glfw
-        .create_window(WIDTH, HEIGHT, "Hello", glfw::WindowMode::Windowed)
-        .context("Failed to create window")?;
-    window.make_current();
-    window.set_key_polling(true);
-    window.set_mouse_button_polling(true);
-    window.set_scroll_polling(true);
-    window.set_drag_and_drop_polling(true);
-    window.set_framebuffer_size_polling(true);
-    gl::load_with(|symbol| {
-        window
-            .get_proc_address(symbol)
-            .map(|ptr| ptr as *const c_void)
-            .unwrap_or(std::ptr::null())
-    });
-    Ok((window, events))
-}
-
-fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex]) {
-    unsafe {
-        gl::BindVertexArray(vao);
-
-        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
-        gl::BufferData(
-            gl::ARRAY_BUFFER,
-            (data.len() * std::mem::size_of::<Vertex>()) as GLsizeiptr,
-            &data[0] as *const _ as *const c_void,
-            gl::STATIC_DRAW,
-        );
-        gl::VertexAttribPointer(
-            0,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (std::mem::size_of::<Vertex>()) as GLsizei,
-            offset_of!(Vertex, position) as *const c_void,
-        );
-        gl::EnableVertexAttribArray(0);
-        gl::VertexAttribPointer(
-            1,
-            3,
-            gl::FLOAT,
-            gl::FALSE,
-            (std::mem::size_of::<Vertex>()) as GLsizei,
-            offset_of!(Vertex, color) as *const c_void,
-        );
-        gl::EnableVertexAttribArray(1);
-        gl::VertexAttribPointer(
-            2,
-            2,
-            gl::FLOAT,
-            gl::FALSE,
-            (std::mem::size_of::<Vertex>()) as GLsizei,
-            offset_of!(Vertex, uv) as *const c_void,
-        );
-        gl::EnableVertexAttribArray(2);
-    }
-}
-
-#[derive(Debug)]
-struct Serpinsky {
-    pub points: Vec<Vertex>,
-    pub vao: u32,
-    pub shader: Shader,
-    pub texture: Texture,
-}
-
-impl Serpinsky {
-    pub fn new() -> Result<Self> {
-        Ok(Self {
-            points: vec![],
-            vao: 0,
-            shader: Shader::new("shaders/serpinsky/vert.glsl", "shaders/serpinsky/frag.glsl")?,
-            texture: Texture::new("textures/cooler.png")?,
-        })
-    }
-    fn serp(&mut self, point_a: &[f32; 3], point_b: &[f32; 3], point_c: &[f32; 3], mut depth: u32) {
-        if depth == 0 {
-            return;
-        }
-        fn middle(a: &[f32; 3], b: &[f32; 3]) -> [f32; 3] {
-            [
-                (a[0] + b[0]) / 2.0,
-                (a[1] + b[1]) / 2.0,
-                (a[2] + b[2]) / 2.0,
-            ]
-        }
-        let (px, py, pz) = (
-            middle(point_a, point_b),
-            middle(point_a, point_c),
-            middle(point_b, point_c),
-        );
-
-        self.points.extend_from_slice(&[
-            Vertex {
-                position: px,
-                uv: [0.5, -0.5],
-                color: [0.0, 0.0, 0.0],
-            },
-            Vertex {
-                position: py,
-                uv: [1.0, 1.0],
-                color: [0.0, 0.0, 0.0],
-            },
-            Vertex {
-                position: pz,
-                uv: [0.0, 1.0],
-                color: [0.0, 0.0, 0.0],
-            },
-        ]);
-
-        depth -= 1;
-        self.serp(point_a, &px, &py, depth);
-        self.serp(&px, point_b, &pz, depth);
-        self.serp(&py, &pz, point_c, depth);
-    }
-    fn prepare(&mut self) {
-        let (mut vbo, mut vao) = (0, 0);
-        unsafe {
-            gl::GenVertexArrays(1, &mut vao);
-            gl::GenBuffers(1, &mut vbo);
-            set_buffer_data(vao, vbo, &self.points);
-        }
-        self.vao = vao;
-    }
-    fn draw(&self, glfw: &mut Glfw) {
-        let transform = Mat4::identity()
-            * Mat4::from_scale(((glfw.get_time().sin() as f32) + 2.0) / 3.0)
-            * Mat4::from_angle_z(Rad(glfw.get_time() as f32));
-        unsafe {
-            self.shader.use_shader();
-            self.shader.set_transform(&transform);
-            self.shader.set_int("tex", 0);
-            self.shader.set_float("time", glfw.get_time() as f32);
-            gl::ActiveTexture(gl::TEXTURE0);
-            self.texture.use_texture();
-            gl::BindVertexArray(self.vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, self.points.len() as i32);
-        }
-    }
-}
 
 fn main() -> Result<()> {
     setup_logger()?;
@@ -320,7 +165,7 @@ fn main() -> Result<()> {
                 gl::FRONT_AND_BACK,
                 if wireframe { gl::LINE } else { gl::FILL },
             );
-            
+
             // Draw calls and such
             shader_program[0].use_shader();
             let projection_matrix = perspective(Deg(45.0), (width / height) as f32, 0.01, 100.0);

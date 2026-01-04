@@ -1,7 +1,8 @@
 use cgmath::{Matrix4, SquareMatrix, Vector3};
 use glfw::{GlfwReceiver, WindowEvent};
 
-use crate::{HEIGHT, WIDTH};
+use crate::render::consts::{HEIGHT, WIDTH};
+
 extern crate gl;
 
 #[repr(u32)]
