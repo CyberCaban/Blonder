@@ -2,7 +2,7 @@ use std::{mem::offset_of, os::raw::c_void, ptr};
 
 use ::log::info;
 use anyhow::{Context as _, Result};
-use cgmath::{Deg, SquareMatrix};
+use cgmath::{Deg, Rad, SquareMatrix, perspective};
 use gl::types::{GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
@@ -10,7 +10,7 @@ use crate::{
     events::process_events,
     log::setup_logger,
     shader::Shader,
-    state::{Events, State},
+    state::{Events, Screen, State},
     texture::Texture,
 };
 
@@ -42,10 +42,10 @@ const VERTICES_SIZE: i32 = 3;
 #[rustfmt::skip]
 const VERTICES: [Vertex; (VERTICES_NUM) as usize] = [
     // first rect
-    Vertex { position: [0.5, 0.5, 0.0], color: [1.0, 0.0, 0.0], uv: [1.0, 1.0] }, // 0
-    Vertex { position: [0.5, -0.5, 0.0], color: [0.0, 1.0, 0.0], uv: [1.0, 0.0] }, // 1
-    Vertex { position: [-0.5, -0.5, 0.0], color: [0.0, 0.0, 1.0], uv: [0.0, 0.0] }, // 2
-    Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 0.0, 1.0], uv: [0.0, 1.0] }, // 3
+    Vertex { position: [0.5, 0.5, 0.0], color: [1.0, 1.0, 1.0], uv: [1.0, 1.0] }, // 0
+    Vertex { position: [0.5, -0.5, 0.0], color: [1.0, 1.0, 1.0], uv: [1.0, 0.0] }, // 1
+    Vertex { position: [-0.5, -0.5, 0.0], color: [1.0, 1.0, 1.0], uv: [0.0, 0.0] }, // 2
+    Vertex { position: [-0.5, 0.5, 0.0], color: [1.0, 1.0, 1.0], uv: [0.0, 1.0] }, // 3
 ];
 const INDICES: [u32; 6] = [0, 1, 3, 1, 2, 3];
 
@@ -128,7 +128,7 @@ impl Serpinsky {
             points: vec![],
             vao: 0,
             shader: Shader::new("shaders/serpinsky/vert.glsl", "shaders/serpinsky/frag.glsl")?,
-            texture: Texture::new("textures/white.png")?,
+            texture: Texture::new("textures/cooler.png")?,
         })
     }
     fn serp(&mut self, point_a: &[f32; 3], point_b: &[f32; 3], point_c: &[f32; 3], mut depth: u32) {
@@ -151,17 +151,17 @@ impl Serpinsky {
         self.points.extend_from_slice(&[
             Vertex {
                 position: px,
-                uv: [0.0, 0.0],
+                uv: [0.5, -0.5],
                 color: [0.0, 0.0, 0.0],
             },
             Vertex {
                 position: py,
-                uv: [1.0, 0.0],
+                uv: [1.0, 1.0],
                 color: [0.0, 0.0, 0.0],
             },
             Vertex {
                 position: pz,
-                uv: [0.5, 1.0],
+                uv: [0.0, 1.0],
                 color: [0.0, 0.0, 0.0],
             },
         ]);
@@ -181,8 +181,10 @@ impl Serpinsky {
         self.vao = vao;
     }
     fn draw(&self, glfw: &mut Glfw) {
+        let transform = Mat4::identity()
+            * Mat4::from_scale(((glfw.get_time().sin() as f32) + 2.0) / 3.0)
+            * Mat4::from_angle_z(Rad(glfw.get_time() as f32));
         unsafe {
-            let transform = Mat4::identity();
             self.shader.use_shader();
             self.shader.set_transform(&transform);
             self.shader.set_int("tex", 0);
@@ -203,6 +205,7 @@ fn main() -> Result<()> {
     let mut state = State::default();
 
     let shader_program = vec![
+        Shader::new("shaders/camera/vert.glsl", "shaders/camera/frag.glsl")?,
         Shader::new("shaders/vert_tex.glsl", "shaders/frag_tex.glsl")?,
         Shader::new("shaders/vert.glsl", "shaders/frag.glsl")?,
     ];
@@ -212,7 +215,8 @@ fn main() -> Result<()> {
     ];
 
     let mut serp = Serpinsky::new()?;
-    serp.serp(&[-0.7, -0.7, 0.0], &[0.7, -0.7, 0.0], &[0., 0.7, 0.0], 7);
+    let d = 0.9;
+    serp.serp(&[-d, -d, 0.0], &[d, -d, 0.0], &[0., d, 0.0], 7);
     serp.prepare();
 
     let vao = unsafe {
@@ -302,7 +306,10 @@ fn main() -> Result<()> {
         process_events(&mut window, &events, &mut state);
 
         let State {
-            color, wireframe, ..
+            color,
+            wireframe,
+            screen: Screen { width, height },
+            ..
         } = state;
         unsafe {
             gl::ClearColor(color.0, color.1, color.2, color.3);
@@ -313,15 +320,15 @@ fn main() -> Result<()> {
                 gl::FRONT_AND_BACK,
                 if wireframe { gl::LINE } else { gl::FILL },
             );
-            // state.transform_matrix =
-            //     Mat4::from_axis_angle(Vec3::unit_z(), Deg((glfw.get_time() * 75.0) as f32))
-            //         * Mat4::from_translation(Vec3::unit_y() * 0.7);
-
+            
             // Draw calls and such
             shader_program[0].use_shader();
-            shader_program[0].set_mat4("transform", &state.transform_matrix);
-            // shader_program[0].set_int("texture1", 0);
-            // shader_program[0].set_int("texture2", 1);
+            let projection_matrix = perspective(Deg(45.0), (width / height) as f32, 0.01, 100.0);
+            let model_matrix = Mat4::from_angle_x(Deg(-55.0));
+            let view_matrix = Mat4::from_translation(Vec3::unit_z() * -3.0);
+            shader_program[0].set_mat4("model", &model_matrix);
+            shader_program[0].set_mat4("view", &view_matrix);
+            shader_program[0].set_mat4("projection", &projection_matrix);
             gl::ActiveTexture(gl::TEXTURE0);
             texture[0].use_texture();
             gl::ActiveTexture(gl::TEXTURE1);
@@ -340,9 +347,7 @@ fn main() -> Result<()> {
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::BindVertexArray(vao[2]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
-            gl::ClearColor(color.0, color.1, color.2, color.3);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
-            serp.draw(&mut glfw);
+            // serp.draw(&mut glfw);
         }
 
         window.swap_buffers();
