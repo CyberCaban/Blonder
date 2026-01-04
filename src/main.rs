@@ -2,7 +2,7 @@ use std::{mem::offset_of, os::raw::c_void, ptr};
 
 use ::log::info;
 use anyhow::{Context as _, Result};
-use cgmath::Deg;
+use cgmath::{Deg, SquareMatrix};
 use gl::types::{GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
@@ -118,34 +118,21 @@ fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex]) {
 struct Serpinsky {
     pub points: Vec<Vertex>,
     pub vao: u32,
+    pub shader: Shader,
+    pub texture: Texture,
 }
 
 impl Serpinsky {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Result<Self> {
+        Ok(Self {
             points: vec![],
             vao: 0,
-        }
+            shader: Shader::new("shaders/serpinsky/vert.glsl", "shaders/serpinsky/frag.glsl")?,
+            texture: Texture::new("textures/white.png")?,
+        })
     }
     fn serp(&mut self, point_a: &[f32; 3], point_b: &[f32; 3], point_c: &[f32; 3], mut depth: u32) {
         if depth == 0 {
-            // self.points.extend_from_slice(&[
-            //     Vertex {
-            //         position: point_a.clone(),
-            //         color: [1.0, 0.0, 0.0],
-            //         uv: [0.0, 0.0],
-            //     },
-            //     Vertex {
-            //         position: point_b.clone(),
-            //         color: [0.0, 1.0, 0.0],
-            //         uv: [1.0, 0.0],
-            //     },
-            //     Vertex {
-            //         position: point_c.clone(),
-            //         color: [0.0, 0.0, 1.0],
-            //         uv: [0.5, 1.0],
-            //     },
-            // ]);
             return;
         }
         fn middle(a: &[f32; 3], b: &[f32; 3]) -> [f32; 3] {
@@ -193,10 +180,17 @@ impl Serpinsky {
         }
         self.vao = vao;
     }
-    fn draw(&self) {
+    fn draw(&self, glfw: &mut Glfw) {
         unsafe {
+            let transform = Mat4::identity();
+            self.shader.use_shader();
+            self.shader.set_transform(&transform);
+            self.shader.set_int("tex", 0);
+            self.shader.set_float("time", glfw.get_time() as f32);
+            gl::ActiveTexture(gl::TEXTURE0);
+            self.texture.use_texture();
             gl::BindVertexArray(self.vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, (self.points.len() / 3 * 3) as i32);
+            gl::DrawArrays(gl::TRIANGLES, 0, self.points.len() as i32);
         }
     }
 }
@@ -217,8 +211,8 @@ fn main() -> Result<()> {
         Texture::new("textures/cooler.png")?,
     ];
 
-    let mut serp = Serpinsky::new();
-    serp.serp(&[-0.7, -0.7, 0.0], &[0.7, -0.7, 0.0], &[0., 0.7, 0.0], 12);
+    let mut serp = Serpinsky::new()?;
+    serp.serp(&[-0.7, -0.7, 0.0], &[0.7, -0.7, 0.0], &[0., 0.7, 0.0], 7);
     serp.prepare();
 
     let vao = unsafe {
@@ -348,7 +342,7 @@ fn main() -> Result<()> {
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::ClearColor(color.0, color.1, color.2, color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT);
-            serp.draw();
+            serp.draw(&mut glfw);
         }
 
         window.swap_buffers();

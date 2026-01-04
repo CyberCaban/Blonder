@@ -1,6 +1,6 @@
 use std::os::raw::c_void;
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use image::GenericImage;
 
 #[derive(Debug)]
@@ -17,6 +17,7 @@ impl Default for TextureConfig {
     }
 }
 
+#[derive(Debug)]
 pub struct Texture {
     id: u32,
 }
@@ -44,7 +45,10 @@ impl Texture {
                 gl::LINEAR_MIPMAP_LINEAR as i32,
             );
 
-            let image = image::open(texture_path)?.rotate180().fliph();
+            let image = image::open(texture_path)
+                .context(format!("Cannot find texture [{}]", texture_path))?
+                .rotate180()
+                .fliph();
             let (width, height) = (image.width(), image.height());
             let raw_image = image.to_rgba().into_raw();
             let data = raw_image.as_ptr() as *const c_void;

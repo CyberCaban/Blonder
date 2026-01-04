@@ -1,10 +1,11 @@
 use std::{ffi::CString, fs::File, io::Read, ptr};
 
-use anyhow::Result;
+use anyhow::{Context, Result};
 use cgmath::{Matrix, Matrix4};
 use gl::types::{GLchar, GLint};
 use log::error;
 
+#[derive(Debug)]
 pub struct Shader {
     id: u32,
 }
@@ -13,8 +14,14 @@ impl Shader {
     pub fn new(vertex_path: &str, fragment_path: &str) -> Result<Self> {
         let mut vertex_source = String::new();
         let mut fragment_source = String::new();
-        File::open(vertex_path)?.read_to_string(&mut vertex_source)?;
-        File::open(fragment_path)?.read_to_string(&mut fragment_source)?;
+        File::open(vertex_path)
+            .context(format!("Cannot find shader [{}]", vertex_path))?
+            .read_to_string(&mut vertex_source)
+            .context(format!("Cannot read shader [{}]", vertex_path))?;
+        File::open(fragment_path)
+            .context(format!("Cannot find shader [{}]", fragment_path))?
+            .read_to_string(&mut fragment_source)
+            .context(format!("Cannot read shader [{}]", fragment_path))?;
         let id = Self::create_shader_program(&vertex_source, &fragment_source);
         Ok(Self { id })
     }
@@ -45,6 +52,9 @@ impl Shader {
                 value.as_ptr(),
             );
         }
+    }
+    pub fn set_transform(&self, transform: &Matrix4<f32>) {
+        self.set_mat4("transform", transform);
     }
     fn check_shader_compile_errors(shader: u32) {
         unsafe {
