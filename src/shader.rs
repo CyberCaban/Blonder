@@ -95,7 +95,7 @@ impl Shader {
             gl::AttachShader(shader_program, vertex_shader);
             gl::AttachShader(shader_program, fragment_shader);
             gl::LinkProgram(shader_program);
-            gl::UseProgram(shader_program);
+            // gl::UseProgram(shader_program);
             gl::DeleteShader(vertex_shader);
             gl::DeleteShader(fragment_shader);
             shader_program
