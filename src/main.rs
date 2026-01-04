@@ -27,6 +27,7 @@ const WIDTH: u32 = 800;
 const HEIGHT: u32 = 600;
 
 #[repr(C)]
+#[derive(Debug, Clone)]
 struct Vertex {
     position: [f32; 3],
     uv: [f32; 2],
@@ -72,7 +73,7 @@ fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     Ok((window, events))
 }
 
-fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex], data_size: u32) {
+fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex]) {
     unsafe {
         gl::BindVertexArray(vao);
 
@@ -85,7 +86,7 @@ fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex], data_size: u32) {
         );
         gl::VertexAttribPointer(
             0,
-            data_size as i32,
+            3,
             gl::FLOAT,
             gl::FALSE,
             (std::mem::size_of::<Vertex>()) as GLsizei,
@@ -94,13 +95,109 @@ fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex], data_size: u32) {
         gl::EnableVertexAttribArray(0);
         gl::VertexAttribPointer(
             1,
-            data_size as i32,
+            3,
             gl::FLOAT,
             gl::FALSE,
             (std::mem::size_of::<Vertex>()) as GLsizei,
             offset_of!(Vertex, color) as *const c_void,
         );
         gl::EnableVertexAttribArray(1);
+        gl::VertexAttribPointer(
+            2,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            (std::mem::size_of::<Vertex>()) as GLsizei,
+            offset_of!(Vertex, uv) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(2);
+    }
+}
+
+#[derive(Debug)]
+struct Serpinsky {
+    pub points: Vec<Vertex>,
+    pub vao: u32,
+}
+
+impl Serpinsky {
+    pub fn new() -> Self {
+        Self {
+            points: vec![],
+            vao: 0,
+        }
+    }
+    fn serp(&mut self, point_a: &[f32; 3], point_b: &[f32; 3], point_c: &[f32; 3], mut depth: u32) {
+        if depth == 0 {
+            // self.points.extend_from_slice(&[
+            //     Vertex {
+            //         position: point_a.clone(),
+            //         color: [1.0, 0.0, 0.0],
+            //         uv: [0.0, 0.0],
+            //     },
+            //     Vertex {
+            //         position: point_b.clone(),
+            //         color: [0.0, 1.0, 0.0],
+            //         uv: [1.0, 0.0],
+            //     },
+            //     Vertex {
+            //         position: point_c.clone(),
+            //         color: [0.0, 0.0, 1.0],
+            //         uv: [0.5, 1.0],
+            //     },
+            // ]);
+            return;
+        }
+        fn middle(a: &[f32; 3], b: &[f32; 3]) -> [f32; 3] {
+            [
+                (a[0] + b[0]) / 2.0,
+                (a[1] + b[1]) / 2.0,
+                (a[2] + b[2]) / 2.0,
+            ]
+        }
+        let (px, py, pz) = (
+            middle(point_a, point_b),
+            middle(point_a, point_c),
+            middle(point_b, point_c),
+        );
+
+        self.points.extend_from_slice(&[
+            Vertex {
+                position: px,
+                uv: [0.0, 0.0],
+                color: [0.0, 0.0, 0.0],
+            },
+            Vertex {
+                position: py,
+                uv: [1.0, 0.0],
+                color: [0.0, 0.0, 0.0],
+            },
+            Vertex {
+                position: pz,
+                uv: [0.5, 1.0],
+                color: [0.0, 0.0, 0.0],
+            },
+        ]);
+
+        depth -= 1;
+        self.serp(point_a, &px, &py, depth);
+        self.serp(&px, point_b, &pz, depth);
+        self.serp(&py, &pz, point_c, depth);
+    }
+    fn prepare(&mut self) {
+        let (mut vbo, mut vao) = (0, 0);
+        unsafe {
+            gl::GenVertexArrays(1, &mut vao);
+            gl::GenBuffers(1, &mut vbo);
+            set_buffer_data(vao, vbo, &self.points);
+        }
+        self.vao = vao;
+    }
+    fn draw(&self) {
+        unsafe {
+            gl::BindVertexArray(self.vao);
+            gl::DrawArrays(gl::TRIANGLES, 0, (self.points.len() / 3 * 3) as i32);
+        }
     }
 }
 
@@ -119,6 +216,10 @@ fn main() -> Result<()> {
         Texture::new("textures/liminal_space.png")?,
         Texture::new("textures/cooler.png")?,
     ];
+
+    let mut serp = Serpinsky::new();
+    serp.serp(&[-0.7, -0.7, 0.0], &[0.7, -0.7, 0.0], &[0., 0.7, 0.0], 12);
+    serp.prepare();
 
     let vao = unsafe {
         #[rustfmt::skip]
@@ -192,9 +293,9 @@ fn main() -> Result<()> {
         gl::EnableVertexAttribArray(2);
 
         // second shape
-        set_buffer_data(vao[1], vbo[1], &triangle1, 3);
+        set_buffer_data(vao[1], vbo[1], &triangle1);
         // third shape
-        set_buffer_data(vao[2], vbo[2], &triangle2, 3);
+        set_buffer_data(vao[2], vbo[2], &triangle2);
 
         // unbinding
         // gl::BindBuffer(gl::ARRAY_BUFFER, 0);
@@ -218,14 +319,15 @@ fn main() -> Result<()> {
                 gl::FRONT_AND_BACK,
                 if wireframe { gl::LINE } else { gl::FILL },
             );
-            state.transform_matrix = Mat4::from_translation(Vec3::unit_y() * 0.1)
-                * Mat4::from_axis_angle(Vec3::unit_z(), Deg((glfw.get_time() * 75.0) as f32));
+            // state.transform_matrix =
+            //     Mat4::from_axis_angle(Vec3::unit_z(), Deg((glfw.get_time() * 75.0) as f32))
+            //         * Mat4::from_translation(Vec3::unit_y() * 0.7);
 
             // Draw calls and such
             shader_program[0].use_shader();
             shader_program[0].set_mat4("transform", &state.transform_matrix);
-            shader_program[0].set_int("texture1", 0);
-            shader_program[0].set_int("texture2", 1);
+            // shader_program[0].set_int("texture1", 0);
+            // shader_program[0].set_int("texture2", 1);
             gl::ActiveTexture(gl::TEXTURE0);
             texture[0].use_texture();
             gl::ActiveTexture(gl::TEXTURE1);
@@ -238,12 +340,15 @@ fn main() -> Result<()> {
                 ptr::null(),
             );
 
-            Texture::use_empty_texture();
-            shader_program[1].use_shader();
+            // Texture::use_empty_texture();
+            // shader_program[1].use_shader();
             gl::BindVertexArray(vao[1]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::BindVertexArray(vao[2]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
+            gl::ClearColor(color.0, color.1, color.2, color.3);
+            gl::Clear(gl::COLOR_BUFFER_BIT);
+            serp.draw();
         }
 
         window.swap_buffers();
