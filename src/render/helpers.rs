@@ -36,6 +36,9 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
             .map(|ptr| ptr as *const c_void)
             .unwrap_or(std::ptr::null())
     });
+    unsafe {
+        gl::Enable(gl::DEPTH_TEST);
+    }
     Ok((window, events))
 }
 

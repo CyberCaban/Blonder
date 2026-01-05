@@ -2,7 +2,7 @@ use std::{mem::offset_of, os::raw::c_void, ptr};
 
 use ::log::info;
 use anyhow::{Context as _, Result};
-use cgmath::{Deg, Rad, SquareMatrix, perspective};
+use cgmath::{Deg, InnerSpace, Rad, SquareMatrix, perspective};
 use gl::types::{GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
@@ -159,7 +159,7 @@ fn main() -> Result<()> {
         } = state;
         unsafe {
             gl::ClearColor(color.0, color.1, color.2, color.3);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
 
             // configurable parameters
             gl::PolygonMode(
@@ -169,10 +169,10 @@ fn main() -> Result<()> {
 
             // Draw calls and such
             shader_program[0].use_shader();
-            let projection_matrix = perspective(Deg(35.0), (width / height) as f32, 0.01, 100.0);
+            let projection_matrix = perspective(Deg(45.0), (width / height) as f32, 0.01, 100.0);
             let model_matrix = Mat4::from_angle_x(Deg(-55.0))
                 * Mat4::from_axis_angle(
-                    Vec3::new(0.0, 1.0, 0.0),
+                    Vec3::new(0.5, 1.0, 0.0).normalize(),
                     Rad(1.0) * glfw.get_time() as f32,
                 );
             let view_matrix = Mat4::from_translation(Vec3::unit_z() * -3.0);
@@ -198,7 +198,7 @@ fn main() -> Result<()> {
             gl::BindVertexArray(vao[2]);
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::ClearColor(color.0, color.1, color.2, color.3);
-            gl::Clear(gl::COLOR_BUFFER_BIT);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             cube.draw();
         }
 
