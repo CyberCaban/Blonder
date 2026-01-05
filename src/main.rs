@@ -2,7 +2,7 @@ use std::{mem::offset_of, os::raw::c_void, ptr};
 
 use ::log::info;
 use anyhow::{Context as _, Result};
-use cgmath::{Deg, InnerSpace, Rad, SquareMatrix, ortho, perspective};
+use cgmath::{Deg, InnerSpace, Matrix4, Point3, Rad, SquareMatrix, Vector3, ortho, perspective};
 use gl::types::{GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
@@ -156,7 +156,6 @@ fn main() -> Result<()> {
     //     -10.0,
     //     10.0,
     // );
-    let view_matrix = Mat4::from_translation(Vec3::new(0.0, 0.0, -3.0));
     while !window.should_close() {
         process_events(&mut window, &events, &mut state);
 
@@ -178,13 +177,28 @@ fn main() -> Result<()> {
 
             // Draw calls and such
             shader_program[0].use_shader();
-            let aspect = (state.screen.width as f32 / state.screen.height as f32);
-            let projection_matrix = perspective(Deg(45.0), (aspect as f32), 0.01, 100.0);
             let model_matrix =
-                Mat4::from_axis_angle(Vec3::new(0.0, 0.0, 0.0).normalize(), Rad(0.0));
+                Mat4::from_axis_angle(Vec3::new(0.5, 1.0, 0.0).normalize(), Rad(0.0));
+            let view_matrix = Matrix4::from_translation(Vector3::new(0.0, 0.0, -3.0));
 
             let mvp = projection_matrix * view_matrix * model_matrix;
             shader_program[0].set_mat4("mvp", &mvp);
+            let camera_pos = Vector3::new(0.0, 0.0, 3.0);
+            let camera_target = Vector3::new(0.0, 0.0, 0.0);
+            let camera_direction = (camera_pos - camera_target).normalize();
+            let up = Vector3::new(0.0, 1.0, 0.0);
+            let camera_right = up.cross(camera_direction).normalize();
+            let camera_up = camera_direction.cross(camera_right);
+
+            let radius: f32 = 10.0;
+            let cam_x = glfw.get_time().sin() as f32 * radius;
+            let cam_z = glfw.get_time().cos() as f32 * radius;
+            // let view_matrix = Matrix4::look_at(
+            //     Point3::new(0.0, 0.0, 3.0),
+            //     Point3::new(0.0, 0.0, 0.0),
+            //     Vector3::new(0.0, 1.0, 0.0),
+            // );
+
             gl::ActiveTexture(gl::TEXTURE0);
             texture[0].use_texture();
             gl::ActiveTexture(gl::TEXTURE1);
