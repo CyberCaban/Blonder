@@ -20,34 +20,24 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
                 window.set_should_close(true)
             }
 
-            WindowEvent::Key(Key::A, _, Action::Press, _) => {
-                state.color.0 += 0.1;
-                state.color.0 = state.color.0.clamp(0.0, 1.0);
-                println!("Increment color RED {}", state.color.0);
-            }
-            WindowEvent::Key(Key::D, _, Action::Press, _) => {
-                state.color.0 -= 0.1;
-                state.color.0 = state.color.0.clamp(0.0, 1.0);
-                println!("Decrement color RED {}", state.color.0);
-            }
-            WindowEvent::Key(Key::W, _, Action::Press, _) => {
-                state.color.1 += 0.1;
-                state.color.1 = state.color.1.clamp(0.0, 1.0);
-                println!("Increment color GREEN {}", state.color.1);
-            }
-            WindowEvent::Key(Key::S, _, Action::Press, _) => {
-                state.color.1 -= 0.1;
-                state.color.1 = state.color.1.clamp(0.0, 1.0);
-                println!("Decrement color GREEN {}", state.color.1);
-            }
+            // WindowEvent::Key(Key::A, _, Action::Press | Action::Repeat, _) => {
+            //     // state.camera.update_pos(crate::camera::MoveDirection::LEFT);
+            // }
+            // WindowEvent::Key(Key::D, _, Action::Press | Action::Repeat, _) => {
+            //     // state.camera.update_pos(crate::camera::MoveDirection::RIGHT);
+            // }
+            // WindowEvent::Key(Key::W, _, Action::Press | Action::Repeat, _) => {
+            //     // state.camera.update_pos(crate::camera::MoveDirection::FRONT);
+            // }
+            // WindowEvent::Key(Key::S, _, Action::Press | Action::Repeat, _) => {
+            //     // state.camera.update_pos(crate::camera::MoveDirection::BACK);
+            // }
             WindowEvent::Key(Key::Up, _, Action::Press | Action::Repeat, _) => {
-                println!("{:?}", state.transform_matrix);
                 // state.transform_matrix =
                 //     state.transform_matrix + Mat4::from_translation(Vec3::unit_y() * 0.1);
                 println!("Increment param {:?}", state.transform_matrix.y);
             }
             WindowEvent::Key(Key::Down, _, Action::Press | Action::Repeat, _) => {
-                println!("{:?}", state.transform_matrix);
                 // state.transform_matrix =
                 //     state.transform_matrix - Mat4::from_translation(Vec3::unit_y() * 0.1);
                 println!("Decrement param {:?}", state.transform_matrix.y);

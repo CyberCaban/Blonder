@@ -1,7 +1,7 @@
 use cgmath::{Matrix4, SquareMatrix, Vector3};
 use glfw::{GlfwReceiver, WindowEvent};
 
-use crate::render::consts::{HEIGHT, WIDTH};
+use crate::{camera::Camera, render::consts::{HEIGHT, WIDTH}};
 
 extern crate gl;
 
@@ -24,6 +24,9 @@ pub struct State {
     pub wireframe: bool,
     pub transform_matrix: Matrix4<f32>,
     pub screen: Screen,
+    pub camera: Camera,
+    pub delta_time: f32,
+    pub last_frame: f32,
 }
 
 impl Default for State {
@@ -38,6 +41,9 @@ impl Default for State {
                 width: WIDTH,
                 height: HEIGHT,
             },
+            camera: Camera::new(),
+            delta_time: 0.0,
+            last_frame: 0.0,
         }
     }
 }

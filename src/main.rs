@@ -29,6 +29,7 @@ mod render;
 mod shader;
 mod state;
 mod texture;
+mod camera;
 
 const VERTICES_NUM: i32 = 4;
 const VERTICES_SIZE: i32 = 3;
@@ -147,6 +148,7 @@ fn main() -> Result<()> {
         vao
     };
     let cube = Cube::new("textures/cooler.png", &[0.0, 0.0, 0.0])?;
+    let cube2 = Cube::new("textures/liminal_space.png", &[1.0, 1.0, 1.0])?;
 
     // let projection_matrix = ortho(
     //     -(aspect as f32) * 2.0,
@@ -157,7 +159,12 @@ fn main() -> Result<()> {
     //     10.0,
     // );
     while !window.should_close() {
+        let current_frame = glfw.get_time() as f32;
+        state.delta_time = current_frame - state.last_frame;
+        state.last_frame = current_frame;
+
         process_events(&mut window, &events, &mut state);
+        state.camera.process_input(&mut window, state.delta_time);
 
         let State {
             color,
@@ -177,27 +184,19 @@ fn main() -> Result<()> {
 
             // Draw calls and such
             shader_program[0].use_shader();
+            let aspect = if state.screen.height > 0 {
+                state.screen.width as f32 / state.screen.height as f32
+            } else {
+                1.0
+            };
             let model_matrix =
                 Mat4::from_axis_angle(Vec3::new(0.5, 1.0, 0.0).normalize(), Rad(0.0));
             let view_matrix = Matrix4::from_translation(Vector3::new(0.0, 0.0, -3.0));
+            let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 100.0);
 
+            let view_matrix = state.camera.view_matrix();
             let mvp = projection_matrix * view_matrix * model_matrix;
             shader_program[0].set_mat4("mvp", &mvp);
-            let camera_pos = Vector3::new(0.0, 0.0, 3.0);
-            let camera_target = Vector3::new(0.0, 0.0, 0.0);
-            let camera_direction = (camera_pos - camera_target).normalize();
-            let up = Vector3::new(0.0, 1.0, 0.0);
-            let camera_right = up.cross(camera_direction).normalize();
-            let camera_up = camera_direction.cross(camera_right);
-
-            let radius: f32 = 10.0;
-            let cam_x = glfw.get_time().sin() as f32 * radius;
-            let cam_z = glfw.get_time().cos() as f32 * radius;
-            // let view_matrix = Matrix4::look_at(
-            //     Point3::new(0.0, 0.0, 3.0),
-            //     Point3::new(0.0, 0.0, 0.0),
-            //     Vector3::new(0.0, 1.0, 0.0),
-            // );
 
             gl::ActiveTexture(gl::TEXTURE0);
             texture[0].use_texture();
@@ -220,6 +219,7 @@ fn main() -> Result<()> {
             gl::ClearColor(color.0, color.1, color.2, color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             cube.draw(&glfw, &state);
+            cube2.draw(&glfw, &state);
         }
 
         window.swap_buffers();
