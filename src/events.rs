@@ -3,16 +3,17 @@ use glfw::{Action, Key, WindowEvent};
 use crate::state::{Events, State};
 
 pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut State) {
-    let State { color, .. } = state;
     for (msg, event) in glfw::flush_messages(events) {
         match event {
             WindowEvent::FileDrop(param) => {
                 for p in param {
                     println!("{}", p.to_string_lossy());
                 }
-                println!("Decrement color BLUE {}", color.2);
+                println!("Decrement color BLUE {}", state.color.2);
             }
             glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
+                state.screen.width = width as u32;
+                state.screen.height = height as u32;
                 gl::Viewport(0, 0, width, height);
             },
             glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
@@ -20,24 +21,24 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
             }
 
             WindowEvent::Key(Key::A, _, Action::Press, _) => {
-                color.0 += 0.1;
-                color.0 = color.0.clamp(0.0, 1.0);
-                println!("Increment color RED {}", color.0);
+                state.color.0 += 0.1;
+                state.color.0 = state.color.0.clamp(0.0, 1.0);
+                println!("Increment color RED {}", state.color.0);
             }
             WindowEvent::Key(Key::D, _, Action::Press, _) => {
-                color.0 -= 0.1;
-                color.0 = color.0.clamp(0.0, 1.0);
-                println!("Decrement color RED {}", color.0);
+                state.color.0 -= 0.1;
+                state.color.0 = state.color.0.clamp(0.0, 1.0);
+                println!("Decrement color RED {}", state.color.0);
             }
             WindowEvent::Key(Key::W, _, Action::Press, _) => {
-                color.1 += 0.1;
-                color.1 = color.1.clamp(0.0, 1.0);
-                println!("Increment color GREEN {}", color.1);
+                state.color.1 += 0.1;
+                state.color.1 = state.color.1.clamp(0.0, 1.0);
+                println!("Increment color GREEN {}", state.color.1);
             }
             WindowEvent::Key(Key::S, _, Action::Press, _) => {
-                color.1 -= 0.1;
-                color.1 = color.1.clamp(0.0, 1.0);
-                println!("Decrement color GREEN {}", color.1);
+                state.color.1 -= 0.1;
+                state.color.1 = state.color.1.clamp(0.0, 1.0);
+                println!("Decrement color GREEN {}", state.color.1);
             }
             WindowEvent::Key(Key::Up, _, Action::Press | Action::Repeat, _) => {
                 println!("{:?}", state.transform_matrix);
@@ -52,13 +53,16 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
                 println!("Decrement param {:?}", state.transform_matrix.y);
             }
             WindowEvent::Scroll(w, h) => {
-                color.2 += (h * 0.01) as f32;
-                color.2 = color.2.clamp(0.0, 1.0);
-                println!("color BLUE {}", color.2);
+                state.color.2 += (h * 0.01) as f32;
+                state.color.2 = state.color.2.clamp(0.0, 1.0);
+                println!("color BLUE {}", state.color.2);
             }
             WindowEvent::Key(Key::Space, _, Action::Press | Action::Repeat, _) => {
                 state.wireframe = !state.wireframe;
                 println!("Pressed space")
+            }
+            WindowEvent::Key(Key::X, _, Action::Press, _) => {
+                println!("{:?}", state);
             }
             _ => {}
         }

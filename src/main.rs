@@ -2,7 +2,7 @@ use std::{mem::offset_of, os::raw::c_void, ptr};
 
 use ::log::info;
 use anyhow::{Context as _, Result};
-use cgmath::{Deg, InnerSpace, Rad, SquareMatrix, perspective};
+use cgmath::{Deg, InnerSpace, Rad, SquareMatrix, ortho, perspective};
 use gl::types::{GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
 
@@ -146,10 +146,17 @@ fn main() -> Result<()> {
 
         vao
     };
-    let cube = Cube::new("textures/white.png", &[0.0, 0.0, 0.0])?;
+    let cube = Cube::new("textures/cooler.png", &[0.0, 0.0, 0.0])?;
 
-    let projection_matrix = perspective(Deg(45.0), (state.screen.width / state.screen.height) as f32, 0.01, 100.0);
-    let view_matrix = Mat4::from_translation(Vec3::unit_z() * -3.0);
+    // let projection_matrix = ortho(
+    //     -(aspect as f32) * 2.0,
+    //     aspect as f32 * 2.0,
+    //     -2.0,
+    //     2.0,
+    //     -10.0,
+    //     10.0,
+    // );
+    let view_matrix = Mat4::from_translation(Vec3::new(0.0, 0.0, -3.0));
     while !window.should_close() {
         process_events(&mut window, &events, &mut state);
 
@@ -171,13 +178,13 @@ fn main() -> Result<()> {
 
             // Draw calls and such
             shader_program[0].use_shader();
-            let model_matrix = Mat4::from_axis_angle(
-                Vec3::new(0.5, 1.0, 0.0).normalize(),
-                Rad(1.0) * glfw.get_time() as f32,
-            );
-            shader_program[0].set_mat4("model", &model_matrix);
-            shader_program[0].set_mat4("view", &view_matrix);
-            shader_program[0].set_mat4("projection", &projection_matrix);
+            let aspect = (state.screen.width as f32 / state.screen.height as f32);
+            let projection_matrix = perspective(Deg(45.0), (aspect as f32), 0.01, 100.0);
+            let model_matrix =
+                Mat4::from_axis_angle(Vec3::new(0.0, 0.0, 0.0).normalize(), Rad(0.0));
+
+            let mvp = projection_matrix * view_matrix * model_matrix;
+            shader_program[0].set_mat4("mvp", &mvp);
             gl::ActiveTexture(gl::TEXTURE0);
             texture[0].use_texture();
             gl::ActiveTexture(gl::TEXTURE1);
@@ -198,7 +205,7 @@ fn main() -> Result<()> {
             gl::DrawArrays(gl::TRIANGLES, 0, 3);
             gl::ClearColor(color.0, color.1, color.2, color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            cube.draw();
+            cube.draw(&glfw, &state);
         }
 
         window.swap_buffers();
