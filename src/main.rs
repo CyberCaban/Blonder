@@ -146,8 +146,10 @@ fn main() -> Result<()> {
 
         vao
     };
-    let cube = Cube::new("textures/white.png")?;
+    let cube = Cube::new("textures/white.png", &[0.0, 0.0, 0.0])?;
 
+    let projection_matrix = perspective(Deg(45.0), (state.screen.width / state.screen.height) as f32, 0.01, 100.0);
+    let view_matrix = Mat4::from_translation(Vec3::unit_z() * -3.0);
     while !window.should_close() {
         process_events(&mut window, &events, &mut state);
 
@@ -169,13 +171,10 @@ fn main() -> Result<()> {
 
             // Draw calls and such
             shader_program[0].use_shader();
-            let projection_matrix = perspective(Deg(45.0), (width / height) as f32, 0.01, 100.0);
-            let model_matrix = Mat4::from_angle_x(Deg(-55.0))
-                * Mat4::from_axis_angle(
-                    Vec3::new(0.5, 1.0, 0.0).normalize(),
-                    Rad(1.0) * glfw.get_time() as f32,
-                );
-            let view_matrix = Mat4::from_translation(Vec3::unit_z() * -3.0);
+            let model_matrix = Mat4::from_axis_angle(
+                Vec3::new(0.5, 1.0, 0.0).normalize(),
+                Rad(1.0) * glfw.get_time() as f32,
+            );
             shader_program[0].set_mat4("model", &model_matrix);
             shader_program[0].set_mat4("view", &view_matrix);
             shader_program[0].set_mat4("projection", &projection_matrix);
@@ -190,7 +189,7 @@ fn main() -> Result<()> {
                 gl::UNSIGNED_INT,
                 ptr::null(),
             );
-            
+
             // Texture::use_empty_texture();
             // shader_program[1].use_shader();
             gl::BindVertexArray(vao[1]);

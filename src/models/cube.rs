@@ -3,7 +3,10 @@ use std::ptr;
 use anyhow::Result;
 
 use crate::{
-    render::{helpers::set_buffer_data_with_indices, vertex::Vertex},
+    render::{
+        helpers::{set_buffer_data, set_buffer_data_with_indices},
+        vertex::Vertex,
+    },
     texture::Texture,
 };
 
@@ -15,18 +18,54 @@ pub struct Cube {
 }
 
 impl Cube {
-    pub fn new(texture_path: &str) -> Result<Self> {
+    pub fn new(texture_path: &str, position: &[f32; 3]) -> Result<Self> {
         #[rustfmt::skip]
-        let points = vec![
-            Vertex { position: [-0.5, -0.5, -0.5], uv: [0.0, 0.0], color: [0.0, 0.0, 0.0] },
-            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] },
-            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] },
-            Vertex { position: [0.5, 0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] },
-            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 0.0], color: [1.0, 0.0, 0.0] },
-            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] },
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 0.0], color: [0.0, 1.0, 1.0] },
-            Vertex { position: [0.5, 0.5, 0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 0.0] },
+        let mut points = vec![
+            // bottom
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [0.0, 0.0], color: [0.0, 0.0, 0.0] }, // 0
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 1
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 1.0], color: [1.0, 1.0, 1.0] }, // 2
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 1.0], color: [1.0, 1.0, 1.0] }, // 2
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 1.0], color: [1.0, 1.0, 1.0] }, // 3
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 1
+            // top
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 0.0], color: [1.0, 0.0, 0.0] }, // 4
+            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 5
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color: [0.0, 1.0, 1.0] }, // 6
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color: [0.0, 1.0, 1.0] }, // 6
+            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color: [1.0, 1.0, 0.0] }, // 7
+            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 5
+            // front
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [0.0, 0.0], color: [0.0, 0.0, 0.0] }, // 0
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 1
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], color: [1.0, 0.0, 0.0] }, // 4
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], color: [1.0, 0.0, 0.0] }, // 4
+            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 1.0], color: [1.0, 1.0, 1.0] }, // 5
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 1
+            // back
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] }, // 2
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 3
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color: [0.0, 1.0, 1.0] }, // 6
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color: [0.0, 1.0, 1.0] }, // 6
+            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color: [1.0, 1.0, 0.0] }, // 7
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 3
+            // left
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] }, // 2
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0], color: [0.0, 0.0, 0.0] }, // 0
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color: [0.0, 1.0, 1.0] }, // 6
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color: [0.0, 1.0, 1.0] }, // 6
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [1.0, 1.0], color: [1.0, 0.0, 0.0] }, // 4
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0], color: [0.0, 0.0, 0.0] }, // 0
+            // right
+            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] }, // 1
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 3
+            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], color: [1.0, 1.0, 1.0] }, // 5
+            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], color: [1.0, 1.0, 1.0] }, // 5
+            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color: [1.0, 1.0, 0.0] }, // 7
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 3
+
         ];
+        points.iter_mut().for_each(|v| v.add_pos(position));
         #[rustfmt::skip]
         let indices = vec![
             0, 1, 2, 2, 3, 1, // down
@@ -42,7 +81,8 @@ impl Cube {
             gl::GenBuffers(1, &mut vbo);
             gl::GenBuffers(1, &mut ebo);
         }
-        set_buffer_data_with_indices(vao, vbo, ebo, &points, &indices);
+        // set_buffer_data_with_indices(vao, vbo, ebo, &points, &indices);
+        set_buffer_data(vao, vbo, &points);
         Ok(Self {
             points,
             indices,
@@ -51,15 +91,17 @@ impl Cube {
         })
     }
     pub fn draw(&self) {
-        self.texture.use_texture();
         unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+            self.texture.use_texture();
             gl::BindVertexArray(self.vao);
-            gl::DrawElements(
-                gl::TRIANGLES,
-                self.indices.len() as i32,
-                gl::UNSIGNED_INT,
-                ptr::null(),
-            );
+            gl::DrawArrays(gl::TRIANGLES, 0, self.points.len() as i32);
+            // gl::DrawElements(
+            //     gl::TRIANGLES,
+            //     self.indices.len() as i32,
+            //     gl::UNSIGNED_INT,
+            //     ptr::null(),
+            // );
         }
     }
 }
