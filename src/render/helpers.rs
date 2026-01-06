@@ -40,9 +40,9 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     });
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
-        // gl::Enable(gl::CULL_FACE);
-        // gl::CullFace(gl::BACK);
-        // gl::FrontFace(gl::CCW);
+        gl::Enable(gl::CULL_FACE);
+        gl::CullFace(gl::BACK);
+        gl::FrontFace(gl::CCW);
     }
     Ok((window, events))
 }
