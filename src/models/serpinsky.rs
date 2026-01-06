@@ -1,6 +1,6 @@
 use crate::{
     render::{
-        color::Color, helpers::{Mat4, set_buffer_data}, vertex::Vertex
+        color::Color, drawable::Drawable, helpers::{Mat4, set_buffer_data}, vertex::Vertex
     },
     shader::Shader,
     texture::Texture,
@@ -96,5 +96,26 @@ impl Serpinsky {
             gl::BindVertexArray(self.vao);
             gl::DrawArrays(gl::TRIANGLES, 0, self.points.len() as i32);
         }
+    }
+}
+
+impl Drawable for Serpinsky {
+    fn draw(&self, glfw: &glfw::Glfw, state: &crate::state::State) {
+        let transform = Mat4::identity()
+            * Mat4::from_scale(((glfw.get_time().sin() as f32) + 2.0) / 3.0)
+            * Mat4::from_angle_z(Rad(glfw.get_time() as f32));
+        unsafe {
+            // self.shader.use_shader();
+            // self.shader.set_transform(&transform);
+            // self.shader.set_int("tex", 0);
+            // self.shader.set_float("time", glfw.get_time() as f32);
+            gl::ActiveTexture(gl::TEXTURE0);
+            self.texture.use_texture();
+            gl::BindVertexArray(self.vao);
+            gl::DrawArrays(gl::TRIANGLES, 0, self.points.len() as i32);
+        }
+    }
+    fn get_texture_name(&self) -> String {
+        String::new()
     }
 }

@@ -67,8 +67,17 @@ impl Texture {
         }
         Ok(Self { id: texture })
     }
+    pub fn id(&self) -> u32 {
+        self.id
+    }
     pub fn new(texture_path: &str) -> Result<Self> {
         Self::with_config(texture_path, TextureConfig::default())
+    }
+    pub fn bind(&self, texture_unit: u32) {
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0 + texture_unit);
+            gl::BindTexture(gl::TEXTURE_2D, self.id);
+        }
     }
     pub fn use_texture(&self) {
         unsafe {
@@ -78,6 +87,14 @@ impl Texture {
     pub fn use_empty_texture() {
         unsafe {
             gl::BindTexture(gl::TEXTURE_2D, 0);
+        }
+    }
+}
+
+impl Drop for Texture {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteTextures(1, &self.id);
         }
     }
 }

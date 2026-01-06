@@ -131,7 +131,10 @@ impl Camera {
 
         if move_vector.magnitude() > 0.0 {
             move_vector = move_vector.normalize();
-            let speed = self.camera_speed * delta_time;
+            let mut speed = self.camera_speed * delta_time;
+            if matches!(window.get_key(glfw::Key::LeftControl), Action::Press | Action::Repeat) {
+                speed *= 3.0;
+            }
             self.position += move_vector * speed;
         }
 

@@ -4,7 +4,7 @@ use cgmath::{Deg, InnerSpace, Matrix4, Rad, Vector3, perspective};
 use log::warn;
 use thiserror::Error;
 
-use crate::{render::drawable::Drawable, shader::Shader, state::State};
+use crate::{render::drawable::Drawable, shader::Shader, state::State, texture::Texture};
 use anyhow::Result;
 
 #[derive(Debug, Error)]
@@ -16,6 +16,8 @@ pub enum RendererError {
 pub struct Renderer {
     drawables: Vec<Box<dyn Drawable>>,
 
+    textures: HashMap<String, Texture>,
+
     shaders: HashMap<String, Shader>,
     current_shader: Option<String>,
 }
@@ -25,6 +27,7 @@ impl Renderer {
         Self {
             drawables: vec![],
             shaders: HashMap::new(),
+            textures: HashMap::new(),
             current_shader: None,
         }
     }
@@ -51,8 +54,30 @@ impl Renderer {
         }
         Ok(())
     }
-    pub fn add_drawable<T: Drawable + 'static>(&mut self, object: T) {
+    pub fn add_drawable<T: Drawable + 'static>(&mut self, object: T) -> Result<()> {
+        let texture_name = object.get_texture_name();
+        if !self.textures.contains_key(&texture_name) {
+            match Texture::new(&texture_name) {
+                Ok(texture) => {
+                    self.textures.insert(texture_name.clone(), texture);
+                }
+                Err(e) => {
+                    warn!("Failed to load texture [{}]: {}", texture_name, e);
+                }
+            }
+        }
         self.drawables.push(Box::new(object));
+        Ok(())
+    }
+    fn draw_object(&self, object: &Box<dyn Drawable>, glfw: &mut glfw::Glfw, state: &State) {
+        let texture_name = object.get_texture_name();
+        if let Some(texture) = self.textures.get(&texture_name){
+            unsafe {
+                gl::ActiveTexture(gl::TEXTURE0);
+                gl::BindTexture(gl::TEXTURE_2D, texture.id());
+            }
+        }
+        object.draw(glfw, state);
     }
     pub fn render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let State {
@@ -82,8 +107,8 @@ impl Renderer {
         if let Err(e) = self.use_current_shader(&mvp) {
             warn!("Rendering error: [{e}]");
         }
-        for object in &mut self.drawables {
-            object.draw(glfw, &state);
+        for object in &self.drawables {
+            self.draw_object(object, glfw, &state);
         }
         unsafe {
             gl::DepthMask(gl::TRUE);
