@@ -95,7 +95,7 @@ impl Cube {
             indices: vec![],
             vao,
             position: Vector3::from(*position),
-            shader: Shader::new("shaders/cube/vert.glsl", "shaders/cube/frag.glsl")?,
+            shader: Shader::new("assets/shaders/cube/vert.glsl", "assets/shaders/cube/frag.glsl")?,
             texture: Texture::new(texture_path)?,
         })
     }

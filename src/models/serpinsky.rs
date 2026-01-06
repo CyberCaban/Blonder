@@ -24,8 +24,8 @@ impl Serpinsky {
         Ok(Self {
             points: vec![],
             vao: 0,
-            shader: Shader::new("shaders/serpinsky/vert.glsl", "shaders/serpinsky/frag.glsl")?,
-            texture: Texture::new("textures/cooler.png")?,
+            shader: Shader::new("assets/shaders/serpinsky/vert.glsl", "assets/shaders/serpinsky/frag.glsl")?,
+            texture: Texture::new("assets/textures/cooler.png")?,
         })
     }
     pub fn serp(

@@ -2,6 +2,7 @@
 name = "blonder"
 version = "0.1.0"
 edition = "2024"
+build = "src/build.rs"
 
 [dependencies]
 cgmath = "0.16.1"

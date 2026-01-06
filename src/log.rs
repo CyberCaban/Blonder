@@ -1,6 +1,12 @@
-use std::time::SystemTime;
+use std::{fs, path::Path, time::SystemTime};
 
 pub fn setup_logger() -> Result<(), fern::InitError> {
+    let logs_dir = Path::new("logs");
+    if !logs_dir.exists() {
+        if let Err(e) = fs::create_dir_all(&logs_dir) {
+            eprintln!("Failed to create logs directory");
+        }
+    }
     fern::Dispatch::new()
         .format(|out, message, record| {
             out.finish(format_args!(

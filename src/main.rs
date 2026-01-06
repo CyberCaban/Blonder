@@ -51,13 +51,13 @@ fn main() -> Result<()> {
     let mut state = State::default();
 
     let shader_program = vec![
-        Shader::new("shaders/camera/vert.glsl", "shaders/camera/frag.glsl")?,
-        Shader::new("shaders/vert_tex.glsl", "shaders/frag_tex.glsl")?,
-        Shader::new("shaders/vert.glsl", "shaders/frag.glsl")?,
+        Shader::new("assets/shaders/camera/vert.glsl", "assets/shaders/camera/frag.glsl")?,
+        Shader::new("assets/shaders/vert_tex.glsl", "assets/shaders/frag_tex.glsl")?,
+        Shader::new("assets/shaders/vert.glsl", "assets/shaders/frag.glsl")?,
     ];
     let texture = [
-        Texture::new("textures/liminal_space.png")?,
-        Texture::new("textures/cooler.png")?,
+        Texture::new("assets/textures/liminal_space.png")?,
+        Texture::new("assets/textures/cooler.png")?,
     ];
 
     let mut serp = Serpinsky::new()?;
@@ -147,8 +147,8 @@ fn main() -> Result<()> {
 
         vao
     };
-    let cube = Cube::new("textures/white.png", &[0.0, 0.0, 0.0])?;
-    let cube2 = Cube::new("textures/cooler.png", &[1.0, 1.0, 1.0])?;
+    let cube = Cube::new("assets/textures/white.png", &[0.0, 0.0, 0.0])?;
+    let cube2 = Cube::new("assets/textures/cooler.png", &[1.0, 1.0, 1.0])?;
 
     // let projection_matrix = ortho(
     //     -(aspect as f32) * 2.0,
