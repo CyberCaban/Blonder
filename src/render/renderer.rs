@@ -62,7 +62,7 @@ impl Renderer {
                     self.textures.insert(texture_name.clone(), texture);
                 }
                 Err(e) => {
-                    warn!("Failed to load texture [{}]: {}", texture_name, e);
+                    warn!("Failed to load texture: {}", e);
                 }
             }
         }

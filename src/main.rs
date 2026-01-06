@@ -53,7 +53,8 @@ fn main() -> Result<()> {
     serp.prepare();
     let _ = renderer.add_drawable(serp);
     let mut rng = rand::thread_rng();
-    let (low, high) = (-10.0, 10.0);
+    let w = 20.0;
+    let (low, high) = (-w, w);
 
     let texture_pool = [
         "assets/textures/transparency.png",
@@ -62,7 +63,7 @@ fn main() -> Result<()> {
         "assets/textures/white.png",
     ];
 
-    for i in 0..100 {
+    for _ in 0..10_000 {
         let cube = Cube::new(CubeSettings {
             position: [
                 rng.gen_range(low, high),
