@@ -16,6 +16,7 @@ pub struct Camera {
     pub position: Vector3<f32>,
     pub up: Vector3<f32>,
     pub front: Vector3<f32>,
+    pub right: Vector3<f32>,
     pub camera_speed: f32,
     pub sensitivity: f32,
     pub yaw: f32,
@@ -36,10 +37,11 @@ impl Camera {
         let camera_right = up.cross(camera_direction).normalize();
         let camera_up = camera_direction.cross(camera_right);
         let camera_front = Vector3::new(0.0, 0.0, -1.0);
-        Self {
+        let mut camera = Camera {
             position: camera_pos,
             up: camera_up,
             front: camera_front,
+            right: camera_right,
             camera_speed: 3.55,
             sensitivity: 0.001,
             last_x: WIDTH as f32,
@@ -49,7 +51,9 @@ impl Camera {
             yaw: 0.0,
             pitch: 0.0,
             roll: 0.0,
-        }
+        };
+        camera.update_vectors();
+        camera
     }
     pub fn view_matrix(&self) -> Matrix4<f32> {
         let center = self.position + self.front;
@@ -74,19 +78,13 @@ impl Camera {
         self.yaw += x_offset;
         self.pitch += y_offset;
         let angle = MAX_PITCH_ANGLE * self.sensitivity * 10.0;
-        dbg!(self.pitch, angle);
         if self.pitch > angle {
             self.pitch = angle
         }
         if self.pitch < -angle {
             self.pitch = -angle
         }
-        let direction = Vector3::new(
-            Rad(self.yaw).cos() * Rad(self.pitch).cos(),
-            Rad(self.pitch).sin(),
-            Rad(self.yaw).sin() * Rad(self.pitch).cos(),
-        );
-        self.front = direction.normalize();
+        self.update_vectors();
     }
     pub fn process_capture(&mut self, window: &mut glfw::Window) {
         if self.is_captured {
@@ -110,19 +108,25 @@ impl Camera {
             // fly cam
             // move_vector += self.front;
             // fps cam
-            move_vector += Vector3::new(self.front.x, 0.0, self.front.z);
+            move_vector += Vector3::new(self.front.x, 0.0, self.front.z).normalize();
         }
         if matches!(window.get_key(glfw::Key::S), Action::Press | Action::Repeat) {
             // fly cam
             // move_vector -= self.front;
             // fps cam
-            move_vector -= Vector3::new(self.front.x, 0.0, self.front.z);
+            move_vector -= Vector3::new(self.front.x, 0.0, self.front.z).normalize();
         }
         if matches!(window.get_key(glfw::Key::A), Action::Press | Action::Repeat) {
-            move_vector += -self.front.cross(self.up).normalize();
+            // fly cam
+            // move_vector += -self.front.cross(self.up).normalize();
+            // fps cam
+            move_vector -= self.right;
         }
         if matches!(window.get_key(glfw::Key::D), Action::Press | Action::Repeat) {
-            move_vector += self.front.cross(self.up).normalize();
+            // fly cam
+            // move_vector += self.front.cross(self.up).normalize();
+            // fps cam
+            move_vector += self.right;
         }
 
         if move_vector.magnitude() > 0.0 {
@@ -143,5 +147,16 @@ impl Camera {
         ) {
             self.position.y -= self.camera_speed * delta_time;
         }
+    }
+    fn update_vectors(&mut self) {
+        let direction = Vector3::new(
+            Rad(self.yaw).cos() * Rad(self.pitch).cos(),
+            Rad(self.pitch).sin(),
+            Rad(self.yaw).sin() * Rad(self.pitch).cos(),
+        );
+        self.front = direction.normalize();
+        let world_up = Vector3::new(0.0, 1.0, 0.0);
+        self.right = self.front.cross(world_up).normalize();
+        self.up = self.right.cross(self.front).normalize();
     }
 }
