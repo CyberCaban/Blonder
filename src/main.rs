@@ -63,7 +63,7 @@ fn main() -> Result<()> {
         "assets/textures/white.png",
     ];
 
-    for _ in 0..10_000 {
+    for _ in 0..30_000 {
         let cube = Cube::new(CubeSettings {
             position: [
                 rng.gen_range(low, high),
@@ -76,6 +76,7 @@ fn main() -> Result<()> {
                 rng.gen_range(low, high),
             ],
             texture_name: texture_pool[rng.gen_range(0, texture_pool.len())],
+            ..Default::default()
         }).unwrap();
         let _ = renderer.add_drawable(cube);
     }
@@ -88,6 +89,7 @@ fn main() -> Result<()> {
         texture_name: "assets/textures/cooler.png",
         position: [1.0, 0.0, 0.0],
         rotation: [3.0, 1.0, 0.0],
+        ..Default::default()
     })?;
     let _ = renderer.add_drawable(cube);
     let _ = renderer.add_drawable(cube2);
@@ -101,7 +103,7 @@ fn main() -> Result<()> {
         process_events(&mut window, &events, &mut state);
         state.camera.process_input(&mut window, state.delta_time);
 
-        renderer.render(&mut glfw, &state);
+        renderer.render_batch(&mut glfw, &state);
 
         window.swap_buffers();
     }

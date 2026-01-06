@@ -5,3 +5,4 @@ pub mod consts;
 pub mod color;
 pub mod renderer;
 pub mod drawable;
+pub mod blend_mode;

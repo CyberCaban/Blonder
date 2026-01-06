@@ -1,6 +1,9 @@
 use crate::{
     render::{
-        color::Color, drawable::Drawable, helpers::{Mat4, set_buffer_data}, vertex::Vertex
+        color::Color,
+        drawable::Drawable,
+        helpers::{Mat4, set_buffer_data},
+        vertex::Vertex,
     },
     shader::Shader,
     texture::Texture,
@@ -23,7 +26,10 @@ impl Serpinsky {
         Ok(Self {
             points: vec![],
             vao: 0,
-            shader: Shader::new("assets/shaders/serpinsky/vert.glsl", "assets/shaders/serpinsky/frag.glsl")?,
+            shader: Shader::new(
+                "assets/shaders/serpinsky/vert.glsl",
+                "assets/shaders/serpinsky/frag.glsl",
+            )?,
             texture: Texture::new("assets/textures/cooler.png")?,
         })
     }
@@ -117,5 +123,11 @@ impl Drawable for Serpinsky {
     }
     fn get_texture_name(&self) -> String {
         String::new()
+    }
+    fn get_shader_name(&self) -> String {
+        String::new()
+    }
+    fn get_blend_mode(&self) -> crate::render::blend_mode::BlendMode {
+        crate::render::blend_mode::BlendMode::Opaque
     }
 }

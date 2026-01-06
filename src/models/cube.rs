@@ -3,7 +3,10 @@ use cgmath::Vector3;
 use glfw::Glfw;
 
 use crate::{
-    render::{color::Color, drawable::Drawable, helpers::set_buffer_data, vertex::Vertex},
+    render::{
+        blend_mode::BlendMode, color::Color, drawable::Drawable, helpers::set_buffer_data,
+        vertex::Vertex,
+    },
     shader::Shader,
     state::State,
     texture::Texture,
@@ -14,6 +17,7 @@ pub struct CubeSettings<'a> {
     pub position: [f32; 3],
     pub rotation: [f32; 3],
     pub texture_name: &'a str,
+    pub blend_mode: BlendMode,
 }
 
 pub struct Cube {
@@ -22,6 +26,7 @@ pub struct Cube {
     pub vao: u32,
     pub texture: String,
     pub shader: Shader,
+    pub blend_mode: BlendMode,
 }
 
 impl Cube {
@@ -92,6 +97,7 @@ impl Cube {
                 "assets/shaders/cube/vert.glsl",
                 "assets/shaders/cube/frag.glsl",
             )?,
+            blend_mode: settings.blend_mode,
             texture: settings.texture_name.to_owned(),
         })
     }
@@ -108,5 +114,11 @@ impl Drawable for Cube {
     }
     fn get_texture_name(&self) -> String {
         self.texture.to_string()
+    }
+    fn get_shader_name(&self) -> String {
+        String::new()
+    }
+    fn get_blend_mode(&self) -> crate::render::blend_mode::BlendMode {
+        self.blend_mode
     }
 }
