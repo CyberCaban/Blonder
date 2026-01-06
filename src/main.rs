@@ -22,6 +22,7 @@ use crate::{
 extern crate gl;
 extern crate glfw;
 
+mod camera;
 mod events;
 mod log;
 mod models;
@@ -29,7 +30,6 @@ mod render;
 mod shader;
 mod state;
 mod texture;
-mod camera;
 
 const VERTICES_NUM: i32 = 4;
 const VERTICES_SIZE: i32 = 3;
@@ -148,7 +148,7 @@ fn main() -> Result<()> {
         vao
     };
     let cube = Cube::new("textures/cooler.png", &[0.0, 0.0, 0.0])?;
-    let cube2 = Cube::new("textures/liminal_space.png", &[1.0, 1.0, 1.0])?;
+    let cube2 = Cube::new("textures/transparency.png", &[1.0, 1.0, 1.0])?;
 
     // let projection_matrix = ortho(
     //     -(aspect as f32) * 2.0,
@@ -159,6 +159,7 @@ fn main() -> Result<()> {
     //     10.0,
     // );
     while !window.should_close() {
+        glfw.poll_events();
         let current_frame = glfw.get_time() as f32;
         state.delta_time = current_frame - state.last_frame;
         state.last_frame = current_frame;
@@ -190,7 +191,7 @@ fn main() -> Result<()> {
                 1.0
             };
             let model_matrix =
-                Mat4::from_axis_angle(Vec3::new(0.5, 1.0, 0.0).normalize(), Rad(0.0));
+                Mat4::from_axis_angle(Vec3::new(1.0, 0.0, 0.0).normalize(), Rad(0.0));
             let view_matrix = Matrix4::from_translation(Vector3::new(0.0, 0.0, -3.0));
             let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 100.0);
 
@@ -223,7 +224,6 @@ fn main() -> Result<()> {
         }
 
         window.swap_buffers();
-        glfw.poll_events();
     }
     Ok(())
 }

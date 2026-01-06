@@ -1,7 +1,10 @@
 use cgmath::{Matrix4, SquareMatrix, Vector3};
 use glfw::{GlfwReceiver, WindowEvent};
 
-use crate::{camera::Camera, render::consts::{HEIGHT, WIDTH}};
+use crate::{
+    camera::Camera,
+    render::consts::{HEIGHT, WIDTH},
+};
 
 extern crate gl;
 
@@ -44,6 +47,7 @@ impl Default for State {
             camera: Camera::new(),
             delta_time: 0.0,
             last_frame: 0.0,
+
         }
     }
 }

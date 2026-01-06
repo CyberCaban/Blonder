@@ -16,11 +16,13 @@ pub type Mat4 = cgmath::Matrix4<f32>;
 pub type Vec3 = cgmath::Vector3<f32>;
 
 pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
+    // MSAA x2/4/8
+    // glfw.window_hint(glfw::WindowHint::Samples(Some(8)));
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
         glfw::OpenGlProfileHint::Core,
     ));
-    glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
+    glfw.set_swap_interval(glfw::SwapInterval::None);
     let (mut window, events) = glfw
         .create_window(WIDTH, HEIGHT, "Hello", glfw::WindowMode::Windowed)
         .context("Failed to create window")?;
@@ -38,6 +40,9 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     });
     unsafe {
         gl::Enable(gl::DEPTH_TEST);
+        // gl::Enable(gl::CULL_FACE);
+        // gl::CullFace(gl::BACK);
+        // gl::FrontFace(gl::CCW);
     }
     Ok((window, events))
 }
