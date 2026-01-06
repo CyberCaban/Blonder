@@ -1,7 +1,6 @@
 use crate::{
     render::{
-        helpers::{Mat4, set_buffer_data},
-        vertex::Vertex,
+        color::Color, helpers::{Mat4, set_buffer_data}, vertex::Vertex
     },
     shader::Shader,
     texture::Texture,
@@ -55,17 +54,17 @@ impl Serpinsky {
             Vertex {
                 position: px,
                 uv: [0.5, -0.5],
-                color: [0.0, 0.0, 0.0],
+                color: Color::black(),
             },
             Vertex {
                 position: py,
                 uv: [1.0, 1.0],
-                color: [0.0, 0.0, 0.0],
+                color: Color::black(),
             },
             Vertex {
                 position: pz,
                 uv: [0.0, 1.0],
-                color: [0.0, 0.0, 0.0],
+                color: Color::black(),
             },
         ]);
 

@@ -1,13 +1,10 @@
-use std::ptr;
-
 use anyhow::Result;
-use cgmath::{Deg, InnerSpace, Matrix4, Rad, Vector3, perspective};
+use cgmath::Vector3;
 use glfw::Glfw;
 
 use crate::{
     render::{
-        helpers::{set_buffer_data, set_buffer_data_with_indices},
-        vertex::Vertex,
+        color::Color, helpers::set_buffer_data, vertex::Vertex
     },
     shader::Shader,
     state::State,
@@ -28,48 +25,48 @@ impl Cube {
         // TODO make vertices render CCW to enable backface culling
         #[rustfmt::skip]
         let mut points = vec![
-            // bottom
-            Vertex { position: [-0.5, -0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] }, // 0
-            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 2
-            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 1
-            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 1
-            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 2
-            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 1.0], color:   [1.0, 1.0, 1.0] }, // 3
-            // top
-            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] }, // 4
-            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 5
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 6
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 6
-            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 5
-            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color:   [1.0, 1.0, 1.0] }, // 7
-            // front
-            Vertex { position: [-0.5, -0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] }, // 0
-            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 1
-            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 4
-            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 4
-            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 1
-            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 1.0], color:   [1.0, 1.0, 1.0] }, // 5
             // back
-            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] }, // 2
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 6
-            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 3
-            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 3
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 6
-            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color:   [1.0, 1.0, 1.0] }, // 7
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [0.0, 0.0], color: Color::white() }, // 0
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 1.0], color:  Color::white() }, // 2
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 1
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 1
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 1.0], color:  Color::white() }, // 2
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 1.0], color:   Color::white() }, // 3
+            // front
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 0.0], color: Color::white() }, // 4
+            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], color:  Color::white() }, // 5
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 6
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 6
+            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], color:  Color::white() }, // 5
+            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color:   Color::white() }, // 7
+            // bottom
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [0.0, 0.0], color: Color::white() }, // 0
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 1
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 4
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 4
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 1
+            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 1.0], color:   Color::white() }, // 5
+            // top
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 0.0], color: Color::white() }, // 2
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 6
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 3
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 3
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 6
+            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color:   Color::white() }, // 7
             // left
-            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 2
-            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 0
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:   [1.0, 1.0, 1.0] }, // 6
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:   [1.0, 1.0, 1.0] }, // 6
-            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0], color: [1.0, 1.0, 1.0] }, // 0
-            Vertex { position: [-0.5, -0.5, 0.5], uv: [1.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 4
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 0.0], color:  Color::white() }, // 2
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0], color: Color::white() }, // 0
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:   Color::white() }, // 6
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:   Color::white() }, // 6
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0], color: Color::white() }, // 0
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [1.0, 1.0], color:  Color::white() }, // 4
             // right
-            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], color: [1.0, 1.0, 1.0] }, // 1
-            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 3
-            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 5
-            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  [1.0, 1.0, 1.0] }, // 5
-            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  [1.0, 1.0, 1.0] }, // 3
-            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color:   [1.0, 1.0, 1.0] }, // 7
+            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], color: Color::white() }, // 1
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 3
+            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 5
+            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 5
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 3
+            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color:   Color::white() }, // 7
 
         ];
         points.iter_mut().for_each(|v| v.add_pos(position));
@@ -95,7 +92,10 @@ impl Cube {
             indices: vec![],
             vao,
             position: Vector3::from(*position),
-            shader: Shader::new("assets/shaders/cube/vert.glsl", "assets/shaders/cube/frag.glsl")?,
+            shader: Shader::new(
+                "assets/shaders/cube/vert.glsl",
+                "assets/shaders/cube/frag.glsl",
+            )?,
             texture: Texture::new(texture_path)?,
         })
     }

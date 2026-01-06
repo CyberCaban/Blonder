@@ -39,10 +39,16 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
             .unwrap_or(std::ptr::null())
     });
     unsafe {
+        // depth buffer
         gl::Enable(gl::DEPTH_TEST);
+        // backface culling
         gl::Enable(gl::CULL_FACE);
         gl::CullFace(gl::BACK);
         gl::FrontFace(gl::CCW);
+        // texture blending
+        gl::Enable(gl::BLEND);
+        gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+        gl::BlendEquation(gl::FUNC_ADD);
     }
     Ok((window, events))
 }
@@ -69,7 +75,7 @@ pub fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex]) {
         gl::EnableVertexAttribArray(0);
         gl::VertexAttribPointer(
             1,
-            3,
+            4,
             gl::FLOAT,
             gl::FALSE,
             (std::mem::size_of::<Vertex>()) as GLsizei,
@@ -123,7 +129,7 @@ pub fn set_buffer_data_with_indices(
         gl::EnableVertexAttribArray(0);
         gl::VertexAttribPointer(
             1,
-            3,
+            4,
             gl::FLOAT,
             gl::FALSE,
             (std::mem::size_of::<Vertex>()) as GLsizei,
