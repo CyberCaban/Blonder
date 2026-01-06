@@ -148,7 +148,7 @@ fn main() -> Result<()> {
         vao
     };
     let cube = Cube::new("textures/white.png", &[0.0, 0.0, 0.0])?;
-    let cube2 = Cube::new("textures/transparency.png", &[1.0, 1.0, 1.0])?;
+    let cube2 = Cube::new("textures/cooler.png", &[1.0, 1.0, 1.0])?;
 
     // let projection_matrix = ortho(
     //     -(aspect as f32) * 2.0,
