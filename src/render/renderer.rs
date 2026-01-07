@@ -159,18 +159,11 @@ impl Renderer {
                 if *wireframe { gl::LINE } else { gl::FILL },
             );
         }
-        let aspect = if state.screen.height > 0 {
-            state.screen.width as f32 / state.screen.height as f32
-        } else {
-            1.0
-        };
-        let model_matrix =
-            Matrix4::from_axis_angle(Vector3::new(1.0, 0.0, 0.0).normalize(), Rad(0.0));
-        let view_matrix = Matrix4::from_translation(Vector3::new(0.0, 0.0, -3.0));
-        let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 100.0);
-
-        let view_matrix = state.camera.view_matrix();
-        let mvp = projection_matrix * view_matrix * model_matrix;
+        if let Some(shader) = self.get_current_shader() {
+            shader.set_vec3("lightColor", &Vector3::new(1.0, 0.0, 0.0));
+        }
+        let (m, v, p) = self.prepare_mvp(state);
+        let mvp = p * v * m;
         if let Err(e) = self.use_current_shader(&mvp) {
             warn!("Rendering error: [{e}]");
         }
@@ -193,6 +186,7 @@ impl Renderer {
             }
             if let Some(shader) = self.shaders.get(&key.shader_name) {
                 shader.use_shader();
+                shader.set_vec3("lightColor", &Vector3::new(1.0, 0.5, 0.31));
                 self.current_shader = Some(key.shader_name.clone());
             }
 

@@ -42,6 +42,7 @@ impl Default for CubeSettings<'_> {
 pub struct Cube {
     pub points: Vec<Vertex>,
     pub position: Vector3<f32>,
+    pub vbo: u32,
     pub vao: u32,
     pub texture: String,
     pub shader_info: ShaderInfo,
@@ -100,17 +101,17 @@ impl Cube {
             v.add_pos(&settings.position);
             v.rotate_around(&settings.position, &settings.rotation);
         });
-        let (mut vao, mut vbo, mut ebo) = (0, 0, 0);
+        let (mut vao, mut vbo) = (0, 0);
         unsafe {
             gl::GenVertexArrays(1, &mut vao);
             gl::GenBuffers(1, &mut vbo);
-            gl::GenBuffers(1, &mut ebo);
         }
         // set_buffer_data_with_indices(vao, vbo, ebo, &points, &indices);
         set_buffer_data(vao, vbo, &points);
         Ok(Self {
             points: vec![],
             vao,
+            vbo,
             position: Vector3::from(settings.position),
             shader_info: settings.shader_name,
             blend_mode: settings.blend_mode,
@@ -138,6 +139,15 @@ impl Drawable for Cube {
         self.blend_mode
     }
     fn requires_shader(&self) -> bool {
-        false
+        true
+    }
+}
+
+impl Drop for Cube {
+    fn drop(&mut self) {
+        unsafe {
+            gl::DeleteVertexArrays(1, &self.vao);
+            gl::DeleteBuffers(1, &self.vbo);
+        }
     }
 }

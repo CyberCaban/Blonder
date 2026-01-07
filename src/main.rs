@@ -42,9 +42,13 @@ fn main() -> Result<()> {
     //     "assets/shaders/camera/vert.glsl",
     //     "assets/shaders/camera/frag.glsl",
     // )?);
+    // renderer.add_default_shader(Shader::new(
+    //     "assets/shaders/checkerboard/vert.glsl",
+    //     "assets/shaders/checkerboard/frag.glsl",
+    // )?);
     renderer.add_default_shader(Shader::new(
-        "assets/shaders/checkerboard/vert.glsl",
-        "assets/shaders/checkerboard/frag.glsl",
+        "assets/shaders/light/vert.glsl",
+        "assets/shaders/light/frag.glsl",
     )?);
 
     let mut serp = Serpinsky::new()?;
