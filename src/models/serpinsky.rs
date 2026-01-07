@@ -91,27 +91,22 @@ impl Serpinsky {
 
 impl Drawable for Serpinsky {
     fn draw(&self, glfw: &glfw::Glfw, state: &crate::state::State) {
-        let transform = Matrix4::identity()
-            * Matrix4::from_scale(((glfw.get_time().sin() as f32) + 2.0) / 3.0)
-            * Matrix4::from_angle_z(Rad(glfw.get_time() as f32));
         unsafe {
-            // self.shader.use_shader();
-            // self.shader.set_transform(&transform);
-            // self.shader.set_int("tex", 0);
-            // self.shader.set_float("time", glfw.get_time() as f32);
-            gl::ActiveTexture(gl::TEXTURE0);
-            self.texture.use_texture();
             gl::BindVertexArray(self.vao);
             gl::DrawArrays(gl::TRIANGLES, 0, self.count as i32);
         }
     }
     fn get_texture_name(&self) -> String {
-        String::new()
+        "assets/textures/cooler.png".to_string()
+        // "".to_string()
     }
     fn get_shader_name(&self) -> ShaderInfo {
         self.shader.clone()
     }
     fn requires_shader(&self) -> bool {
+        false
+    }
+    fn requires_texture(&self) -> bool {
         false
     }
     fn get_blend_mode(&self) -> crate::render::blend_mode::BlendMode {

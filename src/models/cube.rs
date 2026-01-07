@@ -59,7 +59,7 @@ impl Cube {
             Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], color:  Color::white() }, // 1
             Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], color:  Color::white() }, // 1
             Vertex { position: [-0.5, 0.5, -0.5], uv: [1.0, 1.0], color:  Color::white() }, // 2
-            Vertex { position: [0.5, 0.5, -0.5], uv: [0.0, 1.0], color:   Color::white() }, // 3
+            Vertex { position: [0.5, 0.5, -0.5], uv: [0.0, 1.0],  color:   Color::white() }, // 3
             // front
             Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 0.0], color: Color::white() }, // 4
             Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], color:  Color::white() }, // 5
@@ -135,10 +135,13 @@ impl Drawable for Cube {
     fn get_shader_name(&self) -> ShaderInfo {
         self.shader_info.clone()
     }
-    fn get_blend_mode(&self) -> crate::render::blend_mode::BlendMode {
+    fn get_blend_mode(&self) -> BlendMode {
         self.blend_mode
     }
     fn requires_shader(&self) -> bool {
+        false
+    }
+    fn requires_texture(&self) -> bool {
         true
     }
 }

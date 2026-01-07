@@ -6,5 +6,6 @@ pub trait Drawable {
     fn get_texture_name(&self) -> String;
     fn get_shader_name(&self) -> ShaderInfo;
     fn requires_shader(&self) -> bool;
+    fn requires_texture(&self) -> bool;
     fn get_blend_mode(&self) -> BlendMode;
 }

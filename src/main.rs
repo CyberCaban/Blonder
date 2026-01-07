@@ -42,14 +42,14 @@ fn main() -> Result<()> {
     //     "assets/shaders/camera/vert.glsl",
     //     "assets/shaders/camera/frag.glsl",
     // )?);
-    // renderer.add_default_shader(Shader::new(
-    //     "assets/shaders/checkerboard/vert.glsl",
-    //     "assets/shaders/checkerboard/frag.glsl",
-    // )?);
     renderer.add_default_shader(Shader::new(
-        "assets/shaders/light/vert.glsl",
-        "assets/shaders/light/frag.glsl",
+        "assets/shaders/checkerboard/vert.glsl",
+        "assets/shaders/checkerboard/frag.glsl",
     )?);
+    // renderer.add_default_shader(Shader::new(
+    //     "assets/shaders/light/vert.glsl",
+    //     "assets/shaders/light/frag.glsl",
+    // )?);
 
     let mut serp = Serpinsky::new()?;
     let d = 20.0;
@@ -108,7 +108,7 @@ fn main() -> Result<()> {
         process_events(&mut window, &events, &mut state);
         state.camera.process_input(&mut window, state.delta_time);
 
-        renderer.render_batch(&mut glfw, &state);
+        renderer.render_checkerboard(&mut glfw, &state);
 
         window.swap_buffers();
     }

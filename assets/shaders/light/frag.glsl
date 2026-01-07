@@ -6,9 +6,14 @@ in vec2 TexCoord;
 uniform sampler2D tex;
 uniform vec3 lightColor;
 void main() {
-    vec4 texColor = texture(tex, TexCoord) * vec4(ourColor.xyz * lightColor, 1.0);
-    if (texColor.a < 0.1)
+    float ambientStrength = 0.1;
+    vec3 ambient = ambientStrength * lightColor;
+    vec4 textureColor = texture(tex, TexCoord);
+    vec4 objectColor = vec4(ourColor.xyz * lightColor, 1.0);
+    vec4 ambientColor = vec4(objectColor.xyz * ambient, objectColor.w);
+    vec4 result = textureColor * ambientColor;
+    if(result.a < 0.1)
         discard;
 
-    FragColor = texColor;
+    FragColor = result;
 }

@@ -65,7 +65,7 @@ impl Renderer {
     }
     pub fn add_drawable<T: Drawable + 'static>(&mut self, object: T) -> Result<()> {
         let texture_name = object.get_texture_name();
-        if !self.textures.contains_key(&texture_name) {
+        if object.requires_texture() && !self.textures.contains_key(&texture_name) {
             match Texture::new(&texture_name) {
                 Ok(texture) => {
                     self.textures.insert(texture_name.clone(), texture);
@@ -146,6 +146,35 @@ impl Renderer {
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
         }
     }
+    fn batch_render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
+        let batches = {
+            let mut batches: HashMap<BatchKey, Vec<&Box<dyn Drawable>>> = HashMap::new();
+            for object in &self.drawables {
+                let key = BatchKey::from_object(object.as_ref());
+                batches.entry(key).or_default().push(object);
+            }
+            batches
+        };
+
+        for (key, objects) in batches {
+            if let Some(texture) = self.textures.get(&key.texture_name) {
+                unsafe {
+                    gl::ActiveTexture(gl::TEXTURE0);
+                    texture.use_texture();
+                }
+            }
+            if let Some(shader) = self.shaders.get(&key.shader_name) {
+                // shader.use_shader();
+                // shader.set_vec3("lightColor", &Vector3::new(1.0, 1.0, 1.0));
+                self.current_shader = Some(key.shader_name.clone());
+            }
+
+            // key.blend_mode.apply();
+            for object in objects {
+                object.draw(glfw, state);
+            }
+        }
+    }
     pub fn render_batch(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let State {
             color, wireframe, ..
@@ -167,34 +196,7 @@ impl Renderer {
         if let Err(e) = self.use_current_shader(&mvp) {
             warn!("Rendering error: [{e}]");
         }
-
-        let batches = {
-            let mut batches: HashMap<BatchKey, Vec<&Box<dyn Drawable>>> = HashMap::new();
-            for object in &self.drawables {
-                let key = BatchKey::from_object(object.as_ref());
-                batches.entry(key).or_default().push(object);
-            }
-            batches
-        };
-
-        for (key, objects) in batches {
-            if let Some(texture) = self.textures.get(&key.texture_name) {
-                unsafe {
-                    gl::ActiveTexture(gl::TEXTURE0);
-                    texture.use_texture();
-                }
-            }
-            if let Some(shader) = self.shaders.get(&key.shader_name) {
-                shader.use_shader();
-                shader.set_vec3("lightColor", &Vector3::new(1.0, 0.5, 0.31));
-                self.current_shader = Some(key.shader_name.clone());
-            }
-
-            // key.blend_mode.apply();
-            for object in objects {
-                object.draw(glfw, state);
-            }
-        }
+        self.batch_render(glfw, state);
 
         unsafe {
             gl::DepthMask(gl::TRUE);
@@ -208,7 +210,7 @@ impl Renderer {
         let State {
             color, wireframe, ..
         } = state;
-        static mut FRAME_PARITY: bool = false;
+        static mut FRAME_COUNT: u32 = 0;
         unsafe {
             gl::ClearColor(color.0, color.1, color.2, color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -219,11 +221,18 @@ impl Renderer {
             );
         }
         unsafe {
-            let render_black = FRAME_PARITY;
-            FRAME_PARITY = !FRAME_PARITY;
+            FRAME_COUNT += 1;
+            let pattern = match FRAME_COUNT % 4 {
+                0 => 0b00,
+                1 => 0b01,
+                2 => 0b10,
+                3 => 0b11,
+                _ => 0,
+            };
 
             if let Some(shader) = self.get_current_shader() {
-                shader.set_int("checkerboardPattern", 0);
+                // shader.set_int("checkerboardPattern", pattern);
+                // shader.set_int("checkerboardFrame", (FRAME_COUNT % 4) as i32);
                 shader.set_mat4("model", &m);
                 shader.set_float("farPlane", 10.0);
                 shader.set_vec3("cameraPos", &state.camera.position);
@@ -232,9 +241,7 @@ impl Renderer {
             if let Err(e) = self.use_current_shader(&mvp) {
                 warn!("Rendering error: [{e}]");
             }
-            for object in &self.drawables {
-                self.draw_object(object, glfw, &state);
-            }
+            self.batch_render(glfw, state);
         }
         unsafe {
             gl::DepthMask(gl::TRUE);
