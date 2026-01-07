@@ -1,17 +1,11 @@
 use crate::{
-    render::{
-        color::Color,
-        drawable::Drawable,
-        helpers::{Mat4, set_buffer_data},
-        vertex::Vertex,
-    },
-    shader::{Shader, ShaderInfo},
+    render::{color::Color, drawable::Drawable, helpers::set_buffer_data, vertex::Vertex},
+    shader::ShaderInfo,
     texture::Texture,
 };
 
-use anyhow::{Context as _, Result};
-use cgmath::{Rad, SquareMatrix as _};
-use glfw::Glfw;
+use anyhow::Result;
+use cgmath::{Matrix4, Rad, SquareMatrix};
 
 #[derive(Debug)]
 pub struct Serpinsky {
@@ -28,10 +22,10 @@ impl Serpinsky {
             points: vec![],
             vao: 0,
             count: 0,
-            shader: ShaderInfo{
+            shader: ShaderInfo {
                 name: "serpinsky".to_string(),
-                vertex_path:"assets/shaders/serpinsky/vert.glsl".to_string(),
-                fragment_path:"assets/shaders/serpinsky/frag.glsl".to_string(),
+                vertex_path: "assets/shaders/serpinsky/vert.glsl".to_string(),
+                fragment_path: "assets/shaders/serpinsky/frag.glsl".to_string(),
             },
             texture: Texture::new("assets/textures/cooler.png")?,
         })
@@ -97,9 +91,9 @@ impl Serpinsky {
 
 impl Drawable for Serpinsky {
     fn draw(&self, glfw: &glfw::Glfw, state: &crate::state::State) {
-        let transform = Mat4::identity()
-            * Mat4::from_scale(((glfw.get_time().sin() as f32) + 2.0) / 3.0)
-            * Mat4::from_angle_z(Rad(glfw.get_time() as f32));
+        let transform = Matrix4::identity()
+            * Matrix4::from_scale(((glfw.get_time().sin() as f32) + 2.0) / 3.0)
+            * Matrix4::from_angle_z(Rad(glfw.get_time() as f32));
         unsafe {
             // self.shader.use_shader();
             // self.shader.set_transform(&transform);

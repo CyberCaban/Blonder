@@ -12,12 +12,9 @@ use crate::{
     state::Events,
 };
 
-pub type Mat4 = cgmath::Matrix4<f32>;
-pub type Vec3 = cgmath::Vector3<f32>;
-
 pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     // MSAA x2/4/8
-    // glfw.window_hint(glfw::WindowHint::Samples(Some(8)));
+    glfw.window_hint(glfw::WindowHint::Samples(Some(8)));
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
         glfw::OpenGlProfileHint::Core,

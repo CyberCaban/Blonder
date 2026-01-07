@@ -80,14 +80,20 @@ impl Renderer {
             match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
                 Ok(s) => {
                     self.shaders.insert(shader_name.name, s);
-                },
+                }
                 Err(e) => {
                     warn!("Failer to load shader: [{}]", e);
-                },
+                }
             }
         }
         self.drawables.push(Box::new(object));
         Ok(())
+    }
+    fn get_current_shader(&self) -> Option<&Shader> {
+        match &self.current_shader {
+            Some(name) => self.shaders.get(name),
+            None => None,
+        }
     }
     fn draw_object(&self, object: &Box<dyn Drawable>, glfw: &mut glfw::Glfw, state: &State) {
         let texture_name = object.get_texture_name();
@@ -98,6 +104,20 @@ impl Renderer {
             }
         }
         object.draw(glfw, state);
+    }
+    fn prepare_mvp(&self, state: &State) -> (Matrix4<f32>, Matrix4<f32>, Matrix4<f32>) {
+        let aspect = if state.screen.height > 0 {
+            state.screen.width as f32 / state.screen.height as f32
+        } else {
+            1.0
+        };
+        let model_matrix =
+            Matrix4::from_axis_angle(Vector3::new(1.0, 0.0, 0.0).normalize(), Rad(0.0));
+        let view_matrix = Matrix4::from_translation(Vector3::new(0.0, 0.0, -3.0));
+        let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 100.0);
+
+        let view_matrix = state.camera.view_matrix();
+        (model_matrix, view_matrix, projection_matrix)
     }
     pub fn render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let State {
@@ -112,18 +132,8 @@ impl Renderer {
                 if *wireframe { gl::LINE } else { gl::FILL },
             );
         }
-        let aspect = if state.screen.height > 0 {
-            state.screen.width as f32 / state.screen.height as f32
-        } else {
-            1.0
-        };
-        let model_matrix =
-            Matrix4::from_axis_angle(Vector3::new(1.0, 0.0, 0.0).normalize(), Rad(0.0));
-        let view_matrix = Matrix4::from_translation(Vector3::new(0.0, 0.0, -3.0));
-        let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 100.0);
-
-        let view_matrix = state.camera.view_matrix();
-        let mvp = projection_matrix * view_matrix * model_matrix;
+        let (m, v, p) = self.prepare_mvp(state);
+        let mvp = p * v * m;
         if let Err(e) = self.use_current_shader(&mvp) {
             warn!("Rendering error: [{e}]");
         }
@@ -192,6 +202,46 @@ impl Renderer {
             }
         }
 
+        unsafe {
+            gl::DepthMask(gl::TRUE);
+            gl::Disable(gl::BLEND);
+            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+        }
+    }
+    pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &State) {
+        let (m, v, p) = self.prepare_mvp(state);
+        let mvp = p * v * m;
+        let State {
+            color, wireframe, ..
+        } = state;
+        static mut FRAME_PARITY: bool = false;
+        unsafe {
+            gl::ClearColor(color.0, color.1, color.2, color.3);
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
+            // configurable parameters
+            gl::PolygonMode(
+                gl::FRONT_AND_BACK,
+                if *wireframe { gl::LINE } else { gl::FILL },
+            );
+        }
+        unsafe {
+            let render_black = FRAME_PARITY;
+            FRAME_PARITY = !FRAME_PARITY;
+
+            if let Some(shader) = self.get_current_shader() {
+                shader.set_int("checkerboardPattern", 0);
+                shader.set_mat4("model", &m);
+                shader.set_float("farPlane", 10.0);
+                shader.set_vec3("cameraPos", &state.camera.position);
+            }
+
+            if let Err(e) = self.use_current_shader(&mvp) {
+                warn!("Rendering error: [{e}]");
+            }
+            for object in &self.drawables {
+                self.draw_object(object, glfw, &state);
+            }
+        }
         unsafe {
             gl::DepthMask(gl::TRUE);
             gl::Disable(gl::BLEND);
