@@ -5,6 +5,25 @@ use cgmath::{Matrix, Matrix4};
 use gl::types::{GLchar, GLint};
 use log::error;
 
+#[derive(Debug, Hash, PartialEq, Eq, Clone)]
+pub struct ShaderInfo {
+    pub name: String,
+    pub vertex_path: String,
+    pub fragment_path: String,
+}
+impl ShaderInfo {
+    pub fn empty() -> Self {
+        Self {
+            name: String::new(),
+            vertex_path: String::new(),
+            fragment_path: String::new(),
+        }
+    }
+    pub fn get_name(&self) -> String {
+        self.name.clone()
+    }
+}
+
 #[derive(Debug)]
 pub struct Shader {
     id: u32,

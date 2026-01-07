@@ -1,3 +1,5 @@
+use std::fmt::format;
+
 use anyhow::Result;
 use cgmath::Vector3;
 use glfw::Glfw;
@@ -7,17 +9,34 @@ use crate::{
         blend_mode::BlendMode, color::Color, drawable::Drawable, helpers::set_buffer_data,
         vertex::Vertex,
     },
-    shader::Shader,
+    shader::{Shader, ShaderInfo},
     state::State,
     texture::Texture,
 };
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct CubeSettings<'a> {
     pub position: [f32; 3],
     pub rotation: [f32; 3],
     pub texture_name: &'a str,
+    pub shader_name: ShaderInfo,
     pub blend_mode: BlendMode,
+}
+
+impl Default for CubeSettings<'_> {
+    fn default() -> Self {
+        Self {
+            position: [0.0, 0.0, 0.0],
+            rotation: [0.0, 0.0, 0.0],
+            texture_name: "",
+            shader_name: ShaderInfo {
+                name: "cube".to_string(),
+                fragment_path: "assets/shaders/cube/frag.glsl".to_string(),
+                vertex_path: "assets/shaders/cube/vert.glsl".to_string(),
+            },
+            blend_mode: BlendMode::default(),
+        }
+    }
 }
 
 pub struct Cube {
@@ -25,7 +44,7 @@ pub struct Cube {
     pub position: Vector3<f32>,
     pub vao: u32,
     pub texture: String,
-    pub shader: Shader,
+    pub shader_info: ShaderInfo,
     pub blend_mode: BlendMode,
 }
 
@@ -93,10 +112,7 @@ impl Cube {
             points: vec![],
             vao,
             position: Vector3::from(settings.position),
-            shader: Shader::new(
-                "assets/shaders/cube/vert.glsl",
-                "assets/shaders/cube/frag.glsl",
-            )?,
+            shader_info: settings.shader_name,
             blend_mode: settings.blend_mode,
             texture: settings.texture_name.to_owned(),
         })
@@ -115,10 +131,13 @@ impl Drawable for Cube {
     fn get_texture_name(&self) -> String {
         self.texture.to_string()
     }
-    fn get_shader_name(&self) -> String {
-        String::new()
+    fn get_shader_name(&self) -> ShaderInfo {
+        self.shader_info.clone()
     }
     fn get_blend_mode(&self) -> crate::render::blend_mode::BlendMode {
         self.blend_mode
+    }
+    fn requires_shader(&self) -> bool {
+        false
     }
 }

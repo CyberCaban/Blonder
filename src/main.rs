@@ -11,7 +11,7 @@ use crate::{
         serpinsky::Serpinsky,
     },
     render::{helpers::init_window, renderer::Renderer},
-    shader::Shader,
+    shader::{Shader, ShaderInfo},
     state::State,
 };
 
@@ -38,22 +38,18 @@ fn main() -> Result<()> {
 
     let mut renderer = Renderer::new();
 
-    renderer.add_shader(
-        "camera",
-        Shader::new(
-            "assets/shaders/camera/vert.glsl",
-            "assets/shaders/camera/frag.glsl",
-        )?,
-    );
-    renderer.use_shader("camera")?;
+    renderer.add_default_shader(Shader::new(
+        "assets/shaders/camera/vert.glsl",
+        "assets/shaders/camera/frag.glsl",
+    )?);
 
     let mut serp = Serpinsky::new()?;
     let d = 20.0;
-    serp.serp(&[-d, -d, 0.0], &[d, -d, 0.0], &[0., d, 0.0], 1);
+    serp.serp(&[-d, -d, 0.0], &[d, -d, 0.0], &[0., d, 0.0], 3);
     serp.prepare();
     let _ = renderer.add_drawable(serp);
     let mut rng = rand::thread_rng();
-    let w = 20.0;
+    let w = 5.0;
     let (low, high) = (-w, w);
 
     let texture_pool = [
@@ -63,7 +59,7 @@ fn main() -> Result<()> {
         "assets/textures/white.png",
     ];
 
-    for _ in 0..30_000 {
+    for _ in 0..1_0 {
         let cube = Cube::new(CubeSettings {
             position: [
                 rng.gen_range(low, high),
@@ -77,7 +73,8 @@ fn main() -> Result<()> {
             ],
             texture_name: texture_pool[rng.gen_range(0, texture_pool.len())],
             ..Default::default()
-        }).unwrap();
+        })
+        .unwrap();
         let _ = renderer.add_drawable(cube);
     }
 

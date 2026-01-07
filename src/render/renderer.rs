@@ -39,6 +39,10 @@ impl Renderer {
     pub fn add_shader(&mut self, name: &str, shader: Shader) {
         self.shaders.insert(name.to_string(), shader);
     }
+    pub fn add_default_shader(&mut self, shader: Shader) {
+        self.shaders.insert("default".to_string(), shader);
+        self.use_shader("default");
+    }
     pub fn use_shader(&mut self, name: &str) -> Result<()> {
         if let Some(shader) = self.shaders.get(name) {
             shader.use_shader();
@@ -69,6 +73,17 @@ impl Renderer {
                 Err(e) => {
                     warn!("Failed to load texture: {}", e);
                 }
+            }
+        }
+        let shader_name = object.get_shader_name();
+        if object.requires_shader() && !self.shaders.contains_key(&shader_name.get_name()) {
+            match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
+                Ok(s) => {
+                    self.shaders.insert(shader_name.name, s);
+                },
+                Err(e) => {
+                    warn!("Failer to load shader: [{}]", e);
+                },
             }
         }
         self.drawables.push(Box::new(object));
@@ -166,10 +181,10 @@ impl Renderer {
                     texture.use_texture();
                 }
             }
-            // if let Some(shader) = self.shaders.get(&key.shader_name) {
-            //     shader.use_shader();
-            //     self.current_shader = Some(key.shader_name.clone());
-            // }
+            if let Some(shader) = self.shaders.get(&key.shader_name) {
+                shader.use_shader();
+                self.current_shader = Some(key.shader_name.clone());
+            }
 
             // key.blend_mode.apply();
             for object in objects {
@@ -188,7 +203,7 @@ impl Renderer {
 #[derive(Debug, Hash, PartialEq, Eq)]
 struct BatchKey {
     texture_name: String,
-    // shader_name: String,
+    shader_name: String,
     // blend_mode: BlendMode,
 }
 
@@ -196,7 +211,7 @@ impl BatchKey {
     fn from_object(object: &dyn Drawable) -> Self {
         BatchKey {
             texture_name: object.get_texture_name(),
-            // shader_name: object.get_shader_name(),
+            shader_name: object.get_shader_name().get_name(),
             // blend_mode: object.get_blend_mode(),
         }
     }
