@@ -1,5 +1,6 @@
 use anyhow::Result;
 use cgmath::{Matrix4, Vector3};
+use num::Zero;
 
 use crate::{render::gui::font::FontAtlas, shader::Shader};
 
@@ -22,9 +23,7 @@ impl TextRenderer {
             vao,
             vbo,
             shader_program: shader,
-            projection_matrix: Matrix4::new(
-                0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-            ),
+            projection_matrix: Matrix4::zero(),
         };
         renderer.set_projection(width, height);
         Ok(renderer)
@@ -84,36 +83,29 @@ impl TextRenderer {
         let near = -1.0;
         let far = 1.0;
 
-        self.projection_matrix = Matrix4::new(
-            2.0 / (right - left),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            2.0 / (top - bottom),
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            -2.0 / (far - near),
-            0.0,
-            -(right + left) / (right - left),
-            -(top + bottom) / (top - bottom),
-            -(far + near) / (far - near),
-            1.0,
+        #[rustfmt::skip]
+        let projection_matrix = Matrix4::new(
+            2.0 / (right - left), 0.0, 0.0, 0.0,
+            0.0, 2.0 / (top - bottom), 0.0, 0.0,
+            0.0, 0.0, -2.0 / (far - near), 0.0,
+            -(right + left) / (right - left), -(top + bottom) / (top - bottom), -(far + near) / (far - near), 1.0,
         );
+        self.projection_matrix = projection_matrix;
     }
     pub fn render_text(
-        &self,
+        &mut self,
         font_atlas: &FontAtlas,
         text: &str,
         x: f32,
         y: f32,
         scale: f32,
+        screen_width: u32,
+        screen_height: u32,
         color: (f32, f32, f32),
     ) {
         unsafe {
             self.shader_program.use_shader();
+            self.set_projection(screen_width as f32, screen_height as f32);
             self.shader_program
                 .set_mat4("projection", &self.projection_matrix);
 

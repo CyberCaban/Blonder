@@ -50,21 +50,15 @@ impl FontAtlas {
                 }
                 let padding = 2;
                 let img_width = w + padding * 2;
-                let img_height = h + padding * 3;
+                let img_height = h + padding * 2;
                 let mut image = RgbaImage::new(img_width, img_height);
                 for pixel in image.pixels_mut() {
                     *pixel = Rgba([0, 0, 0, 0]);
                 }
 
                 positioned.draw(|x, y, v| {
-                    // Смещаем координаты относительно bounding box
-                    let px = x as i32;
-                    let py = y as i32;
-
-                    // Вычисляем позицию в изображении с учетом padding
-                    let img_x = px - (bounding_box.min.x - (padding * 2) as i32);
-                    let y_rel = py + bounding_box.min.y;
-                    let img_y = (y_rel - (padding * 2) as i32);
+                    let img_x = x as i32 + padding as i32;
+                    let img_y = y as i32 + padding as i32;
                     if img_x >= 0
                         && img_x < img_width as i32
                         && img_y >= 0
@@ -79,10 +73,11 @@ impl FontAtlas {
                         );
                     }
                 });
-                image.save(format!("out/{}.png", ch));
-                unsafe {
-                    gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
-                }
+                // image debug
+                // image.save(format!("out/{}.png", ch));
+                // unsafe {
+                //     gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
+                // }
                 let texture = Texture::from_image(ImageRgba8(image), TextureConfig::default())
                     .context(format!(
                         "Failed to create texture for font [{}], char [{}]",

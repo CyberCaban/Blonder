@@ -109,11 +109,15 @@ fn main() -> Result<()> {
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
     let font_atlas = FontAtlas::new("assets/fonts/Montserrat-Regular.ttf", 48)?;
 
+    let mut frames = 0u32;
+    let mut fps_count = String::new();
     while !window.should_close() {
         glfw.poll_events();
         let current_frame = glfw.get_time() as f32;
         state.delta_time = current_frame - state.last_frame;
         state.last_frame = current_frame;
+
+        frames += 1;
 
         process_events(&mut window, &events, &mut state);
         state.camera.process_input(&mut window, state.delta_time);
@@ -121,13 +125,17 @@ fn main() -> Result<()> {
         renderer.render_checkerboard(&mut glfw, &state);
         text_renderer.render_text(
             &font_atlas,
-            "Hello world",
-            100.0,
-            100.0,
+            &fps_count,
+            0.0,
+            state.screen.height as f32 - 48.0 / 2.0,
             1.0,
-            (0.0, 0.0, 1.0),
+            state.screen.width,
+            state.screen.height,
+            (0.0, 0.0, 0.0),
         );
-
+        if frames % 10 == 0 {
+            fps_count = format!("FPS: {}", 1.0 / state.delta_time);
+        }
         window.swap_buffers();
     }
     Ok(())
