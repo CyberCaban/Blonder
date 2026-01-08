@@ -1,8 +1,11 @@
+#[cfg(debug_assertions)]
+use std::time::Instant;
 use std::{mem::offset_of, os::raw::c_void};
 
 use anyhow::{Context as _, Result};
 use gl::types::{GLsizei, GLsizeiptr};
 use glfw::{Context, Glfw, PWindow};
+use log::info;
 
 use crate::{
     render::{
@@ -13,6 +16,9 @@ use crate::{
 };
 
 pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
+    #[cfg(debug_assertions)]
+    let now = Instant::now();
+
     // MSAA x2/4/8
     glfw.window_hint(glfw::WindowHint::Samples(Some(8)));
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
@@ -47,6 +53,13 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
         gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
         gl::BlendEquation(gl::FUNC_ADD);
     }
+
+    #[cfg(debug_assertions)]
+    info!(
+        "Creating window took {}ms",
+        (Instant::now() - now).as_millis()
+    );
+
     Ok((window, events))
 }
 

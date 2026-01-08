@@ -1,3 +1,5 @@
+use std::time::Instant;
+
 use ::log::info;
 use anyhow::{Context as _, Result};
 use glfw::Context;
@@ -67,7 +69,7 @@ fn main() -> Result<()> {
     serp.prepare();
     // let _ = renderer.add_drawable(serp);
     let mut rng = rand::thread_rng();
-    let r = 10.0;
+    let r = 100.0;
     let (low, high) = (-r, r);
 
     let texture_pool = [
@@ -76,7 +78,7 @@ fn main() -> Result<()> {
         "assets/textures/white.png",
     ];
 
-    for _ in 0..100 {
+    for _ in 0..1000 {
         let cube = Cube::new(CubeSettings {
             position: [
                 rng.gen_range(low, high),
@@ -101,7 +103,7 @@ fn main() -> Result<()> {
         rotation: [3.0, 1.0, 0.0],
         ..Default::default()
     })?;
-    let w = 5.0;
+    let w = 10.0;
     let plane = Plane::new(
         [[w, 0.0, w], [-w, 0.0, w], [w, 0.0, -w], [-w, 0.0, -w]],
         [0.0, 0.0, 0.0],
@@ -110,7 +112,7 @@ fn main() -> Result<()> {
     let _ = renderer.add_drawable(plane);
 
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
-    let font_atlas = FontAtlas::new("assets/fonts/OpenSans.ttf", 48)?;
+    let font_atlas = FontAtlas::new("assets/fonts/Montserrat-Regular.ttf", 48)?;
 
     let mut frames = 0u32;
     let mut fps_count = String::new();

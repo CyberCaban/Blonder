@@ -1,9 +1,11 @@
+#[cfg(debug_assertions)]
+use std::time::Instant;
 use std::{ffi::CString, fs::File, io::Read, ptr};
 
 use anyhow::{Context, Result};
 use cgmath::{Array, Matrix, Matrix4, Vector3, Vector4};
 use gl::types::{GLchar, GLint};
-use log::error;
+use log::{error, info};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct ShaderInfo {
@@ -31,6 +33,9 @@ pub struct Shader {
 
 impl Shader {
     pub fn new(vertex_path: &str, fragment_path: &str) -> Result<Self> {
+        #[cfg(debug_assertions)]
+        let now = Instant::now();
+
         let mut vertex_source = String::new();
         let mut fragment_source = String::new();
         File::open(vertex_path)
@@ -42,6 +47,15 @@ impl Shader {
             .read_to_string(&mut fragment_source)
             .context(format!("Cannot read shader [{}]", fragment_path))?;
         let id = Self::create_shader_program(&vertex_source, &fragment_source);
+
+        #[cfg(debug_assertions)]
+        info!(
+            "Creating shader program [{}:{}] took {}ms",
+            vertex_path,
+            fragment_path,
+            (Instant::now() - now).as_millis()
+        );
+
         Ok(Self { id })
     }
     pub fn use_shader(&self) {

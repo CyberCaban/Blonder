@@ -1,7 +1,8 @@
-use std::{collections::HashMap, fs};
+use std::{collections::HashMap, fs, time::Instant};
 
 use anyhow::{Context, Result};
 use image::{DynamicImage::ImageRgba8, Rgba, RgbaImage};
+use log::info;
 use rusttype::{Font, Scale, point};
 
 use crate::texture::{Texture, TextureConfig};
@@ -21,6 +22,8 @@ pub struct FontAtlas {
 
 impl FontAtlas {
     pub fn new(font_path: &str, font_size: u32) -> Result<Self> {
+        #[cfg(debug_assertions)]
+        let now = Instant::now();
         let font_data =
             fs::read(font_path).context(format!("Failed to load font [{}]", font_path))?;
         let font = Font::try_from_vec(font_data)
@@ -103,6 +106,12 @@ impl FontAtlas {
                 continue;
             }
         }
+        #[cfg(debug_assertions)]
+        info!(
+            "Creating atlas [{}] took {}ms",
+            font_path,
+            (Instant::now() - now).as_millis()
+        );
         Ok(FontAtlas {
             characters,
             size: font_size,

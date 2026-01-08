@@ -1,7 +1,10 @@
 use std::os::raw::c_void;
+#[cfg(debug_assertions)]
+use std::time::Instant;
 
 use anyhow::{Context, Result};
 use image::{DynamicImage, GenericImage, RgbaImage};
+use log::info;
 
 #[derive(Debug)]
 pub struct TextureConfig {
@@ -27,6 +30,9 @@ impl Texture {
         Self { id: 0 }
     }
     pub fn with_config(texture_path: &str, config: TextureConfig) -> Result<Self> {
+        #[cfg(debug_assertions)]
+        let now = Instant::now();
+
         let mut texture = 0;
         unsafe {
             gl::GenTextures(1, &mut texture);
@@ -68,6 +74,12 @@ impl Texture {
             );
             gl::GenerateMipmap(gl::TEXTURE_2D);
         }
+        #[cfg(debug_assertions)]
+        info!(
+            "Creating texture [{}] took {}ms",
+            texture_path,
+            (Instant::now() - now).as_millis()
+        );
         Ok(Self { id: texture })
     }
     pub fn id(&self) -> u32 {
