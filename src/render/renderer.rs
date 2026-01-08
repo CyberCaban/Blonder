@@ -138,16 +138,16 @@ impl Renderer {
                 // shader.use_shader();
                 // shader.set_vec3("lightColor", &Vector3::new(1.0, 1.0, 1.0));
                 // shader.set_vec3("lightPos", &Vector3::new(1.5, 2.0, 1.0));
-                shader.set_float("farPlane", 10.0);
-                shader.set_vec3("cameraPos", &state.camera.position);
-                shader.set_vec3("lightColor", &Vector3::new(0.55, 0.33, 0.6));
-                shader.set_vec3(
-                    "lightPos",
-                    &Vector3::new((glfw.get_time() as f32).sin(), 1.0, 1.0),
-                );
-                shader.set_mat4("model", &self.model);
-                shader.set_mat4("view", &self.view);
-                shader.set_mat4("projection", &self.projection);
+                // shader.set_float("farPlane", 10.0);
+                // shader.set_vec3("cameraPos", &state.camera.position);
+                // shader.set_vec3("lightColor", &Vector3::new(0.55, 0.33, 0.6));
+                // shader.set_vec3(
+                //     "lightPos",
+                //     &Vector3::new((glfw.get_time() as f32).sin(), 1.0, 1.0),
+                // );
+                // shader.set_mat4("model", &self.model);
+                // shader.set_mat4("view", &self.view);
+                // shader.set_mat4("projection", &self.projection);
                 self.current_shader = Some(key.shader_name.clone());
             }
 
