@@ -11,6 +11,7 @@ out vec2 TexCoord;
 out vec3 FragPos;
 void main() {
     FragPos = vec3(model * vec4(aPos, 1.0));
+    // TODO: Make inverse matrices on CPU
     Normal = mat3(transpose(inverse(model))) * aNormal;
     gl_Position = projection * view * model * vec4(FragPos, 1.0);
     TexCoord = aTexCoord;

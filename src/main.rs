@@ -96,7 +96,7 @@ fn main() -> Result<()> {
 
     let cube = Cube::new(CubeSettings {
         texture_name: "assets/textures/white.png",
-        position: [1.5, 0.0, 0.0],
+        position: [1.5, 0.0, 1.0],
         ..Default::default()
     })?;
     let cube2 = Cube::new(CubeSettings {
