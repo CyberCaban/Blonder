@@ -11,9 +11,10 @@ use crate::{
         serpinsky::Serpinsky,
     },
     render::{
+        color::Color,
         gui::{
             font::FontAtlas,
-            text_renderer::{self, TextRenderer},
+            text_renderer::{self, TextRenderParams, TextRenderer},
         },
         helpers::init_window,
         renderer::Renderer,
@@ -111,6 +112,10 @@ fn main() -> Result<()> {
 
     let mut frames = 0u32;
     let mut fps_count = String::new();
+    let fps_render_params = TextRenderParams {
+        scale: 1.0,
+        color: Color::white(),
+    };
     while !window.should_close() {
         glfw.poll_events();
         let current_frame = glfw.get_time() as f32;
@@ -128,10 +133,8 @@ fn main() -> Result<()> {
             &fps_count,
             0.0,
             state.screen.height as f32 - 48.0 / 2.0,
-            1.0,
-            state.screen.width,
-            state.screen.height,
-            (0.0, 0.0, 0.0),
+            &state.screen,
+            &fps_render_params,
         );
         if frames % 10 == 0 {
             fps_count = format!("FPS: {}", 1.0 / state.delta_time);

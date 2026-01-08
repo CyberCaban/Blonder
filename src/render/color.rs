@@ -1,7 +1,7 @@
 use std::ops::{Deref, DerefMut};
 
 #[repr(C)]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Default)]
 pub struct Color([f32; 4]);
 
 impl Color {

@@ -2,7 +2,17 @@ use anyhow::Result;
 use cgmath::{Matrix4, Vector3};
 use num::Zero;
 
-use crate::{render::gui::font::FontAtlas, shader::Shader};
+use crate::{
+    render::{color::Color, gui::font::FontAtlas},
+    shader::Shader,
+    state::Screen,
+};
+
+#[derive(Debug, Default)]
+pub struct TextRenderParams {
+    pub scale: f32,
+    pub color: Color,
+}
 
 pub struct TextRenderer {
     vao: u32,
@@ -98,19 +108,18 @@ impl TextRenderer {
         text: &str,
         x: f32,
         y: f32,
-        scale: f32,
-        screen_width: u32,
-        screen_height: u32,
-        color: (f32, f32, f32),
+        screen: &Screen,
+        render_params: &TextRenderParams,
     ) {
+        let TextRenderParams { color, scale, .. } = render_params;
         unsafe {
             self.shader_program.use_shader();
-            self.set_projection(screen_width as f32, screen_height as f32);
+            self.set_projection(screen.width as f32, screen.height as f32);
             self.shader_program
                 .set_mat4("projection", &self.projection_matrix);
 
             self.shader_program
-                .set_vec3("uTextColor", &Vector3::new(color.0, color.1, color.2));
+                .set_vec3("uTextColor", &Vector3::new(color[0], color[1], color[2]));
 
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);

@@ -1,7 +1,6 @@
 use std::{collections::HashMap, fs};
 
 use anyhow::{Context, Result};
-use gl::types::GLuint;
 use image::{DynamicImage::ImageRgba8, Rgba, RgbaImage};
 use rusttype::{Font, Scale, point};
 
