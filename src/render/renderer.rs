@@ -2,14 +2,10 @@ use std::collections::HashMap;
 
 use cgmath::{Deg, InnerSpace, Matrix4, Rad, Vector3, perspective};
 use log::warn;
+use num::Zero;
 use thiserror::Error;
 
-use crate::{
-    render::{blend_mode::BlendMode, drawable::Drawable},
-    shader::Shader,
-    state::State,
-    texture::Texture,
-};
+use crate::{render::drawable::Drawable, shader::Shader, state::State, texture::Texture};
 use anyhow::Result;
 
 #[derive(Debug, Error)]
@@ -25,6 +21,10 @@ pub struct Renderer {
 
     shaders: HashMap<String, Shader>,
     current_shader: Option<String>,
+
+    model: Matrix4<f32>,
+    view: Matrix4<f32>,
+    projection: Matrix4<f32>,
 }
 
 impl Renderer {
@@ -34,6 +34,9 @@ impl Renderer {
             shaders: HashMap::new(),
             textures: HashMap::new(),
             current_shader: None,
+            model: Matrix4::zero(),
+            view: Matrix4::zero(),
+            projection: Matrix4::zero(),
         }
     }
     pub fn add_shader(&mut self, name: &str, shader: Shader) {
@@ -53,12 +56,16 @@ impl Renderer {
             Err(RendererError::ShaderNotFound(name.to_string()).into())
         }
     }
-    pub fn use_current_shader(&mut self, mvp: &Matrix4<f32>) -> Result<()> {
+    pub fn use_current_shader(&mut self) -> Result<()> {
         let current_shader = &self.current_shader;
         if let Some(shader_name) = current_shader
             && let Some(shader) = self.shaders.get(shader_name)
         {
             shader.use_shader();
+            shader.set_mat4("model", &self.model);
+            shader.set_mat4("view", &self.view);
+            shader.set_mat4("projection", &self.projection);
+            // shader.set_mat4("mvp", &(self.projection * self.view * self.model));
         }
         Ok(())
     }
@@ -94,17 +101,7 @@ impl Renderer {
             None => None,
         }
     }
-    fn draw_object(&self, object: &Box<dyn Drawable>, glfw: &mut glfw::Glfw, state: &State) {
-        let texture_name = object.get_texture_name();
-        if let Some(texture) = self.textures.get(&texture_name) {
-            unsafe {
-                gl::ActiveTexture(gl::TEXTURE0);
-                gl::BindTexture(gl::TEXTURE_2D, texture.id());
-            }
-        }
-        object.draw(glfw, state);
-    }
-    fn prepare_mvp(&self, state: &State) -> (Matrix4<f32>, Matrix4<f32>, Matrix4<f32>) {
+    fn update_mvp(&mut self, state: &State) {
         let aspect = if state.screen.height > 0 {
             state.screen.width as f32 / state.screen.height as f32
         } else {
@@ -116,34 +113,9 @@ impl Renderer {
         let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 100.0);
 
         let view_matrix = state.camera.view_matrix();
-        (model_matrix, view_matrix, projection_matrix)
-    }
-    pub fn render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
-        let State {
-            color, wireframe, ..
-        } = state;
-        unsafe {
-            gl::ClearColor(color.0, color.1, color.2, color.3);
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            // configurable parameters
-            gl::PolygonMode(
-                gl::FRONT_AND_BACK,
-                if *wireframe { gl::LINE } else { gl::FILL },
-            );
-        }
-        let (m, v, p) = self.prepare_mvp(state);
-        let mvp = p * v * m;
-        if let Err(e) = self.use_current_shader(&mvp) {
-            warn!("Rendering error: [{e}]");
-        }
-        for object in &self.drawables {
-            self.draw_object(object, glfw, state);
-        }
-        unsafe {
-            gl::DepthMask(gl::TRUE);
-            gl::Disable(gl::BLEND);
-            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-        }
+        self.model = model_matrix;
+        self.view = view_matrix;
+        self.projection = projection_matrix;
     }
     fn batch_render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let batches = {
@@ -166,6 +138,16 @@ impl Renderer {
                 // shader.use_shader();
                 // shader.set_vec3("lightColor", &Vector3::new(1.0, 1.0, 1.0));
                 // shader.set_vec3("lightPos", &Vector3::new(1.5, 2.0, 1.0));
+                shader.set_float("farPlane", 10.0);
+                shader.set_vec3("cameraPos", &state.camera.position);
+                shader.set_vec3("lightColor", &Vector3::new(0.55, 0.33, 0.6));
+                shader.set_vec3(
+                    "lightPos",
+                    &Vector3::new((glfw.get_time() as f32).sin(), 1.0, 1.0),
+                );
+                shader.set_mat4("model", &self.model);
+                shader.set_mat4("view", &self.view);
+                shader.set_mat4("projection", &self.projection);
                 self.current_shader = Some(key.shader_name.clone());
             }
 
@@ -175,42 +157,8 @@ impl Renderer {
             }
         }
     }
-    pub fn render_batch(&mut self, glfw: &mut glfw::Glfw, state: &State) {
-        let State {
-            color, wireframe, ..
-        } = state;
-        unsafe {
-            gl::ClearColor(color.0, color.1, color.2, color.3);
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
-            // configurable parameters
-            gl::PolygonMode(
-                gl::FRONT_AND_BACK,
-                if *wireframe { gl::LINE } else { gl::FILL },
-            );
-        }
-        let (m, v, p) = self.prepare_mvp(state);
-        let mvp = p * v * m;
-        if let Err(e) = self.use_current_shader(&mvp) {
-            warn!("Rendering error: [{e}]");
-        }
-        if let Some(shader) = self.get_current_shader() {
-            shader.set_vec3("lightColor", &Vector3::new(1.0, 0.0, 0.0));
-            shader.set_vec3("lightPos", &Vector3::new(1.5, 2.0, 1.0));
-            shader.set_mat4("model", &m);
-            shader.set_mat4("view", &v);
-            shader.set_mat4("projection", &p);
-        }
-        self.batch_render(glfw, state);
-
-        unsafe {
-            gl::DepthMask(gl::TRUE);
-            gl::Disable(gl::BLEND);
-            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-        }
-    }
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &State) {
-        let (m, v, p) = self.prepare_mvp(state);
-        let mvp = p * v * m;
+        self.update_mvp(state);
         let State {
             color, wireframe, ..
         } = state;
@@ -234,7 +182,7 @@ impl Renderer {
                 _ => 0,
             };
 
-            if let Err(e) = self.use_current_shader(&mvp) {
+            if let Err(e) = self.use_current_shader() {
                 warn!("Rendering error: [{e}]");
             }
             if let Some(shader) = self.get_current_shader() {
@@ -245,11 +193,12 @@ impl Renderer {
                 shader.set_vec3("lightColor", &Vector3::new(0.55, 0.33, 0.6));
                 shader.set_vec3(
                     "lightPos",
-                    &Vector3::new((glfw.get_time() as f32).sin(), 1.0, 1.0),
+                    &Vector3::new(
+                        (glfw.get_time() as f32).sin(),
+                        1.0,
+                        (glfw.get_time() as f32).cos(),
+                    ),
                 );
-                shader.set_mat4("model", &m);
-                shader.set_mat4("view", &v);
-                shader.set_mat4("projection", &p);
             }
             self.batch_render(glfw, state);
         }

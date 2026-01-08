@@ -12,6 +12,7 @@ use crate::{
     },
     render::{
         color::Color,
+        drawable::Drawable,
         gui::{
             font::FontAtlas,
             text_renderer::{self, TextRenderParams, TextRenderer},
@@ -69,44 +70,31 @@ fn main() -> Result<()> {
     let (low, high) = (-w, w);
 
     let texture_pool = [
-        "assets/textures/transparency.png",
         "assets/textures/cooler.png",
         "assets/textures/liminal_space.png",
         "assets/textures/white.png",
     ];
 
-    for _ in 0..1_00 {
-        let cube = Cube::new(CubeSettings {
-            position: [
-                rng.gen_range(low, high),
-                rng.gen_range(low, high),
-                rng.gen_range(low, high),
-            ],
-            rotation: [
-                rng.gen_range(low, high),
-                rng.gen_range(low, high),
-                rng.gen_range(low, high),
-            ],
-            texture_name: texture_pool[rng.gen_range(0, texture_pool.len())],
-            ..Default::default()
-        })
-        .unwrap();
-        let _ = renderer.add_drawable(cube);
+    for z in -5..5 {
+        for x in -5..5 {
+            let cube = Cube::new(CubeSettings {
+                position: [x as f32, 0.0, z as f32],
+                rotation: [0.0, 0.0, 0.0],
+                texture_name: texture_pool[rng.gen_range(0, texture_pool.len())],
+                ..Default::default()
+            })
+            .unwrap();
+            let _ = renderer.add_drawable(cube);
+        }
     }
 
-    let cube = Cube::new(CubeSettings {
-        texture_name: "assets/textures/white.png",
-        position: [1.5, 0.0, 1.0],
-        ..Default::default()
-    })?;
     let cube2 = Cube::new(CubeSettings {
         texture_name: "assets/textures/cooler.png",
         position: [1.0, 0.0, 0.0],
         rotation: [3.0, 1.0, 0.0],
         ..Default::default()
     })?;
-    let _ = renderer.add_drawable(cube);
-    // let _ = renderer.add_drawable(cube2);
+    let _ = renderer.add_drawable(cube2);
 
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
     let font_atlas = FontAtlas::new("assets/fonts/Montserrat-Regular.ttf", 48)?;
