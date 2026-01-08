@@ -67,26 +67,32 @@ fn main() -> Result<()> {
     serp.prepare();
     // let _ = renderer.add_drawable(serp);
     let mut rng = rand::thread_rng();
-    let w = 5.0;
-    let (low, high) = (-w, w);
+    let r = 10.0;
+    let (low, high) = (-r, r);
 
     let texture_pool = [
-        // "assets/textures/cooler.png",
-        // "assets/textures/liminal_space.png",
+        "assets/textures/cooler.png",
+        "assets/textures/skebob.png",
         "assets/textures/white.png",
     ];
 
-    for z in -5..5 {
-        for x in -5..5 {
-            let cube = Cube::new(CubeSettings {
-                position: [x as f32, 0.0, z as f32],
-                rotation: [0.0, 0.0, 0.0],
-                texture_name: texture_pool[rng.gen_range(0, texture_pool.len())],
-                ..Default::default()
-            })
-            .unwrap();
-            // let _ = renderer.add_drawable(cube);
-        }
+    for _ in 0..100 {
+        let cube = Cube::new(CubeSettings {
+            position: [
+                rng.gen_range(low, high),
+                rng.gen_range(low, high),
+                rng.gen_range(low, high),
+            ],
+            rotation: [
+                rng.r#gen::<f32>() * 360.0,
+                rng.r#gen::<f32>() * 360.0,
+                rng.r#gen::<f32>() * 360.0,
+            ],
+            texture_name: texture_pool[rng.gen_range(0, texture_pool.len())],
+            ..Default::default()
+        })
+        .unwrap();
+        let _ = renderer.add_drawable(cube);
     }
 
     let cube2 = Cube::new(CubeSettings {
@@ -95,6 +101,7 @@ fn main() -> Result<()> {
         rotation: [3.0, 1.0, 0.0],
         ..Default::default()
     })?;
+    let w = 5.0;
     let plane = Plane::new(
         [[w, 0.0, w], [-w, 0.0, w], [w, 0.0, -w], [-w, 0.0, -w]],
         [0.0, 0.0, 0.0],
@@ -103,7 +110,7 @@ fn main() -> Result<()> {
     let _ = renderer.add_drawable(plane);
 
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
-    let font_atlas = FontAtlas::new("assets/fonts/Montserrat-Regular.ttf", 48)?;
+    let font_atlas = FontAtlas::new("assets/fonts/OpenSans.ttf", 48)?;
 
     let mut frames = 0u32;
     let mut fps_count = String::new();

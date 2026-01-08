@@ -48,7 +48,11 @@ impl Plane {
             vbo,
             vao,
             texture: "assets/textures/skebob.png".to_string(),
-            shader_info: ShaderInfo::empty(),
+            shader_info: ShaderInfo {
+                name: "plane".to_string(),
+                fragment_path: "assets/shaders/light/frag.glsl".to_string(),
+                vertex_path: "assets/shaders/light/vert.glsl".to_string(),
+            },
             blend_mode: BlendMode::Opaque,
         })
     }
@@ -59,8 +63,10 @@ impl Drawable for Plane {
         unsafe {
             // gl::ActiveTexture(gl::TEXTURE0);
             // self.texture.use_texture();
+            gl::Disable(gl::CULL_FACE);
             gl::BindVertexArray(self.vao);
             gl::DrawArrays(gl::TRIANGLES, 0, 36 as i32);
+            gl::Enable(gl::CULL_FACE);
         }
     }
     fn get_texture_name(&self) -> String {

@@ -56,7 +56,7 @@ impl Renderer {
             Err(RendererError::ShaderNotFound(name.to_string()).into())
         }
     }
-    pub fn use_current_shader(&mut self) -> Result<()> {
+    pub fn use_current_shader(&self) -> Result<()> {
         let current_shader = &self.current_shader;
         if let Some(shader_name) = current_shader
             && let Some(shader) = self.shaders.get(shader_name)
@@ -128,27 +128,32 @@ impl Renderer {
         };
 
         for (key, objects) in batches {
+            if key.need_shader {
+                if let Some(shader) = self.shaders.get(&key.shader_name) {
+                    shader.use_shader();
+                    self.apply_uniforms(shader, glfw, state);
+                    self.current_shader = Some(key.shader_name.clone());
+                } else {
+                    if let Some(default_shader) = self.shaders.get("default") {
+                        default_shader.use_shader();
+                        self.current_shader = Some("default".to_string());
+                    }
+                }
+            } else {
+                if let Some(default_shader) = self.shaders.get("default") {
+                    default_shader.use_shader();
+                    self.current_shader = Some("default".to_string());
+                }
+            }
+
+            if let Some(shader) = self.get_current_shader() {
+                self.apply_uniforms(shader, glfw, state);
+            }
             if let Some(texture) = self.textures.get(&key.texture_name) {
                 unsafe {
                     gl::ActiveTexture(gl::TEXTURE0);
                     texture.use_texture();
                 }
-            }
-            if let Some(shader) = self.shaders.get(&key.shader_name) {
-                // shader.use_shader();
-                // shader.set_vec3("lightColor", &Vector3::new(1.0, 1.0, 1.0));
-                // shader.set_vec3("lightPos", &Vector3::new(1.5, 2.0, 1.0));
-                // shader.set_float("farPlane", 10.0);
-                // shader.set_vec3("cameraPos", &state.camera.position);
-                // shader.set_vec3("lightColor", &Vector3::new(0.55, 0.33, 0.6));
-                // shader.set_vec3(
-                //     "lightPos",
-                //     &Vector3::new((glfw.get_time() as f32).sin(), 1.0, 1.0),
-                // );
-                // shader.set_mat4("model", &self.model);
-                // shader.set_mat4("view", &self.view);
-                // shader.set_mat4("projection", &self.projection);
-                self.current_shader = Some(key.shader_name.clone());
             }
 
             // key.blend_mode.apply();
@@ -156,6 +161,23 @@ impl Renderer {
                 object.draw(glfw, state);
             }
         }
+    }
+    fn apply_uniforms(&self, shader: &Shader, glfw: &mut glfw::Glfw, state: &State) {
+        shader.set_float("uTime", glfw.get_time() as f32);
+        shader.set_mat4("model", &self.model);
+        shader.set_mat4("view", &self.view);
+        shader.set_mat4("projection", &self.projection);
+        shader.set_float("farPlane", 10.0);
+        shader.set_vec3("cameraPos", &state.camera.position);
+        shader.set_vec3("lightColor", &Vector3::new(0.33, 0.33, 1.));
+        shader.set_vec3(
+            "lightPos",
+            &Vector3::new(
+                (glfw.get_time() as f32).sin() * 3.0,
+                1.0,
+                (glfw.get_time() as f32).cos() * 3.0,
+            ),
+        );
     }
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         self.update_mvp(state);
@@ -188,17 +210,7 @@ impl Renderer {
             if let Some(shader) = self.get_current_shader() {
                 // shader.set_int("checkerboardPattern", pattern);
                 // shader.set_int("checkerboardFrame", (FRAME_COUNT % 4) as i32);
-                shader.set_float("farPlane", 10.0);
-                shader.set_vec3("cameraPos", &state.camera.position);
-                shader.set_vec3("lightColor", &Vector3::new(0.55, 0.33, 0.6));
-                shader.set_vec3(
-                    "lightPos",
-                    &Vector3::new(
-                        (glfw.get_time() as f32).sin(),
-                        1.0,
-                        (glfw.get_time() as f32).cos(),
-                    ),
-                );
+                self.apply_uniforms(shader, glfw, state);
             }
             self.batch_render(glfw, state);
         }
@@ -214,6 +226,7 @@ impl Renderer {
 struct BatchKey {
     texture_name: String,
     shader_name: String,
+    need_shader: bool,
     // blend_mode: BlendMode,
 }
 
@@ -222,6 +235,7 @@ impl BatchKey {
         BatchKey {
             texture_name: object.get_texture_name(),
             shader_name: object.get_shader_name().get_name(),
+            need_shader: object.requires_shader(),
             // blend_mode: object.get_blend_mode(),
         }
     }

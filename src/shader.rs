@@ -49,6 +49,11 @@ impl Shader {
             gl::UseProgram(self.id);
         }
     }
+    pub fn empty_shader() {
+        unsafe {
+            gl::UseProgram(0);
+        }
+    }
     pub fn set_float(&self, name: &str, value: f32) {
         let name = CString::new(name).unwrap();
         unsafe {

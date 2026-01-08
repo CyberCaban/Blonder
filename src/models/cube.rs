@@ -138,7 +138,7 @@ impl Drawable for Cube {
         self.blend_mode
     }
     fn requires_shader(&self) -> bool {
-        false
+        true
     }
     fn requires_texture(&self) -> bool {
         true
