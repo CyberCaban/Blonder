@@ -72,11 +72,11 @@ pub fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex]) {
         gl::EnableVertexAttribArray(0);
         gl::VertexAttribPointer(
             1,
-            4,
+            3,
             gl::FLOAT,
             gl::FALSE,
             (std::mem::size_of::<Vertex>()) as GLsizei,
-            offset_of!(Vertex, color) as *const c_void,
+            offset_of!(Vertex, normal) as *const c_void,
         );
         gl::EnableVertexAttribArray(1);
         gl::VertexAttribPointer(
@@ -126,11 +126,11 @@ pub fn set_buffer_data_with_indices(
         gl::EnableVertexAttribArray(0);
         gl::VertexAttribPointer(
             1,
-            4,
+            3,
             gl::FLOAT,
             gl::FALSE,
             (std::mem::size_of::<Vertex>()) as GLsizei,
-            offset_of!(Vertex, color) as *const c_void,
+            offset_of!(Vertex, normal) as *const c_void,
         );
         gl::EnableVertexAttribArray(1);
         gl::VertexAttribPointer(

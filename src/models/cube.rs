@@ -1,17 +1,15 @@
-use std::fmt::format;
-
 use anyhow::Result;
 use cgmath::Vector3;
-use glfw::Glfw;
 
 use crate::{
     render::{
-        blend_mode::BlendMode, color::Color, drawable::Drawable, helpers::set_buffer_data,
-        vertex::Vertex,
+        blend_mode::BlendMode,
+        drawable::Drawable,
+        helpers::set_buffer_data,
+        vertex::{Vertex, calculate_normals},
     },
     shader::{Shader, ShaderInfo},
     state::State,
-    texture::Texture,
 };
 
 #[derive(Debug)]
@@ -54,53 +52,54 @@ impl Cube {
         #[rustfmt::skip]
         let mut points = vec![
             // back
-            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0], color: Color::white() }, // 0
-            Vertex { position: [-0.5, 0.5, -0.5], uv: [1.0, 1.0], color:  Color::white() }, // 2
-            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], color:  Color::white() }, // 1
-            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], color:  Color::white() }, // 1
-            Vertex { position: [-0.5, 0.5, -0.5], uv: [1.0, 1.0], color:  Color::white() }, // 2
-            Vertex { position: [0.5, 0.5, -0.5], uv: [0.0, 1.0],  color:   Color::white() }, // 3
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0],normal: [0.0, 0.0, 0.0] }, // 0
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [1.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 2
+            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 1
+            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 1
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [1.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 2
+            Vertex { position: [0.5, 0.5, -0.5], uv: [0.0, 1.0],  normal: [0.0, 0.0, 0.0] }, // 3
             // front
-            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 0.0], color: Color::white() }, // 4
-            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], color:  Color::white() }, // 5
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 6
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 6
-            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], color:  Color::white() }, // 5
-            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color:   Color::white() }, // 7
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 0.0],normal: [0.0, 0.0, 0.0] }, // 4
+            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 5
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 6
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 6
+            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 5
+            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0],  normal: [0.0, 0.0, 0.0] }, // 7
             // bottom
-            Vertex { position: [-0.5, -0.5, -0.5], uv: [0.0, 0.0], color: Color::white() }, // 0
-            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 1
-            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 4
-            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 4
-            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 1
-            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 1.0], color:   Color::white() }, // 5
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [0.0, 0.0],normal: [0.0, 0.0, 0.0] }, // 0
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 1
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 4
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 4
+            Vertex { position: [0.5, -0.5, -0.5], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 1
+            Vertex { position: [0.5, -0.5, 0.5], uv: [1.0, 1.0],  normal: [0.0, 0.0, 0.0] }, // 5
             // top
-            Vertex { position: [-0.5, 0.5, -0.5], uv: [1.0, 0.0], color: Color::white() }, // 2
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [1.0, 1.0], color:  Color::white() }, // 6
-            Vertex { position: [0.5, 0.5, -0.5], uv: [0.0, 0.0], color:  Color::white() }, // 3
-            Vertex { position: [0.5, 0.5, -0.5], uv: [0.0, 0.0], color:  Color::white() }, // 3
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [1.0, 1.0], color:  Color::white() }, // 6
-            Vertex { position: [0.5, 0.5, 0.5], uv: [0.0, 1.0], color:   Color::white() }, // 7
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [1.0, 0.0],normal: [0.0, 0.0, 0.0] }, // 2
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [1.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 6
+            Vertex { position: [0.5, 0.5, -0.5], uv: [0.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 3
+            Vertex { position: [0.5, 0.5, -0.5], uv: [0.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 3
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [1.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 6
+            Vertex { position: [0.5, 0.5, 0.5], uv: [0.0, 1.0],  normal: [0.0, 0.0, 0.0] }, // 7
             // left
-            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 0.0], color:  Color::white() }, // 2
-            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0], color: Color::white() }, // 0
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:   Color::white() }, // 6
-            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0], color:   Color::white() }, // 6
-            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0], color: Color::white() }, // 0
-            Vertex { position: [-0.5, -0.5, 0.5], uv: [1.0, 1.0], color:  Color::white() }, // 4
+            Vertex { position: [-0.5, 0.5, -0.5], uv: [0.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 2
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0],normal: [0.0, 0.0, 0.0] }, // 0
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0],  normal: [0.0, 0.0, 0.0] }, // 6
+            Vertex { position: [-0.5, 0.5, 0.5], uv: [0.0, 1.0],  normal: [0.0, 0.0, 0.0] }, // 6
+            Vertex { position: [-0.5, -0.5, -0.5], uv: [1.0, 0.0],normal: [0.0, 0.0, 0.0] }, // 0
+            Vertex { position: [-0.5, -0.5, 0.5], uv: [1.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 4
             // right
-            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0], color: Color::white() }, // 1
-            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 3
-            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 5
-            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], color:  Color::white() }, // 5
-            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], color:  Color::white() }, // 3
-            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0], color:   Color::white() }, // 7
+            Vertex { position: [0.5, -0.5, -0.5], uv: [0.0, 0.0],normal: [0.0, 0.0, 0.0] }, // 1
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 3
+            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 5
+            Vertex { position: [0.5, -0.5, 0.5], uv: [0.0, 1.0], normal: [0.0, 0.0, 0.0] }, // 5
+            Vertex { position: [0.5, 0.5, -0.5], uv: [1.0, 0.0], normal: [0.0, 0.0, 0.0] }, // 3
+            Vertex { position: [0.5, 0.5, 0.5], uv: [1.0, 1.0],  normal: [0.0, 0.0, 0.0] }, // 7
 
         ];
         points.iter_mut().for_each(|v| {
             v.add_pos(&settings.position);
             v.rotate_around(&settings.position, &settings.rotation);
         });
+        calculate_normals(&mut points);
         let (mut vao, mut vbo) = (0, 0);
         unsafe {
             gl::GenVertexArrays(1, &mut vao);

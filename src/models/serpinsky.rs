@@ -57,17 +57,17 @@ impl Serpinsky {
             Vertex {
                 position: px,
                 uv: [0.5, -0.5],
-                color: Color::black(),
+                normal: [0.0, 0.0, 0.0],
             },
             Vertex {
                 position: py,
                 uv: [1.0, 1.0],
-                color: Color::black(),
+                normal: [0.0, 0.0, 0.0],
             },
             Vertex {
                 position: pz,
                 uv: [0.0, 1.0],
-                color: Color::black(),
+                normal: [0.0, 0.0, 0.0],
             },
         ]);
 

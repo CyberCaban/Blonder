@@ -98,7 +98,7 @@ impl Shader {
     pub fn set_transform(&self, transform: &Matrix4<f32>) {
         self.set_mat4("transform", transform);
     }
-    fn check_shader_compile_errors(shader: u32) {
+    fn check_shader_compile_errors(shader: u32) -> bool {
         unsafe {
             let mut success = gl::FALSE as GLint;
             let mut info_log = Vec::with_capacity(512);
@@ -115,8 +115,10 @@ impl Shader {
                     "ERROR::SHADER::VERTEX::COMPILATION_FAILED\n{}",
                     str::from_utf8(&info_log).unwrap()
                 );
+                return true;
             }
         }
+        false
     }
 
     fn create_shader_program(vertex_source: &str, fragment_source: &str) -> u32 {
@@ -125,13 +127,17 @@ impl Shader {
             let c_str_vert = CString::new(vertex_source.as_bytes()).unwrap();
             gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
             gl::CompileShader(vertex_shader);
-            Self::check_shader_compile_errors(vertex_shader);
+            if Self::check_shader_compile_errors(vertex_shader) {
+                error!("Vertex shader failed to compile [{}]", vertex_source);
+            }
 
             let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
             let c_str_vert = CString::new(fragment_source.as_bytes()).unwrap();
             gl::ShaderSource(fragment_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
             gl::CompileShader(fragment_shader);
-            Self::check_shader_compile_errors(fragment_shader);
+            if Self::check_shader_compile_errors(fragment_shader) {
+                error!("Fragment shader failed to compile [{}]", fragment_source);
+            }
 
             let shader_program = gl::CreateProgram();
             gl::AttachShader(shader_program, vertex_shader);

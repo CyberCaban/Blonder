@@ -1,4 +1,4 @@
-use cgmath::{Matrix4, Point3};
+use cgmath::{Array, InnerSpace, Matrix4, Point3, Vector3};
 
 use crate::render::color::Color;
 
@@ -7,7 +7,7 @@ use crate::render::color::Color;
 pub struct Vertex {
     pub position: [f32; 3],
     pub uv: [f32; 2],
-    pub color: Color,
+    pub normal: [f32; 3],
 }
 
 impl Vertex {
@@ -53,5 +53,22 @@ impl Vertex {
         self.position[0] = x + pivot[0];
         self.position[1] = y + pivot[1];
         self.position[2] = z + pivot[2];
+    }
+}
+
+pub fn calculate_normals(vertices: &mut [Vertex]) {
+    // for v in vertices.iter_mut() {
+    //     v.normal = [0.0, 0.0, 0.0];
+    // }
+    for i in (0..vertices.len()).step_by(3) {
+        let v0 = Vector3::from(vertices[i].position);
+        let v1 = Vector3::from(vertices[i + 1].position);
+        let v2 = Vector3::from(vertices[i + 2].position);
+        let s0 = v1 - v0;
+        let s1 = v2 - v0;
+        let face_normal = s0.cross(s1).normalize();
+        vertices[i].normal = face_normal.into();
+        vertices[i + 1].normal = face_normal.into();
+        vertices[i + 2].normal = face_normal.into();
     }
 }

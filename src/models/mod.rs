@@ -1,3 +1,3 @@
-
-pub mod serpinsky;
 pub mod cube;
+pub mod serpinsky;
+

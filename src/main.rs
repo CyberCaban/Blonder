@@ -50,14 +50,14 @@ fn main() -> Result<()> {
     //     "assets/shaders/camera/vert.glsl",
     //     "assets/shaders/camera/frag.glsl",
     // )?);
-    renderer.add_default_shader(Shader::new(
-        "assets/shaders/checkerboard/vert.glsl",
-        "assets/shaders/checkerboard/frag.glsl",
-    )?);
     // renderer.add_default_shader(Shader::new(
-    //     "assets/shaders/light/vert.glsl",
-    //     "assets/shaders/light/frag.glsl",
+    //     "assets/shaders/checkerboard/vert.glsl",
+    //     "assets/shaders/checkerboard/frag.glsl",
     // )?);
+    renderer.add_default_shader(Shader::new(
+        "assets/shaders/light/vert.glsl",
+        "assets/shaders/light/frag.glsl",
+    )?);
 
     let mut serp = Serpinsky::new()?;
     let d = 20.0;
@@ -75,7 +75,7 @@ fn main() -> Result<()> {
         "assets/textures/white.png",
     ];
 
-    for _ in 0..1_0 {
+    for _ in 0..1_00 {
         let cube = Cube::new(CubeSettings {
             position: [
                 rng.gen_range(low, high),
@@ -95,7 +95,8 @@ fn main() -> Result<()> {
     }
 
     let cube = Cube::new(CubeSettings {
-        texture_name: "assets/textures/transparency.png",
+        texture_name: "assets/textures/white.png",
+        position: [1.5, 0.0, 0.0],
         ..Default::default()
     })?;
     let cube2 = Cube::new(CubeSettings {
@@ -104,7 +105,7 @@ fn main() -> Result<()> {
         rotation: [3.0, 1.0, 0.0],
         ..Default::default()
     })?;
-    // let _ = renderer.add_drawable(cube);
+    let _ = renderer.add_drawable(cube);
     // let _ = renderer.add_drawable(cube2);
 
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;

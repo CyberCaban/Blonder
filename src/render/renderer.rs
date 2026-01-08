@@ -55,11 +55,10 @@ impl Renderer {
     }
     pub fn use_current_shader(&mut self, mvp: &Matrix4<f32>) -> Result<()> {
         let current_shader = &self.current_shader;
-        if let Some(shader_name) = current_shader {
-            if let Some(shader) = self.shaders.get(shader_name) {
-                shader.use_shader();
-                shader.set_mat4("mvp", mvp);
-            }
+        if let Some(shader_name) = current_shader
+            && let Some(shader) = self.shaders.get(shader_name)
+        {
+            shader.use_shader();
         }
         Ok(())
     }
@@ -138,7 +137,7 @@ impl Renderer {
             warn!("Rendering error: [{e}]");
         }
         for object in &self.drawables {
-            self.draw_object(object, glfw, &state);
+            self.draw_object(object, glfw, state);
         }
         unsafe {
             gl::DepthMask(gl::TRUE);
@@ -166,6 +165,7 @@ impl Renderer {
             if let Some(shader) = self.shaders.get(&key.shader_name) {
                 // shader.use_shader();
                 // shader.set_vec3("lightColor", &Vector3::new(1.0, 1.0, 1.0));
+                // shader.set_vec3("lightPos", &Vector3::new(1.5, 2.0, 1.0));
                 self.current_shader = Some(key.shader_name.clone());
             }
 
@@ -188,13 +188,17 @@ impl Renderer {
                 if *wireframe { gl::LINE } else { gl::FILL },
             );
         }
-        if let Some(shader) = self.get_current_shader() {
-            shader.set_vec3("lightColor", &Vector3::new(1.0, 0.0, 0.0));
-        }
         let (m, v, p) = self.prepare_mvp(state);
         let mvp = p * v * m;
         if let Err(e) = self.use_current_shader(&mvp) {
             warn!("Rendering error: [{e}]");
+        }
+        if let Some(shader) = self.get_current_shader() {
+            shader.set_vec3("lightColor", &Vector3::new(1.0, 0.0, 0.0));
+            shader.set_vec3("lightPos", &Vector3::new(1.5, 2.0, 1.0));
+            shader.set_mat4("model", &m);
+            shader.set_mat4("view", &v);
+            shader.set_mat4("projection", &p);
         }
         self.batch_render(glfw, state);
 
@@ -230,16 +234,19 @@ impl Renderer {
                 _ => 0,
             };
 
+            if let Err(e) = self.use_current_shader(&mvp) {
+                warn!("Rendering error: [{e}]");
+            }
             if let Some(shader) = self.get_current_shader() {
                 // shader.set_int("checkerboardPattern", pattern);
                 // shader.set_int("checkerboardFrame", (FRAME_COUNT % 4) as i32);
-                shader.set_mat4("model", &m);
                 shader.set_float("farPlane", 10.0);
                 shader.set_vec3("cameraPos", &state.camera.position);
-            }
-
-            if let Err(e) = self.use_current_shader(&mvp) {
-                warn!("Rendering error: [{e}]");
+                shader.set_vec3("lightColor", &Vector3::new(1.0, 1.0, 1.0));
+                shader.set_vec3("lightPos", &Vector3::new(1.5, 1.0, 1.0));
+                shader.set_mat4("model", &m);
+                shader.set_mat4("view", &v);
+                shader.set_mat4("projection", &p);
             }
             self.batch_render(glfw, state);
         }
