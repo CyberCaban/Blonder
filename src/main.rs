@@ -8,6 +8,7 @@ use crate::{
     log::setup_logger,
     models::{
         cube::{Cube, CubeSettings},
+        plane::Plane,
         serpinsky::Serpinsky,
     },
     render::{
@@ -70,8 +71,8 @@ fn main() -> Result<()> {
     let (low, high) = (-w, w);
 
     let texture_pool = [
-        "assets/textures/cooler.png",
-        "assets/textures/liminal_space.png",
+        // "assets/textures/cooler.png",
+        // "assets/textures/liminal_space.png",
         "assets/textures/white.png",
     ];
 
@@ -84,7 +85,7 @@ fn main() -> Result<()> {
                 ..Default::default()
             })
             .unwrap();
-            let _ = renderer.add_drawable(cube);
+            // let _ = renderer.add_drawable(cube);
         }
     }
 
@@ -94,7 +95,12 @@ fn main() -> Result<()> {
         rotation: [3.0, 1.0, 0.0],
         ..Default::default()
     })?;
+    let plane = Plane::new(
+        [[w, 0.0, w], [-w, 0.0, w], [w, 0.0, -w], [-w, 0.0, -w]],
+        [0.0, 0.0, 0.0],
+    )?;
     let _ = renderer.add_drawable(cube2);
+    let _ = renderer.add_drawable(plane);
 
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
     let font_atlas = FontAtlas::new("assets/fonts/Montserrat-Regular.ttf", 48)?;
