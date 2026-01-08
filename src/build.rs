@@ -53,7 +53,6 @@ fn main() {
         .parent()
         .unwrap(); // target
 
-
     // копируем ассеты
     if let Err(e) = copy_dir_all(&current_dir.join("assets"), &target_dir.join("assets")) {
         panic!("Не удалось скопировать ассеты: {e}");
@@ -67,7 +66,10 @@ fn main() {
     }
 
     // Проверяем существование файла glfw3.lib
+    #[cfg(target_os = "windows")]
     let glfw_lib = lib_dir.join("glfw3.lib");
+    #[cfg(target_os = "linux")]
+    let glfw_lib = lib_dir.join("libglfw3.a");
     if !glfw_lib.exists() {
         panic!("Файл 'glfw3.lib' не найден в: {:?}", lib_dir);
     }
@@ -94,17 +96,8 @@ fn main() {
         println!("cargo:rustc-link-lib=Xinerama");
         println!("cargo:rustc-link-lib=Xcursor");
         println!("cargo:rustc-link-lib=Xi");
-        println!("cargo:rustc-link-lib=Xxf86vm");
         println!("cargo:rustc-link-lib=pthread");
         println!("cargo:rustc-link-lib=dl");
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        println!("cargo:rustc-link-lib=framework=Cocoa");
-        println!("cargo:rustc-link-lib=framework=IOKit");
-        println!("cargo:rustc-link-lib=framework=CoreVideo");
-        println!("cargo:rustc-link-lib=framework=OpenGL");
     }
 
     println!("Build script completed successfully!");
