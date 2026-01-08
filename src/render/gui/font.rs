@@ -1,0 +1,131 @@
+use std::{collections::HashMap, fs};
+
+use anyhow::{Context, Result};
+use gl::types::GLuint;
+use image::{DynamicImage::ImageRgba8, Rgba, RgbaImage};
+use rusttype::{Font, Scale, point};
+
+use crate::texture::{Texture, TextureConfig};
+
+pub struct Character {
+    pub texture_id: Texture,
+    pub size: (f32, f32),
+    pub bearing: (f32, f32),
+    pub advance: f32,
+}
+
+pub struct FontAtlas {
+    pub characters: HashMap<char, Character>,
+    pub size: u32,
+    pub line_height: f32,
+}
+
+impl FontAtlas {
+    pub fn new(font_path: &str, font_size: u32) -> Result<Self> {
+        let font_data =
+            fs::read(font_path).context(format!("Failed to load font [{}]", font_path))?;
+        let font = Font::try_from_vec(font_data)
+            .context(format!("Failed to parse font: [{}]", font_path))?;
+        let scale = Scale::uniform(font_size as f32);
+        let v_metrics = font.v_metrics(scale);
+        let line_height = (v_metrics.ascent - v_metrics.descent + v_metrics.line_gap).ceil() as i32;
+        let mut characters = HashMap::new();
+        for ch in 32..128u8 {
+            let ch = ch as char;
+            let glyph = font.glyph(ch).scaled(scale);
+            let h_metrics = glyph.h_metrics();
+            let positioned = glyph.positioned(point(0.0, v_metrics.ascent));
+
+            if let Some(bounding_box) = positioned.pixel_bounding_box() {
+                let (w, h) = (bounding_box.width() as u32, bounding_box.height() as u32);
+                if w == 0 || h == 0 {
+                    let character = Character {
+                        texture_id: Texture::empty_texture(),
+                        size: (0.0, 0.0),
+                        bearing: (0.0, 0.0),
+                        advance: h_metrics.advance_width,
+                    };
+                    characters.insert(ch, character);
+                    continue;
+                }
+                let padding = 2;
+                let img_width = w + padding * 2;
+                let img_height = h + padding * 3;
+                let mut image = RgbaImage::new(img_width, img_height);
+                for pixel in image.pixels_mut() {
+                    *pixel = Rgba([0, 0, 0, 0]);
+                }
+
+                positioned.draw(|x, y, v| {
+                    // Смещаем координаты относительно bounding box
+                    let px = x as i32;
+                    let py = y as i32;
+
+                    // Вычисляем позицию в изображении с учетом padding
+                    let img_x = px - (bounding_box.min.x - (padding * 2) as i32);
+                    let y_rel = py + bounding_box.min.y;
+                    let img_y = (y_rel - (padding * 2) as i32);
+                    if img_x >= 0
+                        && img_x < img_width as i32
+                        && img_y >= 0
+                        && img_y < img_height as i32
+                    {
+                        let inverted_y = (img_height as i32 - 1 - img_y) as u32;
+                        let alpha = (v * 255.0) as u8;
+                        image.put_pixel(
+                            img_x as u32,
+                            inverted_y,
+                            image::Rgba([alpha, alpha, alpha, alpha]),
+                        );
+                    }
+                });
+                image.save(format!("out/{}.png", ch));
+                unsafe {
+                    gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
+                }
+                let texture = Texture::from_image(ImageRgba8(image), TextureConfig::default())
+                    .context(format!(
+                        "Failed to create texture for font [{}], char [{}]",
+                        font_path, ch
+                    ))?;
+                let character = Character {
+                    texture_id: texture,
+                    size: (img_width as f32, img_height as f32),
+                    bearing: (
+                        bounding_box.min.x as f32 - padding as f32,
+                        v_metrics.ascent - bounding_box.min.y as f32 - padding as f32,
+                    ),
+                    advance: h_metrics.advance_width,
+                };
+                characters.insert(ch, character);
+            } else {
+                let character = Character {
+                    texture_id: Texture::empty_texture(),
+                    size: (0.0, 0.0),
+                    bearing: (0.0, 0.0),
+                    advance: h_metrics.advance_width,
+                };
+                characters.insert(ch, character);
+                continue;
+            }
+        }
+        Ok(FontAtlas {
+            characters,
+            size: font_size,
+            line_height: line_height as f32,
+        })
+    }
+    pub fn get_character(&self, ch: char) -> Option<&Character> {
+        self.characters.get(&ch)
+    }
+}
+
+impl Drop for FontAtlas {
+    fn drop(&mut self) {
+        unsafe {
+            for ch in self.characters.values() {
+                gl::DeleteTextures(1, &ch.texture_id.id());
+            }
+        }
+    }
+}

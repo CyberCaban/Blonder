@@ -10,7 +10,14 @@ use crate::{
         cube::{Cube, CubeSettings},
         serpinsky::Serpinsky,
     },
-    render::{helpers::init_window, renderer::Renderer},
+    render::{
+        gui::{
+            font::FontAtlas,
+            text_renderer::{self, TextRenderer},
+        },
+        helpers::init_window,
+        renderer::Renderer,
+    },
     shader::{Shader, ShaderInfo},
     state::State,
 };
@@ -55,7 +62,7 @@ fn main() -> Result<()> {
     let d = 20.0;
     serp.serp(&[-d, -d, 0.0], &[d, -d, 0.0], &[0., d, 0.0], 3);
     serp.prepare();
-    let _ = renderer.add_drawable(serp);
+    // let _ = renderer.add_drawable(serp);
     let mut rng = rand::thread_rng();
     let w = 5.0;
     let (low, high) = (-w, w);
@@ -96,8 +103,11 @@ fn main() -> Result<()> {
         rotation: [3.0, 1.0, 0.0],
         ..Default::default()
     })?;
-    let _ = renderer.add_drawable(cube);
-    let _ = renderer.add_drawable(cube2);
+    // let _ = renderer.add_drawable(cube);
+    // let _ = renderer.add_drawable(cube2);
+
+    let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
+    let font_atlas = FontAtlas::new("assets/fonts/Montserrat-Regular.ttf", 48)?;
 
     while !window.should_close() {
         glfw.poll_events();
@@ -109,6 +119,14 @@ fn main() -> Result<()> {
         state.camera.process_input(&mut window, state.delta_time);
 
         renderer.render_checkerboard(&mut glfw, &state);
+        text_renderer.render_text(
+            &font_atlas,
+            "Hello world",
+            100.0,
+            100.0,
+            1.0,
+            (0.0, 0.0, 1.0),
+        );
 
         window.swap_buffers();
     }
