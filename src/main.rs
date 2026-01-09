@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use ::log::info;
 use anyhow::{Context as _, Result};
 use glfw::Context;
@@ -15,15 +13,14 @@ use crate::{
     },
     render::{
         color::Color,
-        drawable::Drawable,
         gui::{
             font::FontAtlas,
-            text_renderer::{self, TextRenderParams, TextRenderer},
+            text_renderer::{TextRenderParams, TextRenderer},
         },
         helpers::init_window,
         renderer::Renderer,
     },
-    shader::{Shader, ShaderInfo},
+    shader::Shader,
     state::State,
 };
 
@@ -31,6 +28,7 @@ extern crate gl;
 extern crate glfw;
 
 mod camera;
+mod controls;
 mod events;
 mod log;
 mod models;
@@ -64,12 +62,13 @@ fn main() -> Result<()> {
     )?);
 
     let mut serp = Serpinsky::new()?;
-    let d = 20.0;
-    serp.serp(&[-d, -d, 0.0], &[d, -d, 0.0], &[0., d, 0.0], 3);
+    let d = 5.0;
+    // serp.triangle(&[-d, -d, 0.0], &[d, -d, 0.0], &[0., d, 0.0], 3);
+    serp.make_coh(&[-d, -d, 0.0], &[d, -d, 0.0], &[0.0, d, 0.0], 2);
     serp.prepare();
     // let _ = renderer.add_drawable(serp);
     let mut rng = rand::thread_rng();
-    let r = 100.0;
+    let r = 10.0;
     let (low, high) = (-r, r);
 
     let texture_pool = [
@@ -78,41 +77,51 @@ fn main() -> Result<()> {
         "assets/textures/white.png",
     ];
 
-    for _ in 0..1000 {
+    let mut objIds = Vec::with_capacity(100);
+    for _ in 0..100 {
         let cube = Cube::new(CubeSettings {
-            position: [
-                rng.gen_range(low, high),
-                rng.gen_range(low, high),
-                rng.gen_range(low, high),
-            ],
-            rotation: [
-                rng.r#gen::<f32>() * 360.0,
-                rng.r#gen::<f32>() * 360.0,
-                rng.r#gen::<f32>() * 360.0,
-            ],
+            position: [0.0, 0.0, 0.0],
+            rotation: [0.0, 0.0, 0.0],
             texture_name: texture_pool[rng.gen_range(0, texture_pool.len())],
             ..Default::default()
         })
         .unwrap();
-        let _ = renderer.add_drawable(cube);
+        let id = renderer.add_dynamic_drawable(cube);
+        if let Ok(id) = id {
+            if let Some(tr) = renderer.get_transform_mut(&id) {
+                tr.position.x = rng.gen_range(low, high);
+                tr.position.y = rng.gen_range(low, high);
+                tr.position.z = rng.gen_range(low, high);
+            }
+        }
+        objIds.push(id);
     }
 
     let cube2 = Cube::new(CubeSettings {
         texture_name: "assets/textures/cooler.png",
-        position: [1.0, 0.0, 0.0],
-        rotation: [3.0, 1.0, 0.0],
+        position: [0.0, 0.0, 0.0],
+        rotation: [0.0, 0.0, 0.0],
         ..Default::default()
     })?;
     let w = 10.0;
+    let y = -1.0;
     let plane = Plane::new(
-        [[w, 0.0, w], [-w, 0.0, w], [w, 0.0, -w], [-w, 0.0, -w]],
+        [[w, y, w], [-w, y, w], [w, y, -w], [-w, y, -w]],
         [0.0, 0.0, 0.0],
     )?;
-    let _ = renderer.add_drawable(cube2);
-    let _ = renderer.add_drawable(plane);
+    let objId = renderer.add_dynamic_drawable(cube2);
+    let _ = renderer.add_static_drawable(plane);
+    if let Ok(id) = objId {
+        if let Some(tr) = renderer.get_transform_mut(&id) {
+            tr.position.x = 1.0;
+            // tr.scale.x = 0.1;
+            // tr.scale.y = 0.1;
+        }
+    }
 
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
-    let font_atlas = FontAtlas::new("assets/fonts/Montserrat-Regular.ttf", 48)?;
+    let font_size = 48u32;
+    let font_atlas = FontAtlas::new("assets/fonts/Montserrat-Regular.ttf", font_size)?;
 
     let mut frames = 0u32;
     let mut fps_count = String::new();
@@ -131,17 +140,38 @@ fn main() -> Result<()> {
         process_events(&mut window, &events, &mut state);
         state.camera.process_input(&mut window, state.delta_time);
 
+        if frames % 5 == 0 {
+            for (i, obj) in objIds.iter().enumerate() {
+                if let Ok(id) = obj {
+                    if let Some(tr) = renderer.get_transform_mut(&id) {
+                        if state.numbers[0] > 0.0 {
+                            tr.scale.x = state.numbers[0];
+                            tr.scale.y = state.numbers[0];
+                            tr.scale.z = state.numbers[0];
+                        }
+                        tr.rotation.x =
+                            (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
+                        tr.rotation.z =
+                            (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
+                    }
+                }
+            }
+        }
+
         renderer.render_checkerboard(&mut glfw, &state);
         text_renderer.render_text(
             &font_atlas,
             &fps_count,
             0.0,
-            state.screen.height as f32 - 48.0 / 2.0,
+            state.screen.height as f32 - font_size as f32 / 2.0 - 4.0,
             &state.screen,
-            &fps_render_params,
+            &TextRenderParams {
+                scale: 1.0,
+                color: Color::white(),
+            },
         );
         if frames % 10 == 0 {
-            fps_count = format!("FPS: {}", 1.0 / state.delta_time);
+            fps_count = format!("FPS: {:.0}", 1.0 / state.delta_time);
         }
         window.swap_buffers();
     }

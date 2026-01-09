@@ -1,12 +1,21 @@
-use std::collections::HashMap;
+use std::{cell::RefCell, collections::HashMap, rc::Rc};
 
 use cgmath::{Deg, InnerSpace, Matrix4, Rad, Vector3, perspective};
 use log::warn;
 use num::Zero;
 use thiserror::Error;
+use uuid::Uuid;
 
-use crate::{render::drawable::Drawable, shader::Shader, state::State, texture::Texture};
+use crate::{
+    controls::object_manager::DynamicObject,
+    render::{drawable::Drawable, transform::Transform},
+    shader::Shader,
+    state::State,
+    texture::Texture,
+};
 use anyhow::Result;
+
+pub trait DynamicDrawable: Drawable + DynamicObject {}
 
 #[derive(Debug, Error)]
 pub enum RendererError {
@@ -16,6 +25,8 @@ pub enum RendererError {
 
 pub struct Renderer {
     drawables: Vec<Box<dyn Drawable>>,
+    dynamic_drawables: HashMap<Uuid, Transform>,
+    drawable_indices: HashMap<Uuid, usize>,
 
     textures: HashMap<String, Texture>,
 
@@ -31,6 +42,8 @@ impl Renderer {
     pub fn new() -> Self {
         Self {
             drawables: vec![],
+            dynamic_drawables: HashMap::new(),
+            drawable_indices: HashMap::new(),
             shaders: HashMap::new(),
             textures: HashMap::new(),
             current_shader: None,
@@ -69,7 +82,7 @@ impl Renderer {
         }
         Ok(())
     }
-    pub fn add_drawable<T: Drawable + 'static>(&mut self, object: T) -> Result<()> {
+    pub fn add_static_drawable<T: Drawable + 'static>(&mut self, object: T) -> Result<()> {
         let texture_name = object.get_texture_name();
         if object.requires_texture() && !self.textures.contains_key(&texture_name) {
             match Texture::new(&texture_name) {
@@ -95,6 +108,46 @@ impl Renderer {
         self.drawables.push(Box::new(object));
         Ok(())
     }
+    pub fn add_dynamic_drawable<T: Drawable + 'static>(
+        &mut self,
+        object: T,
+    ) -> Result<Uuid> {
+        let texture_name = object.get_texture_name();
+        if object.requires_texture() && !self.textures.contains_key(&texture_name) {
+            match Texture::new(&texture_name) {
+                Ok(texture) => {
+                    self.textures.insert(texture_name.clone(), texture);
+                }
+                Err(e) => {
+                    warn!("Failed to load texture: {}", e);
+                }
+            }
+        }
+        let shader_name = object.get_shader_name();
+        if object.requires_shader() && !self.shaders.contains_key(&shader_name.get_name()) {
+            match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
+                Ok(s) => {
+                    self.shaders.insert(shader_name.name, s);
+                }
+                Err(e) => {
+                    warn!("Failer to load shader: [{}]", e);
+                }
+            }
+        }
+        let id = Uuid::new_v4();
+        self.drawables.push(Box::new(object));
+        self.dynamic_drawables
+            .insert(id.clone(), Transform::default());
+        self.drawable_indices
+            .insert(id.clone(), self.drawables.len() - 1);
+        Ok(id)
+    }
+    pub fn get_transform(&self, id: &Uuid) -> Option<&Transform> {
+        self.dynamic_drawables.get(id)
+    }
+    pub fn get_transform_mut(&mut self, id: &Uuid) -> Option<&mut Transform> {
+        self.dynamic_drawables.get_mut(id)
+    }
     fn get_current_shader(&self) -> Option<&Shader> {
         match &self.current_shader {
             Some(name) => self.shaders.get(name),
@@ -119,36 +172,53 @@ impl Renderer {
     }
     fn batch_render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let batches = {
-            let mut batches: HashMap<BatchKey, Vec<&Box<dyn Drawable>>> = HashMap::new();
-            for object in &self.drawables {
-                let key = BatchKey::from_object(object.as_ref());
-                batches.entry(key).or_default().push(object);
+            let mut batches: HashMap<BatchKey, Vec<(usize, Option<Transform>)>> = HashMap::new();
+            for (index, drawable) in self.drawables.iter().enumerate() {
+                let key = BatchKey::from_object(drawable.as_ref());
+                let transform = self
+                    .drawable_indices
+                    .iter()
+                    .find(|&obj| *obj.1 == index)
+                    .and_then(|(id, _)| self.dynamic_drawables.get(id));
+                batches
+                    .entry(key)
+                    .or_default()
+                    .push((index, transform.cloned()));
             }
             batches
         };
 
         for (key, objects) in batches {
-            if key.need_shader {
-                if let Some(shader) = self.shaders.get(&key.shader_name) {
-                    shader.use_shader();
-                    self.apply_uniforms(shader, glfw, state);
-                    self.current_shader = Some(key.shader_name.clone());
-                } else {
-                    if let Some(default_shader) = self.shaders.get("default") {
-                        default_shader.use_shader();
-                        self.current_shader = Some("default".to_string());
-                    }
-                }
+            if key.need_shader
+                && let Some(shader) = self.shaders.get(&key.shader_name)
+            {
+                shader.use_shader();
+                self.apply_uniforms(shader, glfw, state);
+                self.current_shader = Some(key.shader_name.clone());
             } else {
                 if let Some(default_shader) = self.shaders.get("default") {
                     default_shader.use_shader();
                     self.current_shader = Some("default".to_string());
                 }
             }
+            // if key.need_shader {
+            //     if let Some(shader) = self.shaders.get(&key.shader_name) {
+            //         shader.use_shader();
+            //         self.apply_uniforms(shader, glfw, state);
+            //         self.current_shader = Some(key.shader_name.clone());
+            //     } else {
+            //         if let Some(default_shader) = self.shaders.get("default") {
+            //             default_shader.use_shader();
+            //             self.current_shader = Some("default".to_string());
+            //         }
+            //     }
+            // } else {
+            //     if let Some(default_shader) = self.shaders.get("default") {
+            //         default_shader.use_shader();
+            //         self.current_shader = Some("default".to_string());
+            //     }
+            // }
 
-            if let Some(shader) = self.get_current_shader() {
-                self.apply_uniforms(shader, glfw, state);
-            }
             if let Some(texture) = self.textures.get(&key.texture_name) {
                 unsafe {
                     gl::ActiveTexture(gl::TEXTURE0);
@@ -157,19 +227,30 @@ impl Renderer {
             }
 
             // key.blend_mode.apply();
-            for object in objects {
-                object.draw(glfw, state);
+            for (index, transform) in objects {
+                if let Some(drawable) = self.drawables.get(index) {
+                    if let Some(shader) = self.get_current_shader() {
+                        self.apply_uniforms(shader, glfw, state);
+                        if let Some(transform) = transform {
+                            let model = transform.to_model();
+                            shader.set_mat4("model", &model);
+                        } else {
+                            shader.set_mat4("model", &self.model);
+                        }
+                    }
+                    drawable.draw(glfw, state);
+                }
             }
         }
     }
     fn apply_uniforms(&self, shader: &Shader, glfw: &mut glfw::Glfw, state: &State) {
         shader.set_float("uTime", glfw.get_time() as f32);
-        shader.set_mat4("model", &self.model);
+        // shader.set_mat4("model", &self.model);
         shader.set_mat4("view", &self.view);
         shader.set_mat4("projection", &self.projection);
         shader.set_float("farPlane", 10.0);
         shader.set_vec3("cameraPos", &state.camera.position);
-        shader.set_vec3("lightColor", &Vector3::new(0.33, 0.33, 1.));
+        shader.set_vec3("lightColor", &Vector3::new(1.33, 1.33, 1.));
         shader.set_vec3(
             "lightPos",
             &Vector3::new(

@@ -24,8 +24,8 @@ pub struct Screen {
 #[derive(Debug)]
 pub struct State {
     pub color: (f32, f32, f32, f32),
+    pub numbers: [f32; 10],
     pub wireframe: bool,
-    pub transform_matrix: Matrix4<f32>,
     pub screen: Screen,
     pub camera: Camera,
     pub delta_time: f32,
@@ -34,12 +34,10 @@ pub struct State {
 
 impl Default for State {
     fn default() -> Self {
-        let transform_matrix =
-            Matrix4::<f32>::identity() * Matrix4::<f32>::from_translation(Vector3::unit_y() * 0.5);
         Self {
             color: (0.0, 0.0, 0.0, 0.0),
             wireframe: false,
-            transform_matrix,
+            numbers: [0.0; 10],
             screen: Screen {
                 width: WIDTH,
                 height: HEIGHT,

@@ -5,6 +5,7 @@ pub mod drawable;
 pub mod helpers;
 pub mod renderer;
 pub mod vertex;
+pub mod transform;
 
 
 pub mod gui;

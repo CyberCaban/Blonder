@@ -74,12 +74,14 @@ impl Texture {
             );
             gl::GenerateMipmap(gl::TEXTURE_2D);
         }
+
         #[cfg(debug_assertions)]
         info!(
             "Creating texture [{}] took {}ms",
             texture_path,
             (Instant::now() - now).as_millis()
         );
+
         Ok(Self { id: texture })
     }
     pub fn id(&self) -> u32 {

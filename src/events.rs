@@ -3,6 +3,15 @@ use glfw::{Action, Key, WindowEvent};
 use crate::state::{Events, State};
 
 pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut State) {
+    if matches!(window.get_key(glfw::Key::Up), Action::Press) {
+        state.numbers[0] += 0.1;
+    }
+
+    if matches!(window.get_key(glfw::Key::Down), Action::Press) {
+        state.numbers[0] -= 0.1;
+    }
+
+    state.numbers[0] = state.numbers[0].clamp(-1.0, 5.0);
     for (msg, event) in glfw::flush_messages(events) {
         match event {
             WindowEvent::FileDrop(param) => {
@@ -19,10 +28,8 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
             glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
                 window.set_should_close(true)
             }
-            WindowEvent::Key(Key::Up, _, Action::Press | Action::Repeat, _) => {
-            }
-            WindowEvent::Key(Key::Down, _, Action::Press | Action::Repeat, _) => {
-            }
+            WindowEvent::Key(Key::Up, _, Action::Press | Action::Repeat, _) => {}
+            WindowEvent::Key(Key::Down, _, Action::Press | Action::Repeat, _) => {}
             WindowEvent::Scroll(w, h) => {
                 state.color.2 += (h * 0.01) as f32;
                 state.color.2 = state.color.2.clamp(0.0, 1.0);

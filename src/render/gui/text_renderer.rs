@@ -1,5 +1,5 @@
 use anyhow::Result;
-use cgmath::{Matrix4, Vector3};
+use cgmath::{Matrix4, Vector3, Vector4};
 use num::Zero;
 
 use crate::{
@@ -118,8 +118,10 @@ impl TextRenderer {
             self.shader_program
                 .set_mat4("projection", &self.projection_matrix);
 
-            self.shader_program
-                .set_vec3("uTextColor", &Vector3::new(color[0], color[1], color[2]));
+            self.shader_program.set_vec4(
+                "uTextColor",
+                &Vector4::new(color[0], color[1], color[2], color[3]),
+            );
 
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
