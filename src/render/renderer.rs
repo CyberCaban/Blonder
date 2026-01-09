@@ -15,7 +15,17 @@ use crate::{
 };
 use anyhow::Result;
 
-pub trait DynamicDrawable: Drawable + DynamicObject {}
+pub struct RenderObject {
+    drawable: Box<dyn Drawable>,
+    transform: Option<Transform>,
+    is_dynamic: bool,
+}
+
+impl RenderObject {
+    pub fn get_transform_mut(&mut self) -> Option<&mut Transform> {
+        self.transform.as_mut()
+    }
+}
 
 #[derive(Debug, Error)]
 pub enum RendererError {
@@ -24,9 +34,8 @@ pub enum RendererError {
 }
 
 pub struct Renderer {
-    drawables: Vec<Box<dyn Drawable>>,
-    dynamic_drawables: HashMap<Uuid, Transform>,
-    drawable_indices: HashMap<Uuid, usize>,
+    drawables: Vec<RenderObject>,
+    dynamic_map: HashMap<Uuid, usize>,
 
     textures: HashMap<String, Texture>,
 
@@ -42,8 +51,7 @@ impl Renderer {
     pub fn new() -> Self {
         Self {
             drawables: vec![],
-            dynamic_drawables: HashMap::new(),
-            drawable_indices: HashMap::new(),
+            dynamic_map: HashMap::new(),
             shaders: HashMap::new(),
             textures: HashMap::new(),
             current_shader: None,
@@ -105,13 +113,15 @@ impl Renderer {
                 }
             }
         }
-        self.drawables.push(Box::new(object));
+        let render_object = RenderObject {
+            drawable: Box::new(object),
+            transform: None,
+            is_dynamic: false,
+        };
+        self.drawables.push(render_object);
         Ok(())
     }
-    pub fn add_dynamic_drawable<T: Drawable + 'static>(
-        &mut self,
-        object: T,
-    ) -> Result<Uuid> {
+    pub fn add_dynamic_drawable<T: Drawable + 'static>(&mut self, object: T) -> Result<Uuid> {
         let texture_name = object.get_texture_name();
         if object.requires_texture() && !self.textures.contains_key(&texture_name) {
             match Texture::new(&texture_name) {
@@ -135,18 +145,25 @@ impl Renderer {
             }
         }
         let id = Uuid::new_v4();
-        self.drawables.push(Box::new(object));
-        self.dynamic_drawables
-            .insert(id.clone(), Transform::default());
-        self.drawable_indices
+        let render_object = RenderObject {
+            drawable: Box::new(object),
+            transform: Some(Transform::default()),
+            is_dynamic: true,
+        };
+        self.drawables.push(render_object);
+        self.dynamic_map
             .insert(id.clone(), self.drawables.len() - 1);
         Ok(id)
     }
-    pub fn get_transform(&self, id: &Uuid) -> Option<&Transform> {
-        self.dynamic_drawables.get(id)
+    pub fn get_transform(&self, id: &Uuid) -> Option<&RenderObject> {
+        self.dynamic_map
+            .get(id)
+            .and_then(|index| Some(&self.drawables[*index]))
     }
-    pub fn get_transform_mut(&mut self, id: &Uuid) -> Option<&mut Transform> {
-        self.dynamic_drawables.get_mut(id)
+    pub fn get_transform_mut(&mut self, id: &Uuid) -> Option<&mut RenderObject> {
+        self.dynamic_map
+            .get(id)
+            .and_then(|index| Some(&mut self.drawables[*index]))
     }
     fn get_current_shader(&self) -> Option<&Shader> {
         match &self.current_shader {
@@ -173,17 +190,13 @@ impl Renderer {
     fn batch_render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let batches = {
             let mut batches: HashMap<BatchKey, Vec<(usize, Option<Transform>)>> = HashMap::new();
-            for (index, drawable) in self.drawables.iter().enumerate() {
-                let key = BatchKey::from_object(drawable.as_ref());
-                let transform = self
-                    .drawable_indices
-                    .iter()
-                    .find(|&obj| *obj.1 == index)
-                    .and_then(|(id, _)| self.dynamic_drawables.get(id));
+            for (index, render_obj) in self.drawables.iter().enumerate() {
+                let key = BatchKey::from_object(render_obj.drawable.as_ref());
+
                 batches
                     .entry(key)
                     .or_default()
-                    .push((index, transform.cloned()));
+                    .push((index, render_obj.transform));
             }
             batches
         };
@@ -231,14 +244,14 @@ impl Renderer {
                 if let Some(drawable) = self.drawables.get(index) {
                     if let Some(shader) = self.get_current_shader() {
                         self.apply_uniforms(shader, glfw, state);
-                        if let Some(transform) = transform {
+                        if let Some(transform) = drawable.transform {
                             let model = transform.to_model();
                             shader.set_mat4("model", &model);
                         } else {
                             shader.set_mat4("model", &self.model);
                         }
                     }
-                    drawable.draw(glfw, state);
+                    drawable.drawable.draw(glfw, state);
                 }
             }
         }

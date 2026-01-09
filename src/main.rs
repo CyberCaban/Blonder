@@ -78,7 +78,7 @@ fn main() -> Result<()> {
     ];
 
     let mut objIds = Vec::with_capacity(100);
-    for _ in 0..100 {
+    for _ in 0..1000 {
         let cube = Cube::new(CubeSettings {
             position: [0.0, 0.0, 0.0],
             rotation: [0.0, 0.0, 0.0],
@@ -87,12 +87,13 @@ fn main() -> Result<()> {
         })
         .unwrap();
         let id = renderer.add_dynamic_drawable(cube);
-        if let Ok(id) = id {
-            if let Some(tr) = renderer.get_transform_mut(&id) {
-                tr.position.x = rng.gen_range(low, high);
-                tr.position.y = rng.gen_range(low, high);
-                tr.position.z = rng.gen_range(low, high);
-            }
+        if let Ok(id) = id
+            && let Some(render_object) = renderer.get_transform_mut(&id)
+            && let Some(tr) = render_object.get_transform_mut()
+        {
+            tr.position.x = rng.gen_range(low, high);
+            tr.position.y = rng.gen_range(low, high);
+            tr.position.z = rng.gen_range(low, high);
         }
         objIds.push(id);
     }
@@ -109,14 +110,15 @@ fn main() -> Result<()> {
         [[w, y, w], [-w, y, w], [w, y, -w], [-w, y, -w]],
         [0.0, 0.0, 0.0],
     )?;
-    let objId = renderer.add_dynamic_drawable(cube2);
+    let obj_id = renderer.add_dynamic_drawable(cube2);
     let _ = renderer.add_static_drawable(plane);
-    if let Ok(id) = objId {
-        if let Some(tr) = renderer.get_transform_mut(&id) {
-            tr.position.x = 1.0;
-            // tr.scale.x = 0.1;
-            // tr.scale.y = 0.1;
-        }
+    if let Ok(id) = obj_id
+        && let Some(render_object) = renderer.get_transform_mut(&id)
+        && let Some(tr) = render_object.get_transform_mut()
+    {
+        tr.position.x = 1.0;
+        // tr.scale.x = 0.1;
+        // tr.scale.y = 0.1;
     }
 
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
@@ -140,20 +142,19 @@ fn main() -> Result<()> {
         process_events(&mut window, &events, &mut state);
         state.camera.process_input(&mut window, state.delta_time);
 
-        if frames % 5 == 0 {
+        if frames % 1 == 0 {
             for (i, obj) in objIds.iter().enumerate() {
-                if let Ok(id) = obj {
-                    if let Some(tr) = renderer.get_transform_mut(&id) {
-                        if state.numbers[0] > 0.0 {
-                            tr.scale.x = state.numbers[0];
-                            tr.scale.y = state.numbers[0];
-                            tr.scale.z = state.numbers[0];
-                        }
-                        tr.rotation.x =
-                            (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
-                        tr.rotation.z =
-                            (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
+                if let Ok(id) = obj
+                    && let Some(render_object) = renderer.get_transform_mut(&id)
+                    && let Some(tr) = render_object.get_transform_mut()
+                {
+                    if state.numbers[0] > 0.0 {
+                        tr.scale.x = state.numbers[0];
+                        tr.scale.y = state.numbers[0];
+                        tr.scale.z = state.numbers[0];
                     }
+                    tr.rotation.x = (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
+                    tr.rotation.z = (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
                 }
             }
         }
