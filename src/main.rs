@@ -75,7 +75,7 @@ fn main() -> Result<()> {
     let (low, high) = (-r, r);
 
     let texture_pool = [
-        "assets/textures/cooler.png",
+        "assets/textures/transparency.png",
         "assets/textures/skebob.png",
         "assets/textures/white.png",
     ];

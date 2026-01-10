@@ -9,6 +9,14 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
     if matches!(window.get_key(glfw::Key::Down), Action::Press) {
         state.numbers[0] -= 0.1;
     }
+
+    if matches!(window.get_key(glfw::Key::Left), Action::Press) {
+        state.numbers[1] -= 0.1;
+    }
+    if matches!(window.get_key(glfw::Key::Right), Action::Press) {
+        state.numbers[1] += 0.1;
+    }
+
     let light_pos_speed = 8.55;
     if matches!(window.get_key(glfw::Key::K), Action::Press | Action::Repeat) {
         state.light_pos.x += 0.1 * state.delta_time * light_pos_speed;
