@@ -5,7 +5,7 @@ use std::{ffi::CString, fs::File, io::Read, ptr};
 use anyhow::{Context, Result};
 use cgmath::{Matrix, Matrix4, Vector3, Vector4};
 use gl::types::{GLchar, GLint};
-use log::{error, info};
+use log::{error, info, warn};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct ShaderInfo {
@@ -71,20 +71,20 @@ impl Shader {
     pub fn set_float(&self, name: &str, value: f32) {
         let name = CString::new(name).unwrap();
         unsafe {
-            gl::Uniform1f(gl::GetUniformLocation(self.id, name.as_ptr()), value);
+            gl::Uniform1f(Self::get_uniform_location(self.id, &name), value);
         }
     }
     pub fn set_int(&self, name: &str, value: i32) {
         let name = CString::new(name).unwrap();
         unsafe {
-            gl::Uniform1i(gl::GetUniformLocation(self.id, name.as_ptr()), value);
+            gl::Uniform1i(Self::get_uniform_location(self.id, &name), value);
         }
     }
     pub fn set_vec3(&self, name: &str, value: &Vector3<f32>) {
         let name = CString::new(name).unwrap();
         unsafe {
             gl::Uniform3f(
-                gl::GetUniformLocation(self.id, name.as_ptr()),
+                Self::get_uniform_location(self.id, &name),
                 value.x,
                 value.y,
                 value.z,
@@ -95,7 +95,7 @@ impl Shader {
         let name = CString::new(name).unwrap();
         unsafe {
             gl::Uniform4f(
-                gl::GetUniformLocation(self.id, name.as_ptr()),
+                Self::get_uniform_location(self.id, &name),
                 value.x,
                 value.y,
                 value.z,
@@ -107,7 +107,7 @@ impl Shader {
         let name = CString::new(name).unwrap();
         unsafe {
             gl::UniformMatrix4fv(
-                gl::GetUniformLocation(self.id, name.as_ptr()),
+                Self::get_uniform_location(self.id, &name),
                 1,
                 gl::FALSE,
                 value.as_ptr(),
@@ -116,6 +116,14 @@ impl Shader {
     }
     pub fn set_transform(&self, transform: &Matrix4<f32>) {
         self.set_mat4("transform", transform);
+    }
+    fn get_uniform_location(id: u32, name: &CString) -> i32 {
+        let location = unsafe { gl::GetUniformLocation(id, name.as_ptr()) };
+        if location == -1 {
+            // #[cfg(debug_assertions)]
+            // warn!("No uniform with name: {:?} found", name);
+        }
+        location
     }
     fn check_shader_compile_errors(shader: u32) -> bool {
         unsafe {

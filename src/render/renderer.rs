@@ -1,13 +1,17 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, ops::Mul};
 
-use cgmath::{Deg, InnerSpace, Matrix4, Rad, Vector3, perspective};
+use cgmath::{Array, Deg, ElementWise, InnerSpace, Matrix4, Rad, Vector3, perspective};
 use log::warn;
 use num::Zero;
 use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    render::{drawable::Drawable, transform::Transform},
+    render::{
+        drawable::Drawable,
+        material::{self, Material},
+        transform::Transform,
+    },
     shader::Shader,
     state::State,
     texture::Texture,
@@ -15,9 +19,10 @@ use crate::{
 use anyhow::Result;
 
 pub struct RenderObject {
-    drawable: Box<dyn Drawable>,
-    transform: Option<Transform>,
-    is_dynamic: bool,
+    pub drawable: Box<dyn Drawable>,
+    pub transform: Option<Transform>,
+    pub material: Option<Material>,
+    pub is_dynamic: bool,
 }
 
 impl RenderObject {
@@ -115,6 +120,7 @@ impl Renderer {
         let render_object = RenderObject {
             drawable: Box::new(object),
             transform: None,
+            material: None,
             is_dynamic: false,
         };
         self.drawables.push(render_object);
@@ -147,9 +153,40 @@ impl Renderer {
         let render_object = RenderObject {
             drawable: Box::new(object),
             transform: Some(Transform::default()),
+            material: None,
             is_dynamic: true,
         };
         self.drawables.push(render_object);
+        self.dynamic_map.insert(id, self.drawables.len() - 1);
+        Ok(id)
+    }
+
+    pub fn add_render_object(&mut self, object: RenderObject) -> Result<Uuid> {
+        let texture_name = object.drawable.get_texture_name();
+        if object.drawable.requires_texture() && !self.textures.contains_key(&texture_name) {
+            match Texture::new(&texture_name) {
+                Ok(texture) => {
+                    self.textures.insert(texture_name.clone(), texture);
+                }
+                Err(e) => {
+                    warn!("Failed to load texture: {}", e);
+                }
+            }
+        }
+        let shader_name = object.drawable.get_shader_name();
+        if object.drawable.requires_shader() && !self.shaders.contains_key(&shader_name.get_name())
+        {
+            match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
+                Ok(s) => {
+                    self.shaders.insert(shader_name.name, s);
+                }
+                Err(e) => {
+                    warn!("Failer to load shader: [{}]", e);
+                }
+            }
+        }
+        let id = Uuid::new_v4();
+        self.drawables.push(object);
         self.dynamic_map.insert(id, self.drawables.len() - 1);
         Ok(id)
     }
@@ -186,14 +223,11 @@ impl Renderer {
     }
     fn batch_render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let batches = {
-            let mut batches: HashMap<BatchKey, Vec<(usize, Option<Transform>)>> = HashMap::new();
+            let mut batches: HashMap<BatchKey, Vec<usize>> = HashMap::new();
             for (index, render_obj) in self.drawables.iter().enumerate() {
                 let key = BatchKey::from_object(render_obj.drawable.as_ref());
 
-                batches
-                    .entry(key)
-                    .or_default()
-                    .push((index, render_obj.transform));
+                batches.entry(key).or_default().push(index);
             }
             batches
         };
@@ -235,18 +269,47 @@ impl Renderer {
             }
 
             // key.blend_mode.apply();
-            for (index, transform) in objects {
-                if let Some(drawable) = self.drawables.get(index) {
+            for index in objects {
+                if let Some(render_obj) = self.drawables.get(index) {
+                    // get shader
                     if let Some(shader) = self.get_current_shader() {
                         self.apply_uniforms(shader, glfw, state);
-                        if let Some(transform) = drawable.transform {
+                        // set transform
+                        if let Some(transform) = &render_obj.transform {
                             let model = transform.calculate_model();
                             shader.set_mat4("model", &model);
                         } else {
                             shader.set_mat4("model", &self.model);
                         }
+
+                        // set material
+                        let obj_material = if let Some(material) = &render_obj.material {
+                            material
+                        } else {
+                            &Material::default()
+                        };
+                        shader.set_vec3("material.ambient", &obj_material.ambient);
+                        shader.set_vec3("material.diffuse", &obj_material.diffuse);
+                        shader.set_vec3("material.specular", &obj_material.specular);
+                        shader.set_float("material.shininess", obj_material.shininess);
+                        shader.set_vec3(
+                            "lightPos",
+                            // &Vector3::new(1.0, 0.0, 0.0),
+                            &Vector3::new(
+                                (glfw.get_time() as f32).sin() * 3.0,
+                                1.0,
+                                (glfw.get_time() as f32).cos() * 3.0,
+                            ),
+                        );
+                        let light_color = Vector3::new(1.0, 1.0, 1.0);
+                        let diffuse_color = light_color.mul_element_wise(Vector3::from_value(0.5));
+                        let ambient_color =
+                            diffuse_color.mul_element_wise(Vector3::from_value(0.2));
+                        shader.set_vec3("light.ambient", &ambient_color);
+                        shader.set_vec3("light.diffuse", &diffuse_color);
+                        shader.set_vec3("light.specular", &Vector3::from_value(1.0));
                     }
-                    drawable.drawable.draw(glfw, state);
+                    render_obj.drawable.draw(glfw, state);
                 }
             }
         }
@@ -258,15 +321,6 @@ impl Renderer {
         shader.set_mat4("projection", &self.projection);
         shader.set_float("farPlane", 10.0);
         shader.set_vec3("cameraPos", &state.camera.position);
-        shader.set_vec3("lightColor", &Vector3::new(1.33, 1.33, 1.));
-        shader.set_vec3(
-            "lightPos",
-            &Vector3::new(
-                (glfw.get_time() as f32).sin() * 3.0,
-                1.0,
-                (glfw.get_time() as f32).cos() * 3.0,
-            ),
-        );
     }
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         self.update_mvp(state);
@@ -299,7 +353,7 @@ impl Renderer {
             if let Some(shader) = self.get_current_shader() {
                 // shader.set_int("checkerboardPattern", pattern);
                 // shader.set_int("checkerboardFrame", (FRAME_COUNT % 4) as i32);
-                self.apply_uniforms(shader, glfw, state);
+                // self.apply_uniforms(shader, glfw, state);
             }
             self.batch_render(glfw, state);
         }

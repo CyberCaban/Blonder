@@ -1,5 +1,6 @@
 use ::log::info;
 use anyhow::{Context as _, Result};
+use cgmath::{Array, Vector3};
 use glfw::Context;
 use rand::Rng;
 
@@ -18,9 +19,11 @@ use crate::{
             text_renderer::{TextRenderParams, TextRenderer},
         },
         helpers::init_window,
-        renderer::Renderer,
+        material::Material,
+        renderer::{RenderObject, Renderer},
+        transform::Transform,
     },
-    shader::Shader,
+    shader::{Shader, ShaderInfo},
     state::State,
 };
 
@@ -78,7 +81,18 @@ fn main() -> Result<()> {
     ];
 
     let mut objIds = Vec::with_capacity(100);
-    for _ in 0..10 {
+    for _ in 0..100 {
+        let position = [
+            rng.gen_range(low, high),
+            rng.gen_range(low, high),
+            rng.gen_range(low, high),
+        ];
+
+        let rotation = [
+            rng.r#gen::<f32>() * 360.0,
+            rng.r#gen::<f32>() * 360.0,
+            rng.r#gen::<f32>() * 360.0,
+        ];
         let cube = Cube::new(CubeSettings {
             position: [0.0, 0.0, 0.0],
             rotation: [0.0, 0.0, 0.0],
@@ -86,40 +100,56 @@ fn main() -> Result<()> {
             ..Default::default()
         })
         .unwrap();
-        let id = renderer.add_dynamic_drawable(cube);
-        if let Ok(id) = id
-            && let Some(render_object) = renderer.get_transform_mut(&id)
-            && let Some(tr) = render_object.get_transform_mut()
-        {
-            tr.position.x = rng.gen_range(low, high);
-            tr.position.y = rng.gen_range(low, high);
-            tr.position.z = rng.gen_range(low, high);
-        }
+        let transform = Transform {
+            position: position.into(),
+            rotation: rotation.into(),
+            ..Default::default()
+        };
+
+        let render_object = RenderObject {
+            drawable: Box::new(cube),
+            material: Some(Material {
+                ambient: Vector3::new(1.0, 1.0, 1.0),
+                diffuse: Vector3::new(1.0, 1.0, 1.0),
+                specular: Vector3::from_value(0.6),
+                shininess: 32.0,
+            }),
+            transform: Some(transform),
+            is_dynamic: true,
+        };
+        let id = renderer.add_render_object(render_object);
         objIds.push(id);
     }
 
-    let cube2 = Cube::new(CubeSettings {
-        texture_name: "assets/textures/cooler.png",
+    let light_src = Cube::new(CubeSettings {
+        texture_name: "assets/textures/white.png",
+        shader_name: ShaderInfo {
+            name: "light_cube".to_string(),
+            vertex_path: "assets/shaders/light_cube/vert.glsl".to_string(),
+            fragment_path: "assets/shaders/light_cube/frag.glsl".to_string(),
+        },
         position: [0.0, 0.0, 0.0],
         rotation: [0.0, 0.0, 0.0],
         ..Default::default()
     })?;
+    let light_ro = RenderObject {
+        drawable: Box::new(light_src),
+        transform: Some(Transform {
+            scale: Vector3::from_value(0.5),
+            ..Default::default()
+        }),
+        material: Some(Material::default()),
+        is_dynamic: true,
+    };
+    let light_id = renderer.add_render_object(light_ro)?;
+
     let w = 10.0;
     let y = -1.0;
     let plane = Plane::new(
-        [[w, y + 3.0, w], [-w, y, w], [w, y, -w], [-w, y, -w]],
+        [[w, y, w], [-w, y, w], [w, y, -w], [-w, y, -w]],
         [0.0, 0.0, 0.0],
     )?;
-    let obj_id = renderer.add_dynamic_drawable(cube2);
     let _ = renderer.add_static_drawable(plane);
-    if let Ok(id) = obj_id
-        && let Some(render_object) = renderer.get_transform_mut(&id)
-        && let Some(tr) = render_object.get_transform_mut()
-    {
-        tr.position.x = 1.0;
-        // tr.scale.x = 0.1;
-        // tr.scale.y = 0.1;
-    }
 
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
     let font_size = 48u32;
@@ -148,15 +178,19 @@ fn main() -> Result<()> {
                     && let Some(render_object) = renderer.get_transform_mut(id)
                     && let Some(tr) = render_object.get_transform_mut()
                 {
-                    if state.numbers[0] > 0.0 {
-                        tr.scale.x = state.numbers[0];
-                        tr.scale.y = state.numbers[0];
-                        tr.scale.z = state.numbers[0];
-                    }
-                    tr.rotation.x = (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
-                    tr.rotation.z = (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
+                    tr.scale.x = state.numbers[0];
+                    tr.scale.y = state.numbers[0];
+                    tr.scale.z = state.numbers[0];
+                    // tr.rotation.x = (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
+                    // tr.rotation.z = (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
                 }
             }
+        }
+        if let Some(ro) = renderer.get_transform_mut(&light_id)
+            && let Some(tr) = ro.get_transform_mut()
+        {
+            tr.position.x = (glfw.get_time() as f32).sin() * 3.0;
+            tr.position.z = (glfw.get_time() as f32).cos() * 3.0;
         }
 
         renderer.render_checkerboard(&mut glfw, &state);
