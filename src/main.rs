@@ -78,7 +78,7 @@ fn main() -> Result<()> {
     ];
 
     let mut objIds = Vec::with_capacity(100);
-    for _ in 0..1000 {
+    for _ in 0..10 {
         let cube = Cube::new(CubeSettings {
             position: [0.0, 0.0, 0.0],
             rotation: [0.0, 0.0, 0.0],
@@ -107,7 +107,7 @@ fn main() -> Result<()> {
     let w = 10.0;
     let y = -1.0;
     let plane = Plane::new(
-        [[w, y, w], [-w, y, w], [w, y, -w], [-w, y, -w]],
+        [[w, y + 3.0, w], [-w, y, w], [w, y, -w], [-w, y, -w]],
         [0.0, 0.0, 0.0],
     )?;
     let obj_id = renderer.add_dynamic_drawable(cube2);
@@ -142,10 +142,10 @@ fn main() -> Result<()> {
         process_events(&mut window, &events, &mut state);
         state.camera.process_input(&mut window, state.delta_time);
 
-        if frames % 1 == 0 {
+        if frames % 2 == 0 {
             for (i, obj) in objIds.iter().enumerate() {
                 if let Ok(id) = obj
-                    && let Some(render_object) = renderer.get_transform_mut(&id)
+                    && let Some(render_object) = renderer.get_transform_mut(id)
                     && let Some(tr) = render_object.get_transform_mut()
                 {
                     if state.numbers[0] > 0.0 {

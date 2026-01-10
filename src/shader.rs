@@ -3,7 +3,7 @@ use std::time::Instant;
 use std::{ffi::CString, fs::File, io::Read, ptr};
 
 use anyhow::{Context, Result};
-use cgmath::{Array, Matrix, Matrix4, Vector3, Vector4};
+use cgmath::{Matrix, Matrix4, Vector3, Vector4};
 use gl::types::{GLchar, GLint};
 use log::{error, info};
 

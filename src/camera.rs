@@ -4,13 +4,6 @@ use num::Zero;
 
 use crate::render::consts::{HEIGHT, MAX_PITCH_ANGLE, WIDTH};
 
-pub enum MoveDirection {
-    FRONT,
-    BACK,
-    LEFT,
-    RIGHT,
-}
-
 #[derive(Debug)]
 pub struct Camera {
     pub position: Vector3<f32>,
@@ -132,7 +125,10 @@ impl Camera {
         if move_vector.magnitude() > 0.0 {
             move_vector = move_vector.normalize();
             let mut speed = self.camera_speed * delta_time;
-            if matches!(window.get_key(glfw::Key::LeftControl), Action::Press | Action::Repeat) {
+            if matches!(
+                window.get_key(glfw::Key::LeftControl),
+                Action::Press | Action::Repeat
+            ) {
                 speed *= 3.0;
             }
             self.position += move_vector * speed;

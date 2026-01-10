@@ -8,7 +8,7 @@ use crate::{
         helpers::set_buffer_data,
         vertex::{Vertex, calculate_normals},
     },
-    shader::{Shader, ShaderInfo},
+    shader::ShaderInfo,
     state::State,
 };
 
@@ -125,7 +125,7 @@ impl Drawable for Cube {
             // gl::ActiveTexture(gl::TEXTURE0);
             // self.texture.use_texture();
             gl::BindVertexArray(self.vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, 36 as i32);
+            gl::DrawArrays(gl::TRIANGLES, 0, 36);
         }
     }
     fn get_texture_name(&self) -> String {

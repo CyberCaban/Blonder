@@ -17,7 +17,6 @@ pub struct Character {
 pub struct FontAtlas {
     pub characters: HashMap<char, Character>,
     pub size: u32,
-    pub line_height: f32,
 }
 
 impl FontAtlas {
@@ -30,7 +29,6 @@ impl FontAtlas {
             .context(format!("Failed to parse font: [{}]", font_path))?;
         let scale = Scale::uniform(font_size as f32);
         let v_metrics = font.v_metrics(scale);
-        let line_height = (v_metrics.ascent - v_metrics.descent + v_metrics.line_gap).ceil() as i32;
         let mut characters = HashMap::new();
         for ch in 32..128u8 {
             let ch = ch as char;
@@ -115,7 +113,6 @@ impl FontAtlas {
         Ok(FontAtlas {
             characters,
             size: font_size,
-            line_height: line_height as f32,
         })
     }
     pub fn get_character(&self, ch: char) -> Option<&Character> {

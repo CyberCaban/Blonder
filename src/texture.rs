@@ -3,7 +3,7 @@ use std::os::raw::c_void;
 use std::time::Instant;
 
 use anyhow::{Context, Result};
-use image::{DynamicImage, GenericImage, RgbaImage};
+use image::{DynamicImage, GenericImage};
 use log::info;
 
 #[derive(Debug)]

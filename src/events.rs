@@ -39,8 +39,7 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
                 println!("Mouse x: {x}, y: {y}");
             }
             WindowEvent::Key(Key::F, _, Action::Press | Action::Repeat, _) => {
-                dbg!(&state.camera);
-                println!("Pressed space")
+                dbg!(&state);
             }
             WindowEvent::Key(Key::X, _, Action::Press | Action::Repeat, _) => {
                 state.wireframe = !state.wireframe;

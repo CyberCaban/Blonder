@@ -1,6 +1,4 @@
-use cgmath::{Array, InnerSpace, Matrix4, Point3, Vector3};
-
-use crate::render::color::Color;
+use cgmath::{InnerSpace, Vector3};
 
 #[repr(C)]
 #[derive(Debug, Clone)]

@@ -1,16 +1,15 @@
 use crate::{
-    render::{color::Color, drawable::Drawable, helpers::set_buffer_data, vertex::Vertex},
+    render::{drawable::Drawable, helpers::set_buffer_data, vertex::Vertex},
     shader::ShaderInfo,
     texture::Texture,
 };
 
 use anyhow::Result;
-use cgmath::{InnerSpace, Matrix4, Rad, SquareMatrix, Vector3};
+use cgmath::{InnerSpace, Vector3};
 
 #[derive(Debug)]
 pub struct Serpinsky {
     pub points: Vec<Vertex>,
-    count: u32,
     pub vao: u32,
     pub shader: ShaderInfo,
     pub texture: Texture,
@@ -21,7 +20,6 @@ impl Serpinsky {
         Ok(Self {
             points: vec![],
             vao: 0,
-            count: 0,
             shader: ShaderInfo {
                 name: "serpinsky".to_string(),
                 vertex_path: "assets/shaders/serpinsky/vert.glsl".to_string(),
@@ -56,13 +54,7 @@ impl Serpinsky {
         ]);
         self.coh(point_a, point_b, point_c, depth);
     }
-    fn coh(
-        &mut self,
-        point_a: &[f32; 3],
-        point_b: &[f32; 3],
-        point_c: &[f32; 3],
-        mut depth: u32,
-    ) {
+    fn coh(&mut self, point_a: &[f32; 3], point_b: &[f32; 3], point_c: &[f32; 3], mut depth: u32) {
         if depth == 0 {
             return;
         }
@@ -88,7 +80,6 @@ impl Serpinsky {
                 (a[2] + b[2]) / 2.0,
             ]
         }
-        dbg!(&point_a, &point_b);
         // 1 side
         let p1 = third_1(point_a, point_b);
         let p2 = third_2(point_a, point_b);
@@ -104,7 +95,6 @@ impl Serpinsky {
             point_a[2] + point_c[2],
         ]);
         let mv = v1.cross(v2).normalize() * 2.0;
-        dbg!(&p1, &p2);
         m[0] += mv.x;
         m[1] += mv.y;
         m[2] += mv.z;

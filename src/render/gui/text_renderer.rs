@@ -1,5 +1,5 @@
 use anyhow::Result;
-use cgmath::{Matrix4, Vector3, Vector4};
+use cgmath::{Matrix4, Vector4};
 use num::Zero;
 
 use crate::{

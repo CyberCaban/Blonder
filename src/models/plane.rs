@@ -65,7 +65,7 @@ impl Drawable for Plane {
             // self.texture.use_texture();
             gl::Disable(gl::CULL_FACE);
             gl::BindVertexArray(self.vao);
-            gl::DrawArrays(gl::TRIANGLES, 0, 36 as i32);
+            gl::DrawArrays(gl::TRIANGLES, 0, 6);
             gl::Enable(gl::CULL_FACE);
         }
     }

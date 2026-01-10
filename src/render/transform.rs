@@ -8,7 +8,7 @@ pub struct Transform {
 }
 
 impl Transform {
-    pub fn to_model(&self) -> Matrix4<f32> {
+    pub fn calculate_model(&self) -> Matrix4<f32> {
         let translation = Matrix4::from_translation(self.position);
         let rot_x = Matrix4::from_angle_x(Rad(self.rotation.x));
         let rot_y = Matrix4::from_angle_y(Rad(self.rotation.y));

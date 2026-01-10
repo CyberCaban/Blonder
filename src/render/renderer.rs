@@ -1,4 +1,4 @@
-use std::{cell::RefCell, collections::HashMap, rc::Rc};
+use std::collections::HashMap;
 
 use cgmath::{Deg, InnerSpace, Matrix4, Rad, Vector3, perspective};
 use log::warn;
@@ -7,7 +7,6 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::{
-    controls::object_manager::DynamicObject,
     render::{drawable::Drawable, transform::Transform},
     shader::Shader,
     state::State,
@@ -65,7 +64,7 @@ impl Renderer {
     }
     pub fn add_default_shader(&mut self, shader: Shader) {
         self.shaders.insert("default".to_string(), shader);
-        self.use_shader("default");
+        let _ = self.use_shader("default");
     }
     pub fn use_shader(&mut self, name: &str) -> Result<()> {
         if let Some(shader) = self.shaders.get(name) {
@@ -151,19 +150,18 @@ impl Renderer {
             is_dynamic: true,
         };
         self.drawables.push(render_object);
-        self.dynamic_map
-            .insert(id.clone(), self.drawables.len() - 1);
+        self.dynamic_map.insert(id, self.drawables.len() - 1);
         Ok(id)
     }
     pub fn get_transform(&self, id: &Uuid) -> Option<&RenderObject> {
         self.dynamic_map
             .get(id)
-            .and_then(|index| Some(&self.drawables[*index]))
+            .map(|index| &self.drawables[*index])
     }
     pub fn get_transform_mut(&mut self, id: &Uuid) -> Option<&mut RenderObject> {
         self.dynamic_map
             .get(id)
-            .and_then(|index| Some(&mut self.drawables[*index]))
+            .map(|index| &mut self.drawables[*index])
     }
     fn get_current_shader(&self) -> Option<&Shader> {
         match &self.current_shader {
@@ -179,7 +177,6 @@ impl Renderer {
         };
         let model_matrix =
             Matrix4::from_axis_angle(Vector3::new(1.0, 0.0, 0.0).normalize(), Rad(0.0));
-        let view_matrix = Matrix4::from_translation(Vector3::new(0.0, 0.0, -3.0));
         let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 100.0);
 
         let view_matrix = state.camera.view_matrix();
@@ -208,11 +205,9 @@ impl Renderer {
                 shader.use_shader();
                 self.apply_uniforms(shader, glfw, state);
                 self.current_shader = Some(key.shader_name.clone());
-            } else {
-                if let Some(default_shader) = self.shaders.get("default") {
-                    default_shader.use_shader();
-                    self.current_shader = Some("default".to_string());
-                }
+            } else if let Some(default_shader) = self.shaders.get("default") {
+                default_shader.use_shader();
+                self.current_shader = Some("default".to_string());
             }
             // if key.need_shader {
             //     if let Some(shader) = self.shaders.get(&key.shader_name) {
@@ -245,7 +240,7 @@ impl Renderer {
                     if let Some(shader) = self.get_current_shader() {
                         self.apply_uniforms(shader, glfw, state);
                         if let Some(transform) = drawable.transform {
-                            let model = transform.to_model();
+                            let model = transform.calculate_model();
                             shader.set_mat4("model", &model);
                         } else {
                             shader.set_mat4("model", &self.model);

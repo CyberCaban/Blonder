@@ -70,7 +70,7 @@ pub fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex]) {
         gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
         gl::BufferData(
             gl::ARRAY_BUFFER,
-            (data.len() * std::mem::size_of::<Vertex>()) as GLsizeiptr,
+            std::mem::size_of_val(data) as GLsizeiptr,
             &data[0] as *const _ as *const c_void,
             gl::STATIC_DRAW,
         );
@@ -118,13 +118,13 @@ pub fn set_buffer_data_with_indices(
         gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
         gl::BufferData(
             gl::ELEMENT_ARRAY_BUFFER,
-            (indices.len() * std::mem::size_of::<u32>()) as GLsizeiptr,
+            std::mem::size_of_val(indices) as GLsizeiptr,
             &indices[0] as *const u32 as *const c_void,
             gl::STATIC_DRAW,
         );
         gl::BufferData(
             gl::ARRAY_BUFFER,
-            (data.len() * std::mem::size_of::<Vertex>()) as GLsizeiptr,
+            std::mem::size_of_val(data) as GLsizeiptr,
             &data[0] as *const _ as *const c_void,
             gl::STATIC_DRAW,
         );
