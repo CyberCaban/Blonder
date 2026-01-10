@@ -295,13 +295,14 @@ impl Renderer {
                         shader.set_vec3(
                             "lightPos",
                             // &Vector3::new(1.0, 0.0, 0.0),
-                            &Vector3::new(
-                                (glfw.get_time() as f32).sin() * 3.0,
-                                1.0,
-                                (glfw.get_time() as f32).cos() * 3.0,
-                            ),
+                            &state.light_pos,
+                            // &Vector3::new(
+                            //     (glfw.get_time() as f32).sin() * 3.0,
+                            //     1.0,
+                            //     (glfw.get_time() as f32).cos() * 3.0,
+                            // ),
                         );
-                        let light_color = Vector3::new(1.0, 1.0, 1.0);
+                        let light_color = Vector3::new(0.0, 0.44, 0.55);
                         let diffuse_color = light_color.mul_element_wise(Vector3::from_value(0.5));
                         let ambient_color =
                             diffuse_color.mul_element_wise(Vector3::from_value(0.2));

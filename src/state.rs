@@ -1,3 +1,4 @@
+use cgmath::{Array, Vector3};
 use glfw::{GlfwReceiver, WindowEvent};
 
 use crate::{
@@ -24,6 +25,7 @@ pub struct Screen {
 pub struct State {
     pub color: (f32, f32, f32, f32),
     pub numbers: [f32; 10],
+    pub light_pos: Vector3<f32>,
     pub wireframe: bool,
     pub screen: Screen,
     pub camera: Camera,
@@ -37,6 +39,7 @@ impl Default for State {
             color: (0.0, 0.0, 0.0, 0.0),
             wireframe: false,
             numbers: [0.0; 10],
+            light_pos: Vector3::from_value(0.0),
             screen: Screen {
                 width: WIDTH,
                 height: HEIGHT,

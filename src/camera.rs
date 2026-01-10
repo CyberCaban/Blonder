@@ -122,6 +122,19 @@ impl Camera {
             move_vector += self.right;
         }
 
+        if matches!(
+            window.get_key(glfw::Key::Space),
+            Action::Press | Action::Repeat
+        ) {
+            move_vector.y += self.camera_speed * delta_time;
+        }
+        if matches!(
+            window.get_key(glfw::Key::LeftShift),
+            Action::Press | Action::Repeat
+        ) {
+            move_vector.y -= self.camera_speed * delta_time;
+        }
+
         if move_vector.magnitude() > 0.0 {
             move_vector = move_vector.normalize();
             let mut speed = self.camera_speed * delta_time;
@@ -132,19 +145,6 @@ impl Camera {
                 speed *= 3.0;
             }
             self.position += move_vector * speed;
-        }
-
-        if matches!(
-            window.get_key(glfw::Key::Space),
-            Action::Press | Action::Repeat
-        ) {
-            self.position.y += self.camera_speed * delta_time;
-        }
-        if matches!(
-            window.get_key(glfw::Key::LeftShift),
-            Action::Press | Action::Repeat
-        ) {
-            self.position.y -= self.camera_speed * delta_time;
         }
     }
     fn update_vectors(&mut self) {

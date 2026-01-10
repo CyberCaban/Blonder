@@ -157,10 +157,6 @@ fn main() -> Result<()> {
 
     let mut frames = 0u32;
     let mut fps_count = String::new();
-    let fps_render_params = TextRenderParams {
-        scale: 1.0,
-        color: Color::white(),
-    };
     while !window.should_close() {
         glfw.poll_events();
         let current_frame = glfw.get_time() as f32;
@@ -189,8 +185,7 @@ fn main() -> Result<()> {
         if let Some(ro) = renderer.get_transform_mut(&light_id)
             && let Some(tr) = ro.get_transform_mut()
         {
-            tr.position.x = (glfw.get_time() as f32).sin() * 3.0;
-            tr.position.z = (glfw.get_time() as f32).cos() * 3.0;
+            tr.position = state.light_pos;
         }
 
         renderer.render_checkerboard(&mut glfw, &state);
