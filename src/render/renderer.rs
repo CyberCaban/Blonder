@@ -20,12 +20,14 @@ use anyhow::Result;
 
 pub struct RenderMaterial {
     pub specular: Option<String>, // path to specular texture
+    pub emission: Option<String>, // path to emission texture
     pub shininess: f32,
 }
 impl Default for RenderMaterial {
     fn default() -> Self {
         Self {
             specular: None,
+            emission: None,
             shininess: 32.0,
         }
     }
@@ -188,6 +190,7 @@ impl Renderer {
     }
 
     pub fn add_render_object(&mut self, object: RenderObject) -> Result<Uuid> {
+        // load texture
         let texture_name = object.drawable.get_texture_name();
         if object.drawable.requires_texture() && !self.textures.contains_key(&texture_name) {
             match Texture::new(&texture_name) {
@@ -199,6 +202,7 @@ impl Renderer {
                 }
             }
         }
+        // load shader
         let shader_name = object.drawable.get_shader_name();
         if object.drawable.requires_shader() && !self.shaders.contains_key(&shader_name.get_name())
         {
@@ -211,6 +215,7 @@ impl Renderer {
                 }
             }
         }
+        // load specular map
         if let Some(material) = &object.material
             && let Some(specular_map) = &material.specular
             && !self.textures.contains_key(specular_map)
@@ -218,6 +223,20 @@ impl Renderer {
             match Texture::new(specular_map) {
                 Ok(texture) => {
                     self.textures.insert(specular_map.clone(), texture);
+                }
+                Err(e) => {
+                    warn!("Failed to load texture: {}", e);
+                }
+            }
+        }
+        // load emission map
+        if let Some(material) = &object.material
+            && let Some(emission_map) = &material.emission
+            && !self.textures.contains_key(emission_map)
+        {
+            match Texture::new(emission_map) {
+                Ok(texture) => {
+                    self.textures.insert(emission_map.clone(), texture);
                 }
                 Err(e) => {
                     warn!("Failed to load texture: {}", e);
@@ -327,7 +346,6 @@ impl Renderer {
                         } else {
                             &RenderMaterial::default()
                         };
-                        // shader.set_vec3("material.specular", &obj_material.specular);
                         shader.set_float("material.shininess", obj_material.shininess);
                         shader.set_vec3(
                             "lightPos",
@@ -339,15 +357,27 @@ impl Renderer {
                             //     (glfw.get_time() as f32).cos() * 3.0,
                             // ),
                         );
+
                         // set specular
-                        if let Some(specular) = &render_obj.material
-                            && let Some(spec) = &specular.specular
-                            && let Some(spec_texture) = self.textures.get(spec)
-                        {
-                            shader.set_int("material.specular", 1);
-                            unsafe {
-                                gl::ActiveTexture(gl::TEXTURE1);
-                                spec_texture.use_texture();
+                        if let Some(render_mat) = &render_obj.material {
+                            if let Some(spec) = &render_mat.specular
+                                && let Some(spec_texture) = self.textures.get(spec)
+                            {
+                                shader.set_int("material.specular", 1);
+                                unsafe {
+                                    gl::ActiveTexture(gl::TEXTURE1);
+                                    spec_texture.use_texture();
+                                }
+                            }
+
+                            if let Some(emission) = &render_mat.emission
+                                && let Some(emission_texture) = self.textures.get(emission)
+                            {
+                                shader.set_int("material.emission", 2);
+                                unsafe {
+                                    gl::ActiveTexture(gl::TEXTURE2);
+                                    emission_texture.use_texture();
+                                }
                             }
                         }
 

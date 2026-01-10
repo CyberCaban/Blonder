@@ -110,6 +110,7 @@ fn main() -> Result<()> {
             drawable: Box::new(cube),
             material: Some(RenderMaterial {
                 specular: Some("assets/textures/specular.png".to_string()),
+                emission: Some("assets/textures/emission.jpg".to_string()),
                 ..Default::default()
             }),
             transform: Some(transform),
