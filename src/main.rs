@@ -20,7 +20,7 @@ use crate::{
         },
         helpers::init_window,
         material::Material,
-        renderer::{RenderObject, Renderer},
+        renderer::{RenderMaterial, RenderObject, Renderer},
         transform::Transform,
     },
     shader::{Shader, ShaderInfo},
@@ -108,11 +108,9 @@ fn main() -> Result<()> {
 
         let render_object = RenderObject {
             drawable: Box::new(cube),
-            material: Some(Material {
-                ambient: Vector3::new(1.0, 1.0, 1.0),
-                diffuse: Vector3::new(1.0, 1.0, 1.0),
-                specular: Vector3::from_value(0.6),
-                shininess: 32.0,
+            material: Some(RenderMaterial {
+                specular: Some("assets/textures/specular.png".to_string()),
+                ..Default::default()
             }),
             transform: Some(transform),
             is_dynamic: true,
@@ -138,7 +136,7 @@ fn main() -> Result<()> {
             scale: Vector3::from_value(0.5),
             ..Default::default()
         }),
-        material: Some(Material::default()),
+        material: Some(RenderMaterial::default()),
         is_dynamic: true,
     };
     let light_id = renderer.add_render_object(light_ro)?;

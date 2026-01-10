@@ -1,18 +1,27 @@
-use cgmath::{Array, Vector3};
-
 pub struct Material {
-    pub ambient: Vector3<f32>,
-    pub diffuse: Vector3<f32>,
-    pub specular: Vector3<f32>,
-    pub shininess: f32,
+    shininess: f32,
+    specular: Option<String>,
+}
+
+impl Material {
+    pub fn new(shininess: f32, specular: Option<String>) -> Self {
+        Self {
+            shininess,
+            specular,
+        }
+    }
+    pub fn get_specular(&self) -> Option<&String> {
+        self.specular.as_ref()
+    }
+    pub fn get_shininess(&self) -> f32 {
+        self.shininess
+    }
 }
 
 impl Default for Material {
     fn default() -> Self {
         Self {
-            ambient: Vector3::from_value(1.0),
-            diffuse: Vector3::from_value(1.0),
-            specular: Vector3::from_value(1.0),
+            specular: None,
             shininess: 32.0,
         }
     }

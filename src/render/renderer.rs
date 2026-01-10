@@ -18,10 +18,36 @@ use crate::{
 };
 use anyhow::Result;
 
+pub struct RenderMaterial {
+    pub specular: Option<String>, // path to specular texture
+    pub shininess: f32,
+}
+impl Default for RenderMaterial {
+    fn default() -> Self {
+        Self {
+            specular: None,
+            shininess: 32.0,
+        }
+    }
+}
+// impl From<Material> for RenderMaterial {
+//     fn from(value: Material) -> Self {
+//         let specular = match value.get_specular() {
+//             Some(texture_path) => {
+//                 Texture::new(texture_path)
+//             }
+//         }
+//         Self {
+//             specular,
+//             shininess: value.get_shininess(),
+//         }
+//     }
+// }
+
 pub struct RenderObject {
     pub drawable: Box<dyn Drawable>,
     pub transform: Option<Transform>,
-    pub material: Option<Material>,
+    pub material: Option<RenderMaterial>,
     pub is_dynamic: bool,
 }
 
@@ -185,6 +211,19 @@ impl Renderer {
                 }
             }
         }
+        if let Some(material) = &object.material
+            && let Some(specular_map) = &material.specular
+            && !self.textures.contains_key(specular_map)
+        {
+            match Texture::new(specular_map) {
+                Ok(texture) => {
+                    self.textures.insert(specular_map.clone(), texture);
+                }
+                Err(e) => {
+                    warn!("Failed to load texture: {}", e);
+                }
+            }
+        }
         let id = Uuid::new_v4();
         self.drawables.push(object);
         self.dynamic_map.insert(id, self.drawables.len() - 1);
@@ -286,11 +325,9 @@ impl Renderer {
                         let obj_material = if let Some(material) = &render_obj.material {
                             material
                         } else {
-                            &Material::default()
+                            &RenderMaterial::default()
                         };
-                        shader.set_vec3("material.ambient", &obj_material.ambient);
-                        shader.set_vec3("material.diffuse", &obj_material.diffuse);
-                        shader.set_vec3("material.specular", &obj_material.specular);
+                        // shader.set_vec3("material.specular", &obj_material.specular);
                         shader.set_float("material.shininess", obj_material.shininess);
                         shader.set_vec3(
                             "lightPos",
@@ -302,6 +339,18 @@ impl Renderer {
                             //     (glfw.get_time() as f32).cos() * 3.0,
                             // ),
                         );
+                        // set specular
+                        if let Some(specular) = &render_obj.material
+                            && let Some(spec) = &specular.specular
+                            && let Some(spec_texture) = self.textures.get(spec)
+                        {
+                            shader.set_int("material.specular", 1);
+                            unsafe {
+                                gl::ActiveTexture(gl::TEXTURE1);
+                                spec_texture.use_texture();
+                            }
+                        }
+
                         let light_color = Vector3::new(0.0, 0.44, 0.55);
                         let diffuse_color = light_color.mul_element_wise(Vector3::from_value(0.5));
                         let ambient_color =
