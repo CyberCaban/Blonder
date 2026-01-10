@@ -381,13 +381,13 @@ impl Renderer {
                             }
                         }
 
-                        let light_color = Vector3::new(0.0, 0.44, 0.55);
+                        let light_color = Vector3::new(1.0, 1.0, 1.0);
                         let diffuse_color = light_color.mul_element_wise(Vector3::from_value(0.5));
                         let ambient_color =
                             diffuse_color.mul_element_wise(Vector3::from_value(state.numbers[1]));
                         shader.set_vec3("light.ambient", &ambient_color);
                         shader.set_vec3("light.diffuse", &diffuse_color);
-                        shader.set_vec3("light.specular", &Vector3::from_value(1.5));
+                        shader.set_vec3("light.specular", &Vector3::from_value(1.0));
                     }
                     render_obj.drawable.draw(glfw, state);
                 }

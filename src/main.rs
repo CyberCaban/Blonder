@@ -64,11 +64,11 @@ fn main() -> Result<()> {
         "assets/shaders/light/frag.glsl",
     )?);
 
-    let mut serp = Serpinsky::new()?;
+    // let mut serp = Serpinsky::new()?;
     let d = 5.0;
     // serp.triangle(&[-d, -d, 0.0], &[d, -d, 0.0], &[0., d, 0.0], 3);
-    serp.make_coh(&[-d, -d, 0.0], &[d, -d, 0.0], &[0.0, d, 0.0], 2);
-    serp.prepare();
+    // serp.make_coh(&[-d, -d, 0.0], &[d, -d, 0.0], &[0.0, d, 0.0], 2);
+    // serp.prepare();
     // let _ = renderer.add_drawable(serp);
     let mut rng = rand::thread_rng();
     let r = 10.0;
@@ -93,10 +93,11 @@ fn main() -> Result<()> {
             rng.r#gen::<f32>() * 360.0,
             rng.r#gen::<f32>() * 360.0,
         ];
+        let texture = texture_pool[rng.gen_range(0, texture_pool.len())];
         let cube = Cube::new(CubeSettings {
             position: [0.0, 0.0, 0.0],
             rotation: [0.0, 0.0, 0.0],
-            texture_name: texture_pool[rng.gen_range(0, texture_pool.len())],
+            texture_name: texture,
             ..Default::default()
         })
         .unwrap();
@@ -110,8 +111,10 @@ fn main() -> Result<()> {
             drawable: Box::new(cube),
             material: Some(RenderMaterial {
                 specular: Some("assets/textures/specular.png".to_string()),
-                emission: Some("assets/textures/emission.jpg".to_string()),
-                ..Default::default()
+                // specular: Some(texture.to_string()),
+                // emission: Some("assets/textures/emission.jpg".to_string()),
+                emission: None,
+                shininess: 32.0,
             }),
             transform: Some(transform),
             is_dynamic: true,
@@ -152,10 +155,11 @@ fn main() -> Result<()> {
 
     let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
     let font_size = 48u32;
-    let font_atlas = FontAtlas::new("assets/fonts/Montserrat-Regular.ttf", font_size)?;
+    let font_atlas = FontAtlas::new("assets/fonts/OpenSans.ttf", font_size)?;
 
     let mut frames = 0u32;
     let mut fps_count = String::new();
+    let mut fps_y = 0f32;
     while !window.should_close() {
         glfw.poll_events();
         let current_frame = glfw.get_time() as f32;
@@ -192,7 +196,21 @@ fn main() -> Result<()> {
             &font_atlas,
             &fps_count,
             0.0,
-            state.screen.height as f32 - font_size as f32 / 2.0 - 4.0,
+            {
+                fps_y = state.screen.height as f32 - font_size as f32 / 2.0 - 4.0;
+                fps_y
+            },
+            &state.screen,
+            &TextRenderParams {
+                scale: 1.0,
+                color: Color::white(),
+            },
+        );
+        text_renderer.render_text(
+            &font_atlas,
+            &format!("{}", frames),
+            0.0,
+            fps_y - ((font_size as f32 / 2.0) - 4.0) * 2.0,
             &state.screen,
             &TextRenderParams {
                 scale: 1.0,

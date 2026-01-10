@@ -16,6 +16,7 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
     if matches!(window.get_key(glfw::Key::Right), Action::Press) {
         state.numbers[1] += 0.1;
     }
+    state.numbers[1] = state.numbers[1].clamp(-10.0, 10.0);
 
     let light_pos_speed = 8.55;
     if matches!(window.get_key(glfw::Key::K), Action::Press | Action::Repeat) {
@@ -71,7 +72,7 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
             WindowEvent::Key(Key::X, _, Action::Press | Action::Repeat, _) => {
                 state.wireframe = !state.wireframe;
             }
-            WindowEvent::MouseButton(glfw::MouseButton::Button1, Action::Press, _) => {
+            WindowEvent::MouseButton(glfw::MouseButton::Middle, Action::Press, _) => {
                 state.camera.process_capture(window);
             }
             _ => {}

@@ -47,7 +47,7 @@ impl Plane {
             position: Vector3::from(position),
             vbo,
             vao,
-            texture: "assets/textures/skebob.png".to_string(),
+            texture: "assets/textures/white.png".to_string(),
             shader_info: ShaderInfo {
                 name: "plane".to_string(),
                 fragment_path: "assets/shaders/light/frag.glsl".to_string(),

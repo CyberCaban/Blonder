@@ -20,6 +20,7 @@ uniform sampler2D tex;
 uniform vec3 lightColor;
 uniform vec3 lightPos;
 uniform vec3 cameraPos;
+uniform float uTime;
 uniform Light light;
 uniform Material material;
 void main() {
