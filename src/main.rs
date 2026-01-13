@@ -177,9 +177,11 @@ fn main() -> Result<()> {
                     && let Some(render_object) = renderer.get_transform_mut(id)
                     && let Some(tr) = render_object.get_transform_mut()
                 {
-                    tr.scale.x = state.numbers[0];
-                    tr.scale.y = state.numbers[0];
-                    tr.scale.z = state.numbers[0];
+                    tr.scale = Vector3::from_value(1.0);
+                    // tr.scale.x = state.numbers[0];
+                    // tr.scale.y = state.numbers[0];
+                    // tr.scale.z = state.numbers[0];
+                    tr.rotation.y = state.numbers[2];
                     // tr.rotation.x = (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
                     // tr.rotation.z = (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
                 }
