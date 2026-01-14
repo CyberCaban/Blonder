@@ -84,6 +84,11 @@ impl Texture {
 
         Ok(Self { id: texture })
     }
+    /// Make texture struct from id
+    /// id must be uploaded to OpenGL manually
+    pub fn from_id(id: u32) -> Self {
+        Self { id }
+    }
     pub fn id(&self) -> u32 {
         self.id
     }

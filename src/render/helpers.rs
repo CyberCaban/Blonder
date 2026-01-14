@@ -35,6 +35,7 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     window.set_scroll_polling(true);
     window.set_drag_and_drop_polling(true);
     window.set_framebuffer_size_polling(true);
+    window.set_size_limits(Some(480), Some(360), None, None);
     gl::load_with(|symbol| {
         window
             .get_proc_address(symbol)

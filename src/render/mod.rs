@@ -8,5 +8,6 @@ pub mod material;
 pub mod renderer;
 pub mod transform;
 pub mod vertex;
+pub mod framebuffer;
 
 pub mod gui;

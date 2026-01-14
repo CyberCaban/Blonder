@@ -14,6 +14,8 @@ use crate::{
     },
     render::{
         color::Color,
+        consts::{HEIGHT, WIDTH},
+        framebuffer::Framebuffer,
         gui::{
             font::FontAtlas,
             text_renderer::{TextRenderParams, TextRenderer},
@@ -24,7 +26,7 @@ use crate::{
         transform::Transform,
     },
     shader::{Shader, ShaderInfo},
-    state::State,
+    state::{Screen, State},
 };
 
 extern crate gl;
@@ -157,6 +159,14 @@ fn main() -> Result<()> {
     let font_size = 48u32;
     let font_atlas = FontAtlas::new("assets/fonts/OpenSans.ttf", font_size)?;
 
+    let mut framebuffer = Framebuffer::new(
+        480, 360,
+        &state::Screen {
+            width: WIDTH,
+            height: HEIGHT,
+        },
+    )?;
+
     let mut frames = 0u32;
     let mut fps_count = String::new();
     let mut fps_y = 0f32;
@@ -193,16 +203,17 @@ fn main() -> Result<()> {
             tr.position = state.light_pos;
         }
 
+        framebuffer.begin_render();
         renderer.render_checkerboard(&mut glfw, &state);
         text_renderer.render_text(
             &font_atlas,
             &fps_count,
             0.0,
-            {
-                fps_y = state.screen.height as f32 - font_size as f32 / 2.0 - 4.0;
-                fps_y
+            framebuffer.render_height as f32 - (font_size as f32 / 2.0),
+            &Screen {
+                width: framebuffer.render_width as u32,
+                height: framebuffer.render_height as u32,
             },
-            &state.screen,
             &TextRenderParams {
                 scale: 1.0,
                 color: Color::white(),
@@ -222,6 +233,8 @@ fn main() -> Result<()> {
         if frames % 10 == 0 {
             fps_count = format!("FPS: {:.0}", 1.0 / state.delta_time);
         }
+        framebuffer.end_scene_render();
+        framebuffer.update_screen_size(&state.screen);
         window.swap_buffers();
     }
     Ok(())
