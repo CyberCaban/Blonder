@@ -6,16 +6,18 @@ use anyhow::{Context, Result};
 use image::{DynamicImage, GenericImage};
 use log::info;
 
-#[derive(Debug)]
+#[derive(Debug, Clone, Copy)]
 pub struct TextureConfig {
     pub wrap_s: i32,
     pub wrap_t: i32,
+    pub texture_filtering: i32,
 }
 impl Default for TextureConfig {
     fn default() -> Self {
         TextureConfig {
             wrap_s: gl::REPEAT as i32,
             wrap_t: gl::REPEAT as i32,
+            texture_filtering: gl::LINEAR as i32,
         }
     }
 }
@@ -42,7 +44,7 @@ impl Texture {
             gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, config.wrap_t);
             // texture filtering
             // LINEAR or NEAREST
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::LINEAR as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, config.texture_filtering);
             // mipmap filtering
             // GL_NEAREST_MIPMAP_NEAREST: takes the nearest mipmap to match the pixel size and uses nearest neighbor interpolation for texture sampling.
             // GL_LINEAR_MIPMAP_NEAREST: takes the nearest mipmap level and samples that level using linear interpolation.

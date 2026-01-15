@@ -78,6 +78,9 @@ impl Drawable for Plane {
     fn get_blend_mode(&self) -> BlendMode {
         self.blend_mode
     }
+    fn get_texture_config(&self) -> Option<crate::texture::TextureConfig> {
+        None
+    }
     fn requires_shader(&self) -> bool {
         false
     }

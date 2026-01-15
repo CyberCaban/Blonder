@@ -18,14 +18,18 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
     }
     state.numbers[1] = state.numbers[1].clamp(-10.0, 10.0);
 
-
-    if matches!(window.get_key(glfw::Key::LeftBracket), Action::Press | Action::Repeat) {
+    if matches!(
+        window.get_key(glfw::Key::LeftBracket),
+        Action::Press | Action::Repeat
+    ) {
         state.numbers[2] -= 0.1;
     }
-    if matches!(window.get_key(glfw::Key::RightBracket), Action::Press | Action::Repeat) {
+    if matches!(
+        window.get_key(glfw::Key::RightBracket),
+        Action::Press | Action::Repeat
+    ) {
         state.numbers[2] += 0.1;
     }
-
 
     let light_pos_speed = 8.55;
     if matches!(window.get_key(glfw::Key::K), Action::Press | Action::Repeat) {
@@ -77,6 +81,9 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
             }
             WindowEvent::Key(Key::F, _, Action::Press | Action::Repeat, _) => {
                 dbg!(&state);
+            }
+            WindowEvent::Key(Key::G, _, Action::Press | Action::Repeat, _) => {
+                state.is_lowres = !state.is_lowres;
             }
             WindowEvent::Key(Key::X, _, Action::Press | Action::Repeat, _) => {
                 state.wireframe = !state.wireframe;

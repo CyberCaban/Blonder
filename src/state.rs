@@ -27,6 +27,7 @@ pub struct State {
     pub numbers: [f32; 10],
     pub light_pos: Vector3<f32>,
     pub wireframe: bool,
+    pub is_lowres: bool,
     pub screen: Screen,
     pub camera: Camera,
     pub delta_time: f32,
@@ -38,6 +39,7 @@ impl Default for State {
         Self {
             color: (0.0, 0.0, 0.0, 0.0),
             wireframe: false,
+            is_lowres: false,
             numbers: [0.0; 10],
             light_pos: Vector3::from_value(0.0),
             screen: Screen {

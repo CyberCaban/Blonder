@@ -24,7 +24,7 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     glfw.window_hint(glfw::WindowHint::ContextVersion(3, 3));
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
         glfw::OpenGlProfileHint::Core,
-    ));
+    ))              ;
     glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
     let (mut window, events) = glfw
         .create_window(WIDTH, HEIGHT, "Hello", glfw::WindowMode::Windowed)

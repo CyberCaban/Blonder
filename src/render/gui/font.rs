@@ -78,7 +78,11 @@ impl FontAtlas {
                 // unsafe {
                 //     gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
                 // }
-                let texture = Texture::from_image(ImageRgba8(image), TextureConfig::default())
+                let texture = Texture::from_image(ImageRgba8(image), TextureConfig {
+                    wrap_s: gl::CLAMP_TO_EDGE as i32,
+                    wrap_t: gl::CLAMP_TO_EDGE as i32,
+                    ..Default::default()
+                })
                     .context(format!(
                         "Failed to create texture for font [{}], char [{}]",
                         font_path, ch

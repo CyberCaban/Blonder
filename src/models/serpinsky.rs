@@ -233,6 +233,9 @@ impl Drawable for Serpinsky {
     fn get_shader_name(&self) -> ShaderInfo {
         self.shader.clone()
     }
+    fn get_texture_config(&self) -> Option<crate::texture::TextureConfig> {
+        None
+    }
     fn requires_shader(&self) -> bool {
         false
     }

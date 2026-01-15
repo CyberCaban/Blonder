@@ -9,7 +9,7 @@ use crate::{
         vertex::{Vertex, calculate_normals},
     },
     shader::ShaderInfo,
-    state::State,
+    state::State, texture::TextureConfig,
 };
 
 #[derive(Debug)]
@@ -19,6 +19,7 @@ pub struct CubeSettings<'a> {
     pub texture_name: &'a str,
     pub shader_name: ShaderInfo,
     pub blend_mode: BlendMode,
+    pub texture_config: TextureConfig,
 }
 
 impl Default for CubeSettings<'_> {
@@ -33,6 +34,7 @@ impl Default for CubeSettings<'_> {
                 vertex_path: "assets/shaders/cube/vert.glsl".to_string(),
             },
             blend_mode: BlendMode::default(),
+            texture_config: TextureConfig::default(),
         }
     }
 }
@@ -43,6 +45,7 @@ pub struct Cube {
     pub vbo: u32,
     pub vao: u32,
     pub texture: String,
+    pub texture_config: TextureConfig,
     pub shader_info: ShaderInfo,
     pub blend_mode: BlendMode,
 }
@@ -115,6 +118,7 @@ impl Cube {
             shader_info: settings.shader_name,
             blend_mode: settings.blend_mode,
             texture: settings.texture_name.to_owned(),
+            texture_config: settings.texture_config,
         })
     }
 }
@@ -133,6 +137,9 @@ impl Drawable for Cube {
     }
     fn get_shader_name(&self) -> ShaderInfo {
         self.shader_info.clone()
+    }
+    fn get_texture_config(&self) -> Option<TextureConfig> {
+        Some(self.texture_config)
     }
     fn get_blend_mode(&self) -> BlendMode {
         self.blend_mode

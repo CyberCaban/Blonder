@@ -10,7 +10,6 @@ use crate::{
     models::{
         cube::{Cube, CubeSettings},
         plane::Plane,
-        serpinsky::Serpinsky,
     },
     render::{
         color::Color,
@@ -21,12 +20,12 @@ use crate::{
             text_renderer::{TextRenderParams, TextRenderer},
         },
         helpers::init_window,
-        material::Material,
         renderer::{RenderMaterial, RenderObject, Renderer},
         transform::Transform,
     },
     shader::{Shader, ShaderInfo},
     state::{Screen, State},
+    texture::TextureConfig,
 };
 
 extern crate gl;
@@ -51,35 +50,21 @@ fn main() -> Result<()> {
     state.color.1 = 0.6;
     state.color.2 = 0.6;
 
-    let mut renderer = Renderer::new();
+    let mut renderer = Renderer::new()?;
 
-    // renderer.add_default_shader(Shader::new(
-    //     "assets/shaders/camera/vert.glsl",
-    //     "assets/shaders/camera/frag.glsl",
-    // )?);
-    // renderer.add_default_shader(Shader::new(
-    //     "assets/shaders/checkerboard/vert.glsl",
-    //     "assets/shaders/checkerboard/frag.glsl",
-    // )?);
     renderer.add_default_shader(Shader::new(
         "assets/shaders/light/vert.glsl",
         "assets/shaders/light/frag.glsl",
     )?);
 
-    // let mut serp = Serpinsky::new()?;
-    let d = 5.0;
-    // serp.triangle(&[-d, -d, 0.0], &[d, -d, 0.0], &[0., d, 0.0], 3);
-    // serp.make_coh(&[-d, -d, 0.0], &[d, -d, 0.0], &[0.0, d, 0.0], 2);
-    // serp.prepare();
-    // let _ = renderer.add_drawable(serp);
     let mut rng = rand::thread_rng();
     let r = 10.0;
     let (low, high) = (-r, r);
 
     let texture_pool = [
-        "assets/textures/transparency.png",
-        "assets/textures/skebob.png",
-        "assets/textures/white.png",
+        ("assets/textures/transparency.png", true),
+        ("assets/textures/skebob.png", false),
+        ("assets/textures/white.png", false),
     ];
 
     let mut objIds = Vec::with_capacity(100);
@@ -99,7 +84,11 @@ fn main() -> Result<()> {
         let cube = Cube::new(CubeSettings {
             position: [0.0, 0.0, 0.0],
             rotation: [0.0, 0.0, 0.0],
-            texture_name: texture,
+            texture_name: texture.0,
+            texture_config: TextureConfig {
+                texture_filtering: if texture.1 { gl::NEAREST } else { gl::LINEAR } as i32,
+                ..Default::default()
+            },
             ..Default::default()
         })
         .unwrap();
@@ -112,8 +101,8 @@ fn main() -> Result<()> {
         let render_object = RenderObject {
             drawable: Box::new(cube),
             material: Some(RenderMaterial {
-                specular: Some("assets/textures/specular.png".to_string()),
-                // specular: Some(texture.to_string()),
+                // specular: Some("assets/textures/specular.png".to_string()),
+                specular: Some(texture.0.to_string()),
                 // emission: Some("assets/textures/emission.jpg".to_string()),
                 emission: None,
                 shininess: 32.0,
@@ -155,21 +144,7 @@ fn main() -> Result<()> {
     )?;
     let _ = renderer.add_static_drawable(plane);
 
-    let mut text_renderer = TextRenderer::new(800.0, 600.0)?;
-    let font_size = 48u32;
-    let font_atlas = FontAtlas::new("assets/fonts/OpenSans.ttf", font_size)?;
-
-    let mut framebuffer = Framebuffer::new(
-        480, 360,
-        &state::Screen {
-            width: WIDTH,
-            height: HEIGHT,
-        },
-    )?;
-
     let mut frames = 0u32;
-    let mut fps_count = String::new();
-    let mut fps_y = 0f32;
     while !window.should_close() {
         glfw.poll_events();
         let current_frame = glfw.get_time() as f32;
@@ -203,38 +178,8 @@ fn main() -> Result<()> {
             tr.position = state.light_pos;
         }
 
-        framebuffer.begin_render();
         renderer.render_checkerboard(&mut glfw, &state);
-        text_renderer.render_text(
-            &font_atlas,
-            &fps_count,
-            0.0,
-            framebuffer.render_height as f32 - (font_size as f32 / 2.0),
-            &Screen {
-                width: framebuffer.render_width as u32,
-                height: framebuffer.render_height as u32,
-            },
-            &TextRenderParams {
-                scale: 1.0,
-                color: Color::white(),
-            },
-        );
-        text_renderer.render_text(
-            &font_atlas,
-            &format!("{}", frames),
-            0.0,
-            fps_y - ((font_size as f32 / 2.0) - 4.0) * 2.0,
-            &state.screen,
-            &TextRenderParams {
-                scale: 1.0,
-                color: Color::white(),
-            },
-        );
-        if frames % 10 == 0 {
-            fps_count = format!("FPS: {:.0}", 1.0 / state.delta_time);
-        }
-        framebuffer.end_scene_render();
-        framebuffer.update_screen_size(&state.screen);
+
         window.swap_buffers();
     }
     Ok(())

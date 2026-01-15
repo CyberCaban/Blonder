@@ -7,6 +7,7 @@ use crate::{
     shader::Shader,
     state::Screen,
 };
+use crate::state::State;
 
 #[derive(Debug, Default)]
 pub struct TextRenderParams {
@@ -52,7 +53,7 @@ impl TextRenderer {
             // Буфер для 6 вершин (2 треугольника) на символ
             gl::BufferData(
                 gl::ARRAY_BUFFER,
-                (6 * 4 * std::mem::size_of::<f32>()) as isize,
+                (6 * 4 * size_of::<f32>()) as isize,
                 std::ptr::null(),
                 gl::DYNAMIC_DRAW,
             );
@@ -64,7 +65,7 @@ impl TextRenderer {
                 2,
                 gl::FLOAT,
                 gl::FALSE,
-                (4 * std::mem::size_of::<f32>()) as i32,
+                (4 * size_of::<f32>()) as i32,
                 std::ptr::null(),
             );
 
@@ -75,8 +76,8 @@ impl TextRenderer {
                 2,
                 gl::FLOAT,
                 gl::FALSE,
-                (4 * std::mem::size_of::<f32>()) as i32,
-                (2 * std::mem::size_of::<f32>()) as *const _,
+                (4 * size_of::<f32>()) as i32,
+                (2 * size_of::<f32>()) as *const _,
             );
 
             gl::BindBuffer(gl::ARRAY_BUFFER, 0);
@@ -101,6 +102,10 @@ impl TextRenderer {
             -(right + left) / (right - left), -(top + bottom) / (top - bottom), -(far + near) / (far - near), 1.0,
         );
         self.projection_matrix = projection_matrix;
+    }
+    pub fn render(&mut self, glfw: &mut glfw::Glfw, state: &State) -> Result<()> {
+       
+        Ok(())
     }
     pub fn render_text(
         &mut self,
@@ -161,7 +166,7 @@ impl TextRenderer {
                     gl::BufferSubData(
                         gl::ARRAY_BUFFER,
                         0,
-                        (vertices.len() * std::mem::size_of::<f32>()) as isize,
+                        (vertices.len() * size_of::<f32>()) as isize,
                         vertices.as_ptr() as *const _,
                     );
                     gl::BindBuffer(gl::ARRAY_BUFFER, 0);

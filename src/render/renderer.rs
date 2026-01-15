@@ -1,11 +1,18 @@
-use std::{collections::HashMap, ops::Mul};
-
 use cgmath::{Array, Deg, ElementWise, InnerSpace, Matrix4, Rad, Vector3, ortho, perspective};
 use log::warn;
 use num::Zero;
+use std::collections::VecDeque;
+use std::sync::LazyLock;
+use std::{collections::HashMap, ops::Mul};
 use thiserror::Error;
 use uuid::Uuid;
 
+use crate::render::color::Color;
+use crate::render::consts::{HEIGHT, WIDTH};
+use crate::render::framebuffer::Framebuffer;
+use crate::render::gui::font::FontAtlas;
+use crate::render::gui::text_renderer::{TextRenderParams, TextRenderer};
+use crate::state::Screen;
 use crate::{
     render::{
         drawable::Drawable,
@@ -17,6 +24,8 @@ use crate::{
     texture::Texture,
 };
 use anyhow::Result;
+
+static FPS_SAMPLES: usize = 100;
 
 pub struct RenderMaterial {
     pub specular: Option<String>, // path to specular texture
@@ -77,11 +86,17 @@ pub struct Renderer {
     model: Matrix4<f32>,
     view: Matrix4<f32>,
     projection: Matrix4<f32>,
+
+    framebuffer: Framebuffer,
+    fps_samples: VecDeque<f32>,
+
+    text_renderer: TextRenderer,
+    font_atlases: Vec<FontAtlas>,
 }
 
 impl Renderer {
-    pub fn new() -> Self {
-        Self {
+    pub fn new() -> Result<Self> {
+        Ok(Self {
             drawables: vec![],
             dynamic_map: HashMap::new(),
             shaders: HashMap::new(),
@@ -90,7 +105,18 @@ impl Renderer {
             model: Matrix4::zero(),
             view: Matrix4::zero(),
             projection: Matrix4::zero(),
-        }
+            framebuffer: Framebuffer::new(
+                480,
+                360,
+                &Screen {
+                    width: WIDTH,
+                    height: HEIGHT,
+                },
+            )?,
+            fps_samples: VecDeque::with_capacity(FPS_SAMPLES),
+            text_renderer: TextRenderer::new(WIDTH as f32, HEIGHT as f32)?,
+            font_atlases: vec![FontAtlas::new("assets/fonts/OpenSans.ttf", 96)?],
+        })
     }
     pub fn add_shader(&mut self, name: &str, shader: Shader) {
         self.shaders.insert(name.to_string(), shader);
@@ -193,7 +219,12 @@ impl Renderer {
         // load texture
         let texture_name = object.drawable.get_texture_name();
         if object.drawable.requires_texture() && !self.textures.contains_key(&texture_name) {
-            match Texture::new(&texture_name) {
+            let tex = if let Some(config) = object.drawable.get_texture_config() {
+                Texture::with_config(&texture_name, config)
+            } else {
+                Texture::new(&texture_name)
+            };
+            match tex {
                 Ok(texture) => {
                     self.textures.insert(texture_name.clone(), texture);
                 }
@@ -407,7 +438,6 @@ impl Renderer {
         let State {
             color, wireframe, ..
         } = state;
-        static mut FRAME_COUNT: u32 = 0;
         unsafe {
             gl::ClearColor(color.0, color.1, color.2, color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -417,31 +447,83 @@ impl Renderer {
                 if *wireframe { gl::LINE } else { gl::FILL },
             );
         }
-        unsafe {
-            FRAME_COUNT += 1;
-            let pattern = match FRAME_COUNT % 4 {
-                0 => 0b00,
-                1 => 0b01,
-                2 => 0b10,
-                3 => 0b11,
-                _ => 0,
-            };
+
+        if state.is_lowres {
+            self.framebuffer.begin_render();
 
             if let Err(e) = self.use_current_shader() {
                 warn!("Rendering error: [{e}]");
             }
-            if let Some(shader) = self.get_current_shader() {
-                // shader.set_int("checkerboardPattern", pattern);
-                // shader.set_int("checkerboardFrame", (FRAME_COUNT % 4) as i32);
-                // self.apply_uniforms(shader, glfw, state);
+            self.batch_render(glfw, state);
+            self.render_text(glfw, state);
+            unsafe {
+                gl::DepthMask(gl::TRUE);
+                gl::Disable(gl::BLEND);
+                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+            }
+            self.framebuffer.end_scene_render();
+            self.framebuffer.update_screen_size(&state.screen);
+        } else {
+            if let Err(e) = self.use_current_shader() {
+                warn!("Rendering error: [{e}]");
             }
             self.batch_render(glfw, state);
+            self.render_text(glfw, state);
+            unsafe {
+                gl::DepthMask(gl::TRUE);
+                gl::Disable(gl::BLEND);
+                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+            }
         }
-        unsafe {
-            gl::DepthMask(gl::TRUE);
-            gl::Disable(gl::BLEND);
-            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+        if self.fps_samples.len() >= FPS_SAMPLES {
+            self.fps_samples.pop_front();
         }
+        self.fps_samples.push_back(1.0 / state.delta_time);
+    }
+    fn render_text(&mut self, glfw: &mut glfw::Glfw, state: &State) {
+        let current_font = &self.font_atlases[0];
+        let scale = if state.is_lowres { 0.25 } else { 1.0 };
+        let font_height = (current_font.size as f32 * scale / 2.0);
+        let screen = if state.is_lowres {
+            Screen {
+                width: self.framebuffer.render_width as u32,
+                height: self.framebuffer.render_height as u32,
+            }
+        } else {
+            Screen {
+                width: state.screen.width,
+                height: state.screen.height,
+            }
+        };
+        self.text_renderer.render_text(
+            current_font,
+            &format!(
+                "FPS(sampled:{}): {:.0}",
+                self.fps_samples.len(),
+                self.fps_samples.iter().sum::<f32>() / self.fps_samples.len() as f32
+            ),
+            0.0,
+            screen.height as f32 - font_height,
+            &screen,
+            &TextRenderParams {
+                scale,
+                color: Color::white(),
+            },
+        );
+        // self.text_renderer.render_text(
+        //     current_font,
+        //     &format!("FPS(raw): {}", 1.0 / state.delta_time),
+        //     0.0,
+        //     self.framebuffer.render_height as f32 - font_height * 2.0,
+        //     &Screen {
+        //         width: self.framebuffer.render_width as u32,
+        //         height: self.framebuffer.render_height as u32,
+        //     },
+        //     &TextRenderParams {
+        //         scale,
+        //         color: Color::white(),
+        //     },
+        // );
     }
 }
 
