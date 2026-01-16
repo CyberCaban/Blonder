@@ -13,9 +13,7 @@ use crate::render::consts::{HEIGHT, WIDTH};
 use crate::render::framebuffer::{Framebuffer, ViewportScaleStrategy};
 use crate::render::gui::font::FontAtlas;
 use crate::render::gui::text_renderer::{TextRenderParams, TextRenderer};
-use crate::render::gui::ui_element::UIElement;
 use crate::render::gui::ui_manager::UIManager;
-use crate::render::gui::ui_renderer::UIRenderer;
 use crate::state::Screen;
 use crate::texture::TextureConfig;
 use crate::{
@@ -127,20 +125,6 @@ impl Renderer {
             )]),
             ui_manager: UIManager::new()?,
         });
-
-        renderer
-            .ui_manager
-            .add_ui_rect(100.0, 100.0, 20.0, 50.0, Color::blue());
-        let tex = renderer.get_or_load_texture(
-            "assets/textures/transparency.png",
-            Some(TextureConfig {
-                texture_filtering: gl::NEAREST as i32,
-                ..Default::default()
-            }),
-        );
-        renderer
-            .ui_manager
-            .add_ui_texture(tex.clone(), 200.0, 200.0, 200.0, 200.0, Color::white());
 
         Ok(renderer)
     }
@@ -573,22 +557,22 @@ impl Renderer {
                 height: state.screen.height,
             }
         };
-        self.text_renderer
-            .set_projection(screen.width as f32, screen.height as f32);
-        self.text_renderer.render_text(
-            current_font,
-            &format!(
-                "FPS(sampled:{}): {:.0}",
-                self.fps_samples.len(),
-                self.fps_samples.iter().sum::<f32>() / self.fps_samples.len() as f32
-            ),
-            0.0,
-            screen.height as f32 - font_height,
-            &TextRenderParams {
-                scale,
-                color: Color::white(),
-            },
-        );
+        // self.text_renderer
+        //     .set_projection(screen.width as f32, screen.height as f32);
+        // self.text_renderer.render_text(
+        //     current_font,
+        //     &format!(
+        //         "FPS(sampled:{}): {:.0}",
+        //         self.fps_samples.len(),
+        //         self.fps_samples.iter().sum::<f32>() / self.fps_samples.len() as f32
+        //     ),
+        //     0.0,
+        //     screen.height as f32 - font_height,
+        //     &TextRenderParams {
+        //         scale,
+        //         color: Color::white(),
+        //     },
+        // );
         // self.text_renderer.render_text(
         //     current_font,
         //     &format!("FPS(raw): {}", 1.0 / state.delta_time),
@@ -605,7 +589,47 @@ impl Renderer {
         // );
     }
     fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &State) {
-        self.ui_manager.render(state);
+        let scale = 1.0;
+        let screen = if state.is_lowres && false {
+            Screen {
+                width: self.framebuffer.render_width as u32,
+                height: self.framebuffer.render_height as u32,
+            }
+        } else {
+            Screen {
+                width: state.screen.width,
+                height: state.screen.height,
+            }
+        };
+
+        self.ui_manager.begin_frame(state);
+        self.ui_manager
+            .draw_rect(100.0, 100.0, 20.0, 50.0, Color::blue());
+        let tex = self.get_or_load_texture(
+            "assets/textures/transparency.png",
+            Some(TextureConfig {
+                texture_filtering: gl::NEAREST as i32,
+                ..Default::default()
+            }),
+        );
+        self.ui_manager
+            .draw_texture(tex.clone(), 200.0, 200.0, 200.0, 200.0, Color::white());
+
+        let current_font = self.font_atlases.get(DEFAULT_FONT).unwrap();
+        let font_height = (current_font.size as f32 * scale / 2.0);
+        self.ui_manager.draw_text(
+            current_font,
+            &format!(
+                "FPS(sampled:{}): {:.0}",
+                self.fps_samples.len(),
+                self.fps_samples.iter().sum::<f32>() / self.fps_samples.len() as f32
+            ),
+            0.0,
+            screen.height as f32 - font_height,
+            scale,
+            Color::white(),
+        );
+        self.ui_manager.end_frame();
     }
 }
 
