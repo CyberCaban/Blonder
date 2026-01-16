@@ -80,15 +80,18 @@ impl FontAtlas {
                 // unsafe {
                 //     gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
                 // }
-                let texture = Texture::from_image(ImageRgba8(image), TextureConfig {
-                    wrap_s: gl::CLAMP_TO_EDGE as i32,
-                    wrap_t: gl::CLAMP_TO_EDGE as i32,
-                    ..Default::default()
-                })
-                    .context(format!(
-                        "Failed to create texture for font [{}], char [{}]",
-                        font_path, ch
-                    ))?;
+                let texture = Texture::from_image(
+                    ImageRgba8(image),
+                    TextureConfig {
+                        wrap_s: gl::CLAMP_TO_EDGE as i32,
+                        wrap_t: gl::CLAMP_TO_EDGE as i32,
+                        ..Default::default()
+                    },
+                )
+                .context(format!(
+                    "Failed to create texture for font [{}], char [{}]",
+                    font_path, ch
+                ))?;
                 let character = Character {
                     texture_id: texture,
                     size: (img_width as f32, img_height as f32),
@@ -120,6 +123,19 @@ impl FontAtlas {
             characters,
             size: font_size,
         })
+    }
+    pub fn measure_line(&self, text: &str, scale: f32) -> f32 {
+        let mut width = 0.0;
+
+        for ch in text.chars() {
+            if let Some(character) = self.characters.get(&ch) {
+                width += character.advance * scale;
+            } else {
+                width += self.size as f32 * 0.0 * scale;
+            }
+        }
+
+        width
     }
     pub fn get_character(&self, ch: char) -> Option<&Character> {
         self.characters.get(&ch)

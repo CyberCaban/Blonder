@@ -11,7 +11,7 @@ use crate::{
         },
         renderer::{FontAtlasRef, TextureRef},
     },
-    state::State,
+    state::{Screen, State},
 };
 
 pub enum ButtonState {
@@ -35,12 +35,12 @@ impl UIManager {
             clicked_buttons: Vec::new(),
         })
     }
-    pub fn begin_frame(&mut self, state: &State) {
+    pub fn begin_frame(&mut self, state: &State, render_screen: &Screen) {
         let State { screen, .. } = state;
         self.ui_renderer
-            .update_projection(screen.width as f32, screen.height as f32);
+            .update_projection(render_screen.width as f32, render_screen.height as f32);
         self.text_renderer
-            .set_projection(screen.width as f32, screen.height as f32);
+            .set_projection(render_screen.width as f32, render_screen.height as f32);
 
         self.ui_renderer.begin_frame();
 
@@ -133,9 +133,10 @@ impl UIManager {
 
         self.draw_rect(x, y, width, height, color);
 
-        let text_width = text.len() as f32 * 8.0 * 1.0;
+        let scale = 0.3;
+        let text_width = font.measure_line(text, scale);
         let text_x = x + (width - text_width) / 2.0;
-        let text_y = y + (height - 20.0) / 2.0;
+        let text_y = y + (height - font.size as f32 * scale) / 2.0;
 
         let text_color = if is_hovered && mouse_pressed {
             Color::white()
@@ -143,7 +144,7 @@ impl UIManager {
             Color::black()
         };
 
-        self.draw_text(font, text, text_x, text_y, 0.5, text_color);
+        self.draw_text(font, text, text_x, text_y, scale, text_color);
         was_clicked
     }
 }

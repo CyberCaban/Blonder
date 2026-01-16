@@ -174,7 +174,7 @@ fn main() -> Result<()> {
             tr.set_position(state.light_pos);
         }
 
-        renderer.render_checkerboard(&mut glfw, &state);
+        renderer.render_checkerboard(&mut glfw, &mut state);
 
         window.swap_buffers();
     }

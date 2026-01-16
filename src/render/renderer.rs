@@ -488,7 +488,7 @@ impl Renderer {
         shader.set_float("farPlane", 10.0);
         shader.set_vec3("cameraPos", &state.camera.position);
     }
-    pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &State) {
+    pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         self.update_mvp(state);
         let State {
             color,
@@ -515,7 +515,6 @@ impl Renderer {
                 warn!("Rendering error: [{e}]");
             }
             self.batch_render(glfw, state);
-            self.render_text(glfw, state);
             self.render_ui(glfw, state);
             unsafe {
                 gl::DepthMask(gl::TRUE);
@@ -529,7 +528,6 @@ impl Renderer {
                 warn!("Rendering error: [{e}]");
             }
             self.batch_render(glfw, state);
-            self.render_text(glfw, state);
             self.render_ui(glfw, state);
             unsafe {
                 gl::DepthMask(gl::TRUE);
@@ -542,10 +540,8 @@ impl Renderer {
         }
         self.fps_samples.push_back(1.0 / state.delta_time);
     }
-    fn render_text(&mut self, glfw: &mut glfw::Glfw, state: &State) {
-        let current_font = self.font_atlases.get(DEFAULT_FONT).unwrap();
+    fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         let scale = if state.is_lowres { 0.25 } else { 1.0 };
-        let font_height = (current_font.size as f32 * scale / 2.0);
         let screen = if state.is_lowres {
             Screen {
                 width: self.framebuffer.render_width as u32,
@@ -557,63 +553,25 @@ impl Renderer {
                 height: state.screen.height,
             }
         };
-        // self.text_renderer
-        //     .set_projection(screen.width as f32, screen.height as f32);
-        // self.text_renderer.render_text(
-        //     current_font,
-        //     &format!(
-        //         "FPS(sampled:{}): {:.0}",
-        //         self.fps_samples.len(),
-        //         self.fps_samples.iter().sum::<f32>() / self.fps_samples.len() as f32
-        //     ),
-        //     0.0,
-        //     screen.height as f32 - font_height,
-        //     &TextRenderParams {
-        //         scale,
-        //         color: Color::white(),
-        //     },
-        // );
-        // self.text_renderer.render_text(
-        //     current_font,
-        //     &format!("FPS(raw): {}", 1.0 / state.delta_time),
-        //     0.0,
-        //     self.framebuffer.render_height as f32 - font_height * 2.0,
-        //     &Screen {
-        //         width: self.framebuffer.render_width as u32,
-        //         height: self.framebuffer.render_height as u32,
-        //     },
-        //     &TextRenderParams {
-        //         scale,
-        //         color: Color::white(),
-        //     },
-        // );
-    }
-    fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &State) {
-        let scale = 1.0;
-        let screen = if state.is_lowres && false {
-            Screen {
-                width: self.framebuffer.render_width as u32,
-                height: self.framebuffer.render_height as u32,
-            }
-        } else {
-            Screen {
-                width: state.screen.width,
-                height: state.screen.height,
-            }
-        };
 
-        self.ui_manager.begin_frame(state);
-        self.ui_manager
-            .draw_rect(100.0, 100.0, 20.0, 50.0, Color::blue());
-        let tex = self.get_or_load_texture(
-            "assets/textures/transparency.png",
-            Some(TextureConfig {
-                texture_filtering: gl::NEAREST as i32,
-                ..Default::default()
-            }),
-        );
-        self.ui_manager
-            .draw_texture(tex.clone(), 200.0, 200.0, 200.0, 200.0, Color::white());
+        self.ui_manager.begin_frame(state, &screen);
+        // self.ui_manager
+        //     .draw_rect(100.0, 100.0, 20.0, 50.0, Color::blue());
+        // let tex = self.get_or_load_texture(
+        //     "assets/textures/transparency.png",
+        //     Some(TextureConfig {
+        //         texture_filtering: gl::NEAREST as i32,
+        //         ..Default::default()
+        //     }),
+        // );
+        // self.ui_manager.draw_texture(
+        //     tex.clone(),
+        //     0.0,
+        //     0.0,
+        //     screen.width as f32 / 10.0,
+        //     screen.height as f32 / 10.0,
+        //     Color::white(),
+        // );
 
         let current_font = self.font_atlases.get(DEFAULT_FONT).unwrap();
         let font_height = (current_font.size as f32 * scale / 2.0);
@@ -629,19 +587,43 @@ impl Renderer {
             scale,
             Color::white(),
         );
-        
+
+        let (btn_width, btn_height) = (screen.width as f32 / 100.0 * 30.0, 50.0);
+        let (mouse_x, mouse_y) = (
+            state.cursor_pos_x * screen.width as f32 / state.screen.width as f32,
+            state.cursor_pos_y * screen.height as f32 / state.screen.height as f32,
+        );
+
         if self.ui_manager.button(
             0,
-            "Hello world",
+            "Light Up",
             0.0,
-            screen.height as f32 / 2.0,
-            100.0,
-            30.0,
+            screen.height as f32 / 100.0 * 50.0,
+            btn_width,
+            btn_height,
             current_font,
-            state.cursor_pos_x,
-            state.cursor_pos_y,
-            state.mouse_pressed
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
         ) {
+            let light_pos_speed = 8.55;
+            state.light_pos.y += 0.1 * state.delta_time * light_pos_speed;
+        }
+
+        if self.ui_manager.button(
+            0,
+            "Light Down",
+            0.0,
+            screen.height as f32 / 100.0 * 50.0 - btn_height,
+            btn_width,
+            btn_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+        ) {
+            let light_pos_speed = 8.55;
+            state.light_pos.y -= 0.1 * state.delta_time * light_pos_speed;
         }
         self.ui_manager.end_frame();
     }
