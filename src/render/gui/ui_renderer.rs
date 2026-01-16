@@ -27,8 +27,6 @@ const MAX_VERTICES: usize = 512;
 pub struct UIRenderer {
     shader: Shader,
     white_texture: Texture,
-    textures: HashMap<Texture, Vec<u32>>,
-    current_texture_id: u32,
     projection_matrix: Matrix4<f32>,
     screen_width: f32,
     screen_height: f32,
@@ -49,9 +47,7 @@ impl UIRenderer {
         }
         let white_texture = Texture::white();
         let mut renderer = (Self {
-            current_texture_id: white_texture.id(),
             white_texture,
-            textures: HashMap::new(),
             shader: Shader::new("assets/shaders/ui/vert.glsl", "assets/shaders/ui/frag.glsl")?,
             projection_matrix: Matrix4::zero(),
             screen_height: 0.0,
@@ -167,6 +163,7 @@ impl UIRenderer {
 
             gl::ActiveTexture(gl::TEXTURE0);
             self.white_texture.use_texture();
+            // self.shader.set_int("texture1", 0);
 
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
@@ -206,27 +203,22 @@ impl UIRenderer {
             let start_index = self.vertex_data.len() as u32;
             let color = color.as_array();
 
-            // 4 вершины для прямоугольника
             let vertices = [
-                // Левый верхний
                 UIVertex {
                     position: [x, y],
                     color,
                     uv: [0.0, 0.0],
                 },
-                // Правый верхний
                 UIVertex {
                     position: [x + width, y],
                     color,
                     uv: [1.0, 0.0],
                 },
-                // Правый нижний
                 UIVertex {
                     position: [x + width, y + height],
                     color,
                     uv: [1.0, 1.0],
                 },
-                // Левый нижний
                 UIVertex {
                     position: [x, y + height],
                     color,
@@ -234,14 +226,13 @@ impl UIRenderer {
                 },
             ];
 
-            // 2 треугольника (6 индексов)
             let indices = [
                 start_index,
                 start_index + 1,
-                start_index + 2, // Первый треугольник
+                start_index + 2,
                 start_index,
                 start_index + 2,
-                start_index + 3, // Второй треугольник
+                start_index + 3,
             ];
 
             self.vertex_data.extend_from_slice(&vertices);
@@ -256,42 +247,36 @@ impl UIRenderer {
         let start_index = self.vertex_data.len() as u32;
         let color = color.as_array();
 
-        // 4 вершины для прямоугольника
         let vertices = [
-            // Левый верхний
             UIVertex {
                 position: [x, y],
                 color,
-                uv: [0.0, 0.0],
+                uv: [-1.0, -1.0],
             },
-            // Правый верхний
             UIVertex {
                 position: [x + width, y],
                 color,
-                uv: [1.0, 0.0],
+                uv: [-1.0, -1.0],
             },
-            // Правый нижний
             UIVertex {
                 position: [x + width, y + height],
                 color,
-                uv: [1.0, 1.0],
+                uv: [-1.0, -1.0],
             },
-            // Левый нижний
             UIVertex {
                 position: [x, y + height],
                 color,
-                uv: [0.0, 1.0],
+                uv: [-1.0, -1.0],
             },
         ];
 
-        // 2 треугольника (6 индексов)
         let indices = [
             start_index,
             start_index + 1,
-            start_index + 2, // Первый треугольник
+            start_index + 2,
             start_index,
             start_index + 2,
-            start_index + 3, // Второй треугольник
+            start_index + 3,
         ];
 
         self.vertex_data.extend_from_slice(&vertices);

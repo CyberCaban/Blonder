@@ -1,6 +1,9 @@
 use glfw::{Action, Key, WindowEvent};
 
-use crate::state::{Events, State};
+use crate::{
+    render::framebuffer::ViewportScaleStrategy,
+    state::{Events, State},
+};
 
 pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut State) {
     if matches!(window.get_key(glfw::Key::Up), Action::Press) {
@@ -87,6 +90,13 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
             }
             WindowEvent::Key(Key::X, _, Action::Press | Action::Repeat, _) => {
                 state.wireframe = !state.wireframe;
+            }
+            WindowEvent::Key(Key::R, _, Action::Press | Action::Repeat, _) => {
+                state.scale_strategy = match state.scale_strategy {
+                    ViewportScaleStrategy::Fit => ViewportScaleStrategy::PixelPerfect,
+                    ViewportScaleStrategy::PixelPerfect => ViewportScaleStrategy::Stretch,
+                    ViewportScaleStrategy::Stretch => ViewportScaleStrategy::Fit,
+                }
             }
             WindowEvent::MouseButton(glfw::MouseButton::Middle, Action::Press, _) => {
                 state.camera.process_capture(window);

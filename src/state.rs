@@ -3,7 +3,7 @@ use glfw::{GlfwReceiver, WindowEvent};
 
 use crate::{
     camera::Camera,
-    render::consts::{HEIGHT, WIDTH},
+    render::{consts::{HEIGHT, WIDTH}, framebuffer::ViewportScaleStrategy},
 };
 
 extern crate gl;
@@ -28,6 +28,7 @@ pub struct State {
     pub light_pos: Vector3<f32>,
     pub wireframe: bool,
     pub is_lowres: bool,
+    pub scale_strategy: ViewportScaleStrategy,
     pub screen: Screen,
     pub camera: Camera,
     pub delta_time: f32,
@@ -40,6 +41,7 @@ impl Default for State {
             color: (0.0, 0.0, 0.0, 0.0),
             wireframe: false,
             is_lowres: false,
+            scale_strategy: ViewportScaleStrategy::Stretch,
             numbers: [0.0; 10],
             light_pos: Vector3::from_value(0.0),
             screen: Screen {

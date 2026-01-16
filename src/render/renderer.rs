@@ -462,7 +462,10 @@ impl Renderer {
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         self.update_mvp(state);
         let State {
-            color, wireframe, ..
+            color,
+            wireframe,
+            scale_strategy,
+            ..
         } = state;
         unsafe {
             gl::ClearColor(color.0, color.1, color.2, color.3);
@@ -473,6 +476,8 @@ impl Renderer {
                 if *wireframe { gl::LINE } else { gl::FILL },
             );
         }
+
+        self.framebuffer.set_scale_strategy(scale_strategy.clone());
 
         if state.is_lowres {
             self.framebuffer.begin_render();
@@ -559,7 +564,10 @@ impl Renderer {
         self.ui_renderer.begin_frame();
         self.ui_renderer
             .draw_rect(100.0, 100.0, 20.0, 50.0, &Color::blue());
-        let tex = self.textures.values().take(2).collect::<Vec<_>>()[1];
+        let tex = self
+            .textures
+            .get("assets/textures/transparency.png")
+            .unwrap();
         self.ui_renderer
             .draw_texture(tex, 200.0, 200.0, 200.0, 200.0, &Color::white());
         self.ui_renderer.end_frame();
