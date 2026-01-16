@@ -107,7 +107,6 @@ fn main() -> Result<()> {
                 shininess: 32.0,
             }),
             transform: Some(transform),
-            is_dynamic: true,
         };
         let id = renderer.add_render_object(render_object);
         objIds.push(id);
@@ -128,7 +127,6 @@ fn main() -> Result<()> {
         drawable: Box::new(light_src),
         transform: Some(Transform::new(None, None, Some(Vector3::from_value(0.5)))),
         material: Some(RenderMaterial::default()),
-        is_dynamic: true,
     };
     let light_id = renderer.add_render_object(light_ro)?;
 
