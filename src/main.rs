@@ -32,7 +32,6 @@ extern crate gl;
 extern crate glfw;
 
 mod camera;
-mod controls;
 mod events;
 mod log;
 mod models;
@@ -68,7 +67,7 @@ fn main() -> Result<()> {
     ];
 
     let mut objIds = Vec::with_capacity(100);
-    for _ in 0..100 {
+    for _ in 0..1000 {
         let position = [
             rng.gen_range(low, high),
             rng.gen_range(low, high),
@@ -92,11 +91,11 @@ fn main() -> Result<()> {
             ..Default::default()
         })
         .unwrap();
-        let transform = Transform {
-            position: position.into(),
-            rotation: rotation.into(),
-            ..Default::default()
-        };
+        let transform = Transform::new(
+            Some(position.into()),
+            Some(rotation.into()),
+            Some(Vector3::from_value(1.0)),
+        );
 
         let render_object = RenderObject {
             drawable: Box::new(cube),
@@ -127,10 +126,7 @@ fn main() -> Result<()> {
     })?;
     let light_ro = RenderObject {
         drawable: Box::new(light_src),
-        transform: Some(Transform {
-            scale: Vector3::from_value(0.5),
-            ..Default::default()
-        }),
+        transform: Some(Transform::new(None, None, Some(Vector3::from_value(0.5)))),
         material: Some(RenderMaterial::default()),
         is_dynamic: true,
     };
@@ -162,11 +158,12 @@ fn main() -> Result<()> {
                     && let Some(render_object) = renderer.get_transform_mut(id)
                     && let Some(tr) = render_object.get_transform_mut()
                 {
-                    tr.scale = Vector3::from_value(1.0);
+                    tr.set_scale(Vector3::from_value(1.0));
                     // tr.scale.x = state.numbers[0];
                     // tr.scale.y = state.numbers[0];
                     // tr.scale.z = state.numbers[0];
-                    tr.rotation.y = state.numbers[2];
+                    let r = tr.get_rotation();
+                    tr.set_rotation(Vector3::new(r.x, state.numbers[2], r.z));
                     // tr.rotation.x = (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
                     // tr.rotation.z = (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
                 }
@@ -175,7 +172,7 @@ fn main() -> Result<()> {
         if let Some(ro) = renderer.get_transform_mut(&light_id)
             && let Some(tr) = ro.get_transform_mut()
         {
-            tr.position = state.light_pos;
+            tr.set_position(state.light_pos);
         }
 
         renderer.render_checkerboard(&mut glfw, &state);

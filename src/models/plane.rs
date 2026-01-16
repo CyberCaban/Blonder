@@ -69,23 +69,17 @@ impl Drawable for Plane {
             gl::Enable(gl::CULL_FACE);
         }
     }
-    fn get_texture_name(&self) -> String {
-        self.texture.to_string()
+    fn get_texture_name(&self) -> Option<String> {
+        Some(self.texture.to_string())
     }
-    fn get_shader_name(&self) -> ShaderInfo {
-        self.shader_info.clone()
+    fn get_shader_name(&self) -> Option<ShaderInfo> {
+        Some(self.shader_info.clone())
     }
     fn get_blend_mode(&self) -> BlendMode {
         self.blend_mode
     }
     fn get_texture_config(&self) -> Option<crate::texture::TextureConfig> {
         None
-    }
-    fn requires_shader(&self) -> bool {
-        false
-    }
-    fn requires_texture(&self) -> bool {
-        true
     }
 }
 

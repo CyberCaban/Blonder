@@ -227,20 +227,14 @@ impl Drawable for Serpinsky {
             gl::Enable(gl::CULL_FACE);
         }
     }
-    fn get_texture_name(&self) -> String {
-        "assets/textures/cooler.png".to_string()
+    fn get_shader_name(&self) -> Option<ShaderInfo> {
+        Some(self.shader.clone())
     }
-    fn get_shader_name(&self) -> ShaderInfo {
-        self.shader.clone()
+    fn get_texture_name(&self) -> Option<String> {
+        None
     }
     fn get_texture_config(&self) -> Option<crate::texture::TextureConfig> {
         None
-    }
-    fn requires_shader(&self) -> bool {
-        false
-    }
-    fn requires_texture(&self) -> bool {
-        true
     }
     fn get_blend_mode(&self) -> crate::render::blend_mode::BlendMode {
         crate::render::blend_mode::BlendMode::Opaque

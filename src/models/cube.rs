@@ -132,11 +132,11 @@ impl Drawable for Cube {
             gl::DrawArrays(gl::TRIANGLES, 0, 36);
         }
     }
-    fn get_texture_name(&self) -> String {
-        self.texture.to_string()
+    fn get_texture_name(&self) -> Option<String> {
+        Some(self.texture.to_string())
     }
-    fn get_shader_name(&self) -> ShaderInfo {
-        self.shader_info.clone()
+    fn get_shader_name(&self) -> Option<ShaderInfo> {
+        Some(self.shader_info.clone())
     }
     fn get_texture_config(&self) -> Option<TextureConfig> {
         Some(self.texture_config)
@@ -144,12 +144,7 @@ impl Drawable for Cube {
     fn get_blend_mode(&self) -> BlendMode {
         self.blend_mode
     }
-    fn requires_shader(&self) -> bool {
-        true
-    }
-    fn requires_texture(&self) -> bool {
-        true
-    }
+
 }
 
 impl Drop for Cube {

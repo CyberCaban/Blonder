@@ -2,12 +2,12 @@ use anyhow::Result;
 use cgmath::{Matrix4, Vector4};
 use num::Zero;
 
+use crate::state::State;
 use crate::{
     render::{color::Color, gui::font::FontAtlas},
     shader::Shader,
     state::Screen,
 };
-use crate::state::State;
 
 #[derive(Debug, Default)]
 pub struct TextRenderParams {
@@ -50,7 +50,6 @@ impl TextRenderer {
             gl::BindVertexArray(vao);
             gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
 
-            // Буфер для 6 вершин (2 треугольника) на символ
             gl::BufferData(
                 gl::ARRAY_BUFFER,
                 (6 * 4 * size_of::<f32>()) as isize,
@@ -58,7 +57,6 @@ impl TextRenderer {
                 gl::DYNAMIC_DRAW,
             );
 
-            // Позиция
             gl::EnableVertexAttribArray(0);
             gl::VertexAttribPointer(
                 0,
@@ -69,7 +67,6 @@ impl TextRenderer {
                 std::ptr::null(),
             );
 
-            // Текстурные координаты
             gl::EnableVertexAttribArray(1);
             gl::VertexAttribPointer(
                 1,
@@ -104,7 +101,6 @@ impl TextRenderer {
         self.projection_matrix = projection_matrix;
     }
     pub fn render(&mut self, glfw: &mut glfw::Glfw, state: &State) -> Result<()> {
-       
         Ok(())
     }
     pub fn render_text(
@@ -131,6 +127,7 @@ impl TextRenderer {
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
             gl::ActiveTexture(gl::TEXTURE0);
+            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
 
             gl::BindVertexArray(self.vao);
 
@@ -149,10 +146,9 @@ impl TextRenderer {
                     let w = character.size.0 * scale;
                     let h = character.size.1 * scale;
 
-                    // Обновляем VBO для текущего символа
                     #[rustfmt::skip]
                     let vertices: [f32; 24] = [
-                        // Позиция       // Текстурные координаты
+                        // pos       // uv
                         xpos, ypos + h, 0.0, 0.0,
                         xpos, ypos, 0.0, 1.0,
                         xpos + w, ypos, 1.0, 1.0,

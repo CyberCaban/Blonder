@@ -149,9 +149,16 @@ impl Renderer {
         Ok(())
     }
     pub fn add_static_drawable<T: Drawable + 'static>(&mut self, object: T) -> Result<()> {
-        let texture_name = object.get_texture_name();
-        if object.requires_texture() && !self.textures.contains_key(&texture_name) {
-            match Texture::new(&texture_name) {
+        // load texture
+        if let Some(texture_name) = object.get_texture_name()
+            && !self.textures.contains_key(&texture_name)
+        {
+            let tex = if let Some(config) = object.get_texture_config() {
+                Texture::with_config(&texture_name, config)
+            } else {
+                Texture::new(&texture_name)
+            };
+            match tex {
                 Ok(texture) => {
                     self.textures.insert(texture_name.clone(), texture);
                 }
@@ -160,8 +167,10 @@ impl Renderer {
                 }
             }
         }
-        let shader_name = object.get_shader_name();
-        if object.requires_shader() && !self.shaders.contains_key(&shader_name.get_name()) {
+        // load shader
+        if let Some(shader_name) = object.get_shader_name()
+            && !self.shaders.contains_key(&shader_name.get_name())
+        {
             match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
                 Ok(s) => {
                     self.shaders.insert(shader_name.name, s);
@@ -181,9 +190,16 @@ impl Renderer {
         Ok(())
     }
     pub fn add_dynamic_drawable<T: Drawable + 'static>(&mut self, object: T) -> Result<Uuid> {
-        let texture_name = object.get_texture_name();
-        if object.requires_texture() && !self.textures.contains_key(&texture_name) {
-            match Texture::new(&texture_name) {
+        // load texture
+        if let Some(texture_name) = object.get_texture_name()
+            && !self.textures.contains_key(&texture_name)
+        {
+            let tex = if let Some(config) = object.get_texture_config() {
+                Texture::with_config(&texture_name, config)
+            } else {
+                Texture::new(&texture_name)
+            };
+            match tex {
                 Ok(texture) => {
                     self.textures.insert(texture_name.clone(), texture);
                 }
@@ -192,8 +208,10 @@ impl Renderer {
                 }
             }
         }
-        let shader_name = object.get_shader_name();
-        if object.requires_shader() && !self.shaders.contains_key(&shader_name.get_name()) {
+        // load shader
+        if let Some(shader_name) = object.get_shader_name()
+            && !self.shaders.contains_key(&shader_name.get_name())
+        {
             match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
                 Ok(s) => {
                     self.shaders.insert(shader_name.name, s);
@@ -217,8 +235,9 @@ impl Renderer {
 
     pub fn add_render_object(&mut self, object: RenderObject) -> Result<Uuid> {
         // load texture
-        let texture_name = object.drawable.get_texture_name();
-        if object.drawable.requires_texture() && !self.textures.contains_key(&texture_name) {
+        if let Some(texture_name) = object.drawable.get_texture_name()
+            && !self.textures.contains_key(&texture_name)
+        {
             let tex = if let Some(config) = object.drawable.get_texture_config() {
                 Texture::with_config(&texture_name, config)
             } else {
@@ -234,8 +253,8 @@ impl Renderer {
             }
         }
         // load shader
-        let shader_name = object.drawable.get_shader_name();
-        if object.drawable.requires_shader() && !self.shaders.contains_key(&shader_name.get_name())
+        if let Some(shader_name) = object.drawable.get_shader_name()
+            && !self.shaders.contains_key(&shader_name.get_name())
         {
             match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
                 Ok(s) => {
@@ -322,12 +341,12 @@ impl Renderer {
         };
 
         for (key, objects) in batches {
-            if key.need_shader
-                && let Some(shader) = self.shaders.get(&key.shader_name)
+            if let Some(shader_name) = key.shader_name
+                && let Some(shader) = self.shaders.get(&shader_name)
             {
                 shader.use_shader();
                 self.apply_uniforms(shader, glfw, state);
-                self.current_shader = Some(key.shader_name.clone());
+                self.current_shader = Some(shader_name.clone());
             } else if let Some(default_shader) = self.shaders.get("default") {
                 default_shader.use_shader();
                 self.current_shader = Some("default".to_string());
@@ -350,7 +369,9 @@ impl Renderer {
             //     }
             // }
 
-            if let Some(texture) = self.textures.get(&key.texture_name) {
+            if let Some(texture_name) = key.texture_name
+                && let Some(texture) = self.textures.get(&texture_name)
+            {
                 unsafe {
                     gl::ActiveTexture(gl::TEXTURE0);
                     texture.use_texture();
@@ -529,9 +550,8 @@ impl Renderer {
 
 #[derive(Debug, Hash, PartialEq, Eq)]
 struct BatchKey {
-    texture_name: String,
-    shader_name: String,
-    need_shader: bool,
+    texture_name: Option<String>,
+    shader_name: Option<String>,
     // blend_mode: BlendMode,
 }
 
@@ -539,8 +559,7 @@ impl BatchKey {
     fn from_object(object: &dyn Drawable) -> Self {
         BatchKey {
             texture_name: object.get_texture_name(),
-            shader_name: object.get_shader_name().get_name(),
-            need_shader: object.requires_shader(),
+            shader_name: object.get_shader_name().and_then(|s| Some(s.get_name())),
             // blend_mode: object.get_blend_mode(),
         }
     }
