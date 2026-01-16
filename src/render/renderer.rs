@@ -629,6 +629,20 @@ impl Renderer {
             scale,
             Color::white(),
         );
+        
+        if self.ui_manager.button(
+            0,
+            "Hello world",
+            0.0,
+            screen.height as f32 / 2.0,
+            100.0,
+            30.0,
+            current_font,
+            state.cursor_pos_x,
+            state.cursor_pos_y,
+            state.mouse_pressed
+        ) {
+        }
         self.ui_manager.end_frame();
     }
 }

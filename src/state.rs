@@ -31,6 +31,9 @@ pub struct State {
     pub scale_strategy: ViewportScaleStrategy,
     pub screen: Screen,
     pub camera: Camera,
+    pub cursor_pos_x: f32,
+    pub cursor_pos_y: f32,
+    pub mouse_pressed: bool,
     pub delta_time: f32,
     pub last_frame: f32,
 }
@@ -49,6 +52,9 @@ impl Default for State {
                 height: HEIGHT,
             },
             camera: Camera::new(),
+            cursor_pos_x: 0.0,
+            cursor_pos_y: 0.0,
+            mouse_pressed: false,
             delta_time: 0.0,
             last_frame: 0.0,
         }

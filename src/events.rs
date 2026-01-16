@@ -80,7 +80,14 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
                 println!("color BLUE {}", state.color.2);
             }
             WindowEvent::CursorPos(x, y) => {
-                println!("Mouse x: {x}, y: {y}");
+                state.cursor_pos_x = x as f32;
+                state.cursor_pos_y = (state.screen.height as f64 - y) as f32;
+            }
+            WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Press, _) => {
+                state.mouse_pressed = true;
+            }
+            WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Release, _) => {
+                state.mouse_pressed = false;
             }
             WindowEvent::Key(Key::F, _, Action::Press | Action::Repeat, _) => {
                 dbg!(&state);
