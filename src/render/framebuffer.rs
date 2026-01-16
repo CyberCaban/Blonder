@@ -1,6 +1,12 @@
 use crate::{shader::Shader, state::Screen, texture::Texture};
 use anyhow::Result;
 
+pub enum ViewportScaleStrategy {
+    Fit,
+    Stretch,
+    PixelPerfect,
+}
+
 pub struct Framebuffer {
     fbo: u32,
     rbo: u32,
@@ -11,10 +17,16 @@ pub struct Framebuffer {
     screen_quad_vao: u32,
     screen_quad_vbo: u32,
     screen_size: (u32, u32),
+    scale_strategy: ViewportScaleStrategy,
 }
 
 impl Framebuffer {
-    pub fn new(width: i32, height: i32, screen: &Screen) -> Result<Self> {
+    pub fn new(
+        width: i32,
+        height: i32,
+        screen: &Screen,
+        scale_strategy: ViewportScaleStrategy,
+    ) -> Result<Self> {
         let mut fbo = 0;
         let mut rbo = 0;
         let mut texture_id = 0;
@@ -84,6 +96,7 @@ impl Framebuffer {
             screen_quad_vbo,
             render_height: height,
             screen_size: (screen.width, screen.height),
+            scale_strategy,
         })
     }
     fn create_screen_quad() -> (u32, u32) {
@@ -145,6 +158,9 @@ impl Framebuffer {
     pub fn update_screen_size(&mut self, screen: &Screen) {
         self.screen_size = (screen.width, screen.height)
     }
+    pub fn set_scale_strategy(&mut self, scale_strategy: ViewportScaleStrategy) {
+        self.scale_strategy = scale_strategy;
+    }
     pub fn set_render_size(&mut self, width: u32, height: u32) {
         self.render_width = width as i32;
         self.render_height = height as i32;
@@ -182,7 +198,7 @@ impl Framebuffer {
             self.render_texture.use_texture();
 
             let (viewport_width, viewport_height, offset_x, offset_y) =
-                self.calculate_fit_viewport();
+                self.calculate_viewport_params();
 
             gl::Viewport(offset_x, offset_y, viewport_width, viewport_height);
 
@@ -194,37 +210,56 @@ impl Framebuffer {
             gl::Enable(gl::DEPTH_TEST);
         }
     }
-    fn calculate_fit_viewport(&self) -> (i32, i32, i32, i32) {
-        let screen_width = self.screen_size.0 as f32;
-        let screen_height = self.screen_size.1 as f32;
-        let render_width = self.render_width as f32;
-        let render_height = self.render_height as f32;
+    fn calculate_viewport_params(&self) -> (i32, i32, i32, i32) {
+        match self.scale_strategy {
+            ViewportScaleStrategy::Fit => {
+                let screen_width = self.screen_size.0 as f32;
+                let screen_height = self.screen_size.1 as f32;
+                let render_width = self.render_width as f32;
+                let render_height = self.render_height as f32;
 
-        let screen_aspect = screen_width / screen_height;
-        let render_aspect = render_width / render_height;
+                let screen_aspect = screen_width / screen_height;
+                let render_aspect = render_width / render_height;
 
-        let (viewport_width, viewport_height, offset_x, offset_y);
+                let (viewport_width, viewport_height, offset_x, offset_y);
 
-        if screen_aspect > render_aspect {
-            let scale = screen_height / render_height;
-            viewport_height = screen_height as i32;
-            viewport_width = (render_width * scale) as i32;
-            offset_x = ((screen_width - viewport_width as f32) / 2.0) as i32;
-            offset_y = 0;
-        } else if screen_aspect < render_aspect {
-            let scale = screen_width / render_width;
-            viewport_width = screen_width as i32;
-            viewport_height = (render_height * scale) as i32;
-            offset_x = 0;
-            offset_y = ((screen_height - viewport_height as f32) / 2.0) as i32;
-        } else {
-            viewport_width = screen_width as i32;
-            viewport_height = screen_height as i32;
-            offset_x = 0;
-            offset_y = 0;
+                if screen_aspect > render_aspect {
+                    let scale = screen_height / render_height;
+                    viewport_height = screen_height as i32;
+                    viewport_width = (render_width * scale) as i32;
+                    offset_x = ((screen_width - viewport_width as f32) / 2.0) as i32;
+                    offset_y = 0;
+                } else if screen_aspect < render_aspect {
+                    let scale = screen_width / render_width;
+                    viewport_width = screen_width as i32;
+                    viewport_height = (render_height * scale) as i32;
+                    offset_x = 0;
+                    offset_y = ((screen_height - viewport_height as f32) / 2.0) as i32;
+                } else {
+                    viewport_width = screen_width as i32;
+                    viewport_height = screen_height as i32;
+                    offset_x = 0;
+                    offset_y = 0;
+                }
+
+                (viewport_width, viewport_height, offset_x, offset_y)
+            }
+            ViewportScaleStrategy::PixelPerfect => {
+                let max_scale_x = self.screen_size.0 as f32 / self.render_width as f32;
+                let max_scale_y = self.screen_size.1 as f32 / self.render_height as f32;
+                let scale = max_scale_x.min(max_scale_y).floor().max(1.0);
+
+                let render_width = (self.render_width as f32 * scale) as i32;
+                let render_height = (self.render_height as f32 * scale) as i32;
+                let offset_x = (self.screen_size.0 as i32 - render_width) / 2;
+                let offset_y = (self.screen_size.1 as i32 - render_height) / 2;
+
+                (render_width, render_height, offset_x, offset_y)
+            }
+            ViewportScaleStrategy::Stretch => {
+                (self.screen_size.0 as i32, self.screen_size.1 as i32, 0, 0)
+            }
         }
-
-        (viewport_width, viewport_height, offset_x, offset_y)
     }
 }
 

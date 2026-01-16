@@ -9,9 +9,10 @@ use uuid::Uuid;
 
 use crate::render::color::Color;
 use crate::render::consts::{HEIGHT, WIDTH};
-use crate::render::framebuffer::Framebuffer;
+use crate::render::framebuffer::{Framebuffer, ViewportScaleStrategy};
 use crate::render::gui::font::FontAtlas;
 use crate::render::gui::text_renderer::{TextRenderParams, TextRenderer};
+use crate::render::gui::ui_renderer::UIRenderer;
 use crate::state::Screen;
 use crate::{
     render::{
@@ -92,6 +93,8 @@ pub struct Renderer {
 
     text_renderer: TextRenderer,
     font_atlases: Vec<FontAtlas>,
+
+    ui_renderer: UIRenderer,
 }
 
 impl Renderer {
@@ -112,10 +115,12 @@ impl Renderer {
                     width: WIDTH,
                     height: HEIGHT,
                 },
+                ViewportScaleStrategy::Stretch,
             )?,
             fps_samples: VecDeque::with_capacity(FPS_SAMPLES),
             text_renderer: TextRenderer::new(WIDTH as f32, HEIGHT as f32)?,
             font_atlases: vec![FontAtlas::new("assets/fonts/OpenSans.ttf", 96)?],
+            ui_renderer: UIRenderer::new()?,
         })
     }
     pub fn add_shader(&mut self, name: &str, shader: Shader) {
@@ -477,6 +482,7 @@ impl Renderer {
             }
             self.batch_render(glfw, state);
             self.render_text(glfw, state);
+            self.render_ui(glfw, state);
             unsafe {
                 gl::DepthMask(gl::TRUE);
                 gl::Disable(gl::BLEND);
@@ -490,6 +496,7 @@ impl Renderer {
             }
             self.batch_render(glfw, state);
             self.render_text(glfw, state);
+            self.render_ui(glfw, state);
             unsafe {
                 gl::DepthMask(gl::TRUE);
                 gl::Disable(gl::BLEND);
@@ -545,6 +552,17 @@ impl Renderer {
         //         color: Color::white(),
         //     },
         // );
+    }
+    fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &State) {
+        self.ui_renderer
+            .update_projection(state.screen.width as f32, state.screen.height as f32);
+        self.ui_renderer.begin_frame();
+        self.ui_renderer
+            .draw_rect(100.0, 100.0, 20.0, 50.0, &Color::blue());
+        let tex = self.textures.values().take(2).collect::<Vec<_>>()[1];
+        self.ui_renderer
+            .draw_texture(tex, 200.0, 200.0, 200.0, 200.0, &Color::white());
+        self.ui_renderer.end_frame();
     }
 }
 

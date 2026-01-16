@@ -29,6 +29,9 @@ impl Color {
     pub const fn rg() -> Self {
         Self([1.0, 1.0, 0.0, 1.0])
     }
+    pub const fn as_array(&self) -> [f32; 4] {
+        self.0
+    }
 }
 
 impl Deref for Color {
