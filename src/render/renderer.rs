@@ -8,6 +8,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::render::color::Color;
+use crate::render::consts::DEFAULT_FONT;
 use crate::render::consts::{HEIGHT, WIDTH};
 use crate::render::framebuffer::{Framebuffer, ViewportScaleStrategy};
 use crate::render::gui::font::FontAtlas;
@@ -74,6 +75,7 @@ pub enum RendererError {
 }
 
 pub type TextureRef = Arc<Texture>;
+pub type FontAtlasRef = Arc<FontAtlas>;
 
 pub struct Renderer {
     drawables: Vec<RenderObject>,
@@ -92,7 +94,7 @@ pub struct Renderer {
     fps_samples: VecDeque<f32>,
 
     text_renderer: TextRenderer,
-    font_atlases: Vec<FontAtlas>,
+    font_atlases: HashMap<String, FontAtlasRef>,
 
     pub ui_manager: UIManager,
 }
@@ -118,8 +120,11 @@ impl Renderer {
                 ViewportScaleStrategy::Stretch,
             )?,
             fps_samples: VecDeque::with_capacity(FPS_SAMPLES),
-            text_renderer: TextRenderer::new(WIDTH as f32, HEIGHT as f32)?,
-            font_atlases: vec![FontAtlas::new("assets/fonts/OpenSans.ttf", 96)?],
+            text_renderer: TextRenderer::new()?,
+            font_atlases: HashMap::from([(
+                DEFAULT_FONT.to_string(),
+                Arc::new(FontAtlas::new("assets/fonts/OpenSans.ttf", 96)?),
+            )]),
             ui_manager: UIManager::new()?,
         });
 
@@ -554,7 +559,7 @@ impl Renderer {
         self.fps_samples.push_back(1.0 / state.delta_time);
     }
     fn render_text(&mut self, glfw: &mut glfw::Glfw, state: &State) {
-        let current_font = &self.font_atlases[0];
+        let current_font = self.font_atlases.get(DEFAULT_FONT).unwrap();
         let scale = if state.is_lowres { 0.25 } else { 1.0 };
         let font_height = (current_font.size as f32 * scale / 2.0);
         let screen = if state.is_lowres {
@@ -568,6 +573,8 @@ impl Renderer {
                 height: state.screen.height,
             }
         };
+        self.text_renderer
+            .set_projection(screen.width as f32, screen.height as f32);
         self.text_renderer.render_text(
             current_font,
             &format!(
@@ -577,7 +584,6 @@ impl Renderer {
             ),
             0.0,
             screen.height as f32 - font_height,
-            &screen,
             &TextRenderParams {
                 scale,
                 color: Color::white(),

@@ -7,6 +7,7 @@ use rusttype::{Font, Scale, point};
 
 use crate::texture::{Texture, TextureConfig};
 
+#[derive(Debug)]
 pub struct Character {
     pub texture_id: Texture,
     pub size: (f32, f32),
@@ -14,6 +15,7 @@ pub struct Character {
     pub advance: f32,
 }
 
+#[derive(Debug)]
 pub struct FontAtlas {
     pub characters: HashMap<char, Character>,
     pub size: u32,

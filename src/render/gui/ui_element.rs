@@ -1,7 +1,10 @@
 use std::sync::Arc;
 
 use crate::{
-    render::{color::Color, renderer::TextureRef},
+    render::{
+        color::Color,
+        renderer::{FontAtlasRef, TextureRef},
+    },
     texture::Texture,
 };
 
@@ -20,6 +23,14 @@ pub enum UIElement {
         y: f32,
         width: f32,
         height: f32,
+        color: Color,
+    },
+    Text {
+        font: FontAtlasRef,
+        text: String,
+        x: f32,
+        y: f32,
+        scale: f32,
         color: Color,
     },
 }
@@ -49,6 +60,16 @@ impl UIElement {
             y,
             width,
             height,
+            color,
+        }
+    }
+    pub fn new_text(font: FontAtlasRef, text: String, x: f32, y: f32, scale: f32, color: Color) -> Self {
+        Self::Text {
+            font,
+            text,
+            x,
+            y,
+            scale,
             color,
         }
     }

@@ -23,7 +23,7 @@ pub struct TextRenderer {
 }
 
 impl TextRenderer {
-    pub fn new(width: f32, height: f32) -> Result<Self> {
+    pub fn new() -> Result<Self> {
         let (vao, vbo) = TextRenderer::setup_buffers()?;
         let shader = Shader::new(
             "assets/shaders/text/vert.glsl",
@@ -36,7 +36,6 @@ impl TextRenderer {
             shader_program: shader,
             projection_matrix: Matrix4::zero(),
         };
-        renderer.set_projection(width, height);
         Ok(renderer)
     }
     fn setup_buffers() -> Result<(u32, u32)> {
@@ -109,13 +108,11 @@ impl TextRenderer {
         text: &str,
         x: f32,
         y: f32,
-        screen: &Screen,
         render_params: &TextRenderParams,
     ) {
         let TextRenderParams { color, scale, .. } = render_params;
         unsafe {
             self.shader_program.use_shader();
-            self.set_projection(screen.width as f32, screen.height as f32);
             self.shader_program
                 .set_mat4("projection", &self.projection_matrix);
 
