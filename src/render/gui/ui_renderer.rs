@@ -8,7 +8,7 @@ use gl::types::{GLsizei, GLsizeiptr};
 use num::Zero;
 
 use crate::{
-    render::{color::Color, helpers::set_buffer_data_with_indices, vertex::Vertex},
+    render::{color::Color, helpers::set_buffer_data_with_indices, renderer::TextureRef, vertex::Vertex},
     shader::Shader,
     texture::Texture,
 };
@@ -190,7 +190,7 @@ impl UIRenderer {
     }
     pub fn draw_texture(
         &mut self,
-        texture: &Texture,
+        texture: TextureRef,
         x: f32,
         y: f32,
         width: f32,

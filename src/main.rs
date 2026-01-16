@@ -138,6 +138,7 @@ fn main() -> Result<()> {
     )?;
     let _ = renderer.add_static_drawable(plane);
 
+
     let mut frames = 0u32;
     while !window.should_close() {
         glfw.poll_events();

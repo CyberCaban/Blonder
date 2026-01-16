@@ -12,8 +12,11 @@ use crate::render::consts::{HEIGHT, WIDTH};
 use crate::render::framebuffer::{Framebuffer, ViewportScaleStrategy};
 use crate::render::gui::font::FontAtlas;
 use crate::render::gui::text_renderer::{TextRenderParams, TextRenderer};
+use crate::render::gui::ui_element::UIElement;
+use crate::render::gui::ui_manager::UIManager;
 use crate::render::gui::ui_renderer::UIRenderer;
 use crate::state::Screen;
+use crate::texture::TextureConfig;
 use crate::{
     render::{drawable::Drawable, transform::Transform},
     shader::Shader,
@@ -70,11 +73,13 @@ pub enum RendererError {
     ShaderNotFound(String),
 }
 
+pub type TextureRef = Arc<Texture>;
+
 pub struct Renderer {
     drawables: Vec<RenderObject>,
     dynamic_map: HashMap<Uuid, usize>,
 
-    textures: HashMap<String, Texture>,
+    pub textures: HashMap<String, TextureRef>,
 
     shaders: HashMap<String, Shader>,
     current_shader: Option<String>,
@@ -89,12 +94,12 @@ pub struct Renderer {
     text_renderer: TextRenderer,
     font_atlases: Vec<FontAtlas>,
 
-    ui_renderer: UIRenderer,
+    pub ui_manager: UIManager,
 }
 
 impl Renderer {
     pub fn new() -> Result<Self> {
-        Ok(Self {
+        let mut renderer = (Self {
             drawables: vec![],
             dynamic_map: HashMap::new(),
             shaders: HashMap::new(),
@@ -115,8 +120,24 @@ impl Renderer {
             fps_samples: VecDeque::with_capacity(FPS_SAMPLES),
             text_renderer: TextRenderer::new(WIDTH as f32, HEIGHT as f32)?,
             font_atlases: vec![FontAtlas::new("assets/fonts/OpenSans.ttf", 96)?],
-            ui_renderer: UIRenderer::new()?,
-        })
+            ui_manager: UIManager::new()?,
+        });
+
+        renderer
+            .ui_manager
+            .add_ui_rect(100.0, 100.0, 20.0, 50.0, Color::blue());
+        let tex = renderer.get_or_load_texture(
+            "assets/textures/transparency.png",
+            Some(TextureConfig {
+                texture_filtering: gl::NEAREST as i32,
+                ..Default::default()
+            }),
+        );
+        renderer
+            .ui_manager
+            .add_ui_texture(tex.clone(), 200.0, 200.0, 200.0, 200.0, Color::white());
+
+        Ok(renderer)
     }
     pub fn add_shader(&mut self, name: &str, shader: Shader) {
         self.shaders.insert(name.to_string(), shader);
@@ -160,7 +181,8 @@ impl Renderer {
             };
             match tex {
                 Ok(texture) => {
-                    self.textures.insert(texture_name.clone(), texture);
+                    self.textures
+                        .insert(texture_name.clone(), Arc::new(texture));
                 }
                 Err(e) => {
                     warn!("Failed to load texture: {}", e);
@@ -200,7 +222,8 @@ impl Renderer {
             };
             match tex {
                 Ok(texture) => {
-                    self.textures.insert(texture_name.clone(), texture);
+                    self.textures
+                        .insert(texture_name.clone(), Arc::new(texture));
                 }
                 Err(e) => {
                     warn!("Failed to load texture: {}", e);
@@ -243,7 +266,8 @@ impl Renderer {
             };
             match tex {
                 Ok(texture) => {
-                    self.textures.insert(texture_name.clone(), texture);
+                    self.textures
+                        .insert(texture_name.clone(), Arc::new(texture));
                 }
                 Err(e) => {
                     warn!("Failed to load texture: {}", e);
@@ -270,7 +294,8 @@ impl Renderer {
         {
             match Texture::new(specular_map) {
                 Ok(texture) => {
-                    self.textures.insert(specular_map.clone(), texture);
+                    self.textures
+                        .insert(specular_map.clone(), Arc::new(texture));
                 }
                 Err(e) => {
                     warn!("Failed to load texture: {}", e);
@@ -284,7 +309,8 @@ impl Renderer {
         {
             match Texture::new(emission_map) {
                 Ok(texture) => {
-                    self.textures.insert(emission_map.clone(), texture);
+                    self.textures
+                        .insert(emission_map.clone(), Arc::new(texture));
                 }
                 Err(e) => {
                     warn!("Failed to load texture: {}", e);
@@ -306,10 +332,29 @@ impl Renderer {
             .get(id)
             .map(|index| &mut self.drawables[*index])
     }
-    fn get_current_shader(&self) -> Option<&Shader> {
-        match &self.current_shader {
-            Some(name) => self.shaders.get(name),
-            None => None,
+    pub fn get_or_load_texture(
+        &mut self,
+        texture_path: &str,
+        texture_config: Option<TextureConfig>,
+    ) -> TextureRef {
+        if let Some(texture) = self.textures.get(texture_path) {
+            texture.clone()
+        } else {
+            let texture = if let Some(config) = texture_config {
+                Texture::with_config(texture_path, config)
+            } else {
+                Texture::new(texture_path)
+            };
+            match texture {
+                Ok(texture) => {
+                    self.textures
+                        .insert(texture_path.to_owned(), Arc::new(texture));
+                }
+                Err(e) => {
+                    warn!("Failed to load texture: {}", e);
+                }
+            }
+            self.textures.get(texture_path).unwrap().clone()
         }
     }
     fn update_mvp(&mut self, state: &State) {
@@ -554,18 +599,7 @@ impl Renderer {
         // );
     }
     fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &State) {
-        self.ui_renderer
-            .update_projection(state.screen.width as f32, state.screen.height as f32);
-        self.ui_renderer.begin_frame();
-        self.ui_renderer
-            .draw_rect(100.0, 100.0, 20.0, 50.0, &Color::blue());
-        let tex = self
-            .textures
-            .get("assets/textures/transparency.png")
-            .unwrap();
-        self.ui_renderer
-            .draw_texture(tex, 200.0, 200.0, 200.0, 200.0, &Color::white());
-        self.ui_renderer.end_frame();
+        self.ui_manager.render(state);
     }
 }
 
