@@ -527,6 +527,9 @@ impl Renderer {
             if let Err(e) = self.use_current_shader() {
                 warn!("Rendering error: [{e}]");
             }
+            self.ui_manager.picking_texture.enable_writing();
+            self.render_unique(glfw, state);
+            self.ui_manager.picking_texture.disable_writing();
             self.batch_render(glfw, state);
             self.render_ui(glfw, state);
             unsafe {
@@ -625,7 +628,53 @@ impl Renderer {
             let light_pos_speed = 8.55;
             state.light_pos.y -= 0.1 * state.delta_time * light_pos_speed;
         }
+        let screen = if state.is_lowres {
+            Screen {
+                width: self.framebuffer.render_width as u32,
+                height: self.framebuffer.render_height as u32,
+            }
+        } else {
+            Screen {
+                width: state.screen.width,
+                height: state.screen.height,
+            }
+        };
+        let (mouse_x, mouse_y) = (
+            state.cursor_pos_x * screen.width as f32 / state.screen.width as f32,
+            state.cursor_pos_y * screen.height as f32 / state.screen.height as f32,
+        );
+        if state.mouse_pressed {
+            let p = self
+                .ui_manager
+                .picking_texture
+                .read_pixel(mouse_x as u32, mouse_y as u32);
+            if p > 0 {
+                let index = p as usize - 1;
+                println!("ObjId: {}, Index: {}", p, index);
+                // println!("Object: {:?}", self.drawables[index].transform)
+            }
+        }
+
         self.ui_manager.end_frame();
+    }
+    fn render_unique(&mut self, glfw: &mut glfw::Glfw, state: &State) {
+        let shader = &self.ui_manager.picking_texture.shader;
+        shader.use_shader();
+        shader.set_mat4("view", &self.view);
+        shader.set_mat4("projection", &self.projection);
+        for index in 0..self.drawables.len() {
+            let render_obj = &self.drawables[index];
+            let object_id = (index + 1) as u32;
+            shader.set_uint("objectId", object_id);
+            if let Some(transform) = &render_obj.transform {
+                let model = transform.calculate_model();
+                shader.set_mat4("model", &model);
+            } else {
+                shader.set_mat4("model", &self.model);
+            }
+
+            render_obj.drawable.draw(glfw, state);
+        }
     }
 }
 

@@ -4,12 +4,9 @@ use anyhow::Result;
 
 use crate::{
     render::{
-        color::Color,
-        gui::{
-            text_renderer::{TextRenderParams, TextRenderer},
-            ui_renderer::UIRenderer,
-        },
-        renderer::{FontAtlasRef, TextureRef},
+        color::Color, consts::{HEIGHT, WIDTH}, gui::{
+            picking_texture::PickingTexture, text_renderer::{TextRenderParams, TextRenderer}, ui_renderer::UIRenderer
+        }, renderer::{FontAtlasRef, TextureRef}
     },
     state::{Screen, State},
 };
@@ -24,6 +21,8 @@ pub struct UIManager {
     ui_renderer: UIRenderer,
     text_renderer: TextRenderer,
 
+    pub picking_texture: PickingTexture,
+
     clicked_buttons: Vec<u32>,
 }
 
@@ -32,6 +31,7 @@ impl UIManager {
         Ok(Self {
             ui_renderer: UIRenderer::new()?,
             text_renderer: TextRenderer::new()?,
+            picking_texture: PickingTexture::new(WIDTH as i32, HEIGHT as i32)?,
             clicked_buttons: Vec::new(),
         })
     }

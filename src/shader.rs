@@ -80,6 +80,12 @@ impl Shader {
             gl::Uniform1i(Self::get_uniform_location(self.id, &name), value);
         }
     }
+    pub fn set_uint(&self, name: &str, value: u32) {
+        let name = CString::new(name).unwrap();
+        unsafe {
+            gl::Uniform1ui(Self::get_uniform_location(self.id, &name), value);
+        }
+    }
     pub fn set_vec3(&self, name: &str, value: &Vector3<f32>) {
         let name = CString::new(name).unwrap();
         unsafe {

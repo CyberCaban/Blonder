@@ -67,7 +67,7 @@ fn main() -> Result<()> {
     ];
 
     let mut objIds = Vec::with_capacity(100);
-    for _ in 0..1000 {
+    for _ in 0..1 {
         let position = [
             rng.gen_range(low, high),
             rng.gen_range(low, high),
