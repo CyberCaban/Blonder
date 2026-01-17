@@ -4,9 +4,14 @@ use anyhow::Result;
 
 use crate::{
     render::{
-        color::Color, consts::{HEIGHT, WIDTH}, gui::{
-            picking_texture::PickingTexture, text_renderer::{TextRenderParams, TextRenderer}, ui_renderer::UIRenderer
-        }, renderer::{FontAtlasRef, TextureRef}
+        color::Color,
+        consts::{HEIGHT, WIDTH},
+        gui::{
+            picking_texture::PickingTexture,
+            text_renderer::{TextRenderParams, TextRenderer},
+            ui_renderer::UIRenderer,
+        },
+        renderer::{FontAtlasRef, TextureRef},
     },
     state::{Screen, State},
 };
@@ -111,9 +116,13 @@ impl UIManager {
         mouse_x: f32,
         mouse_y: f32,
         mouse_pressed: bool,
+        is_captured: bool,
     ) -> bool {
-        let is_hovered =
-            mouse_x >= x && mouse_x <= x + width && mouse_y >= y && mouse_y <= y + height;
+        let is_hovered = mouse_x >= x
+            && mouse_x <= x + width
+            && mouse_y >= y
+            && mouse_y <= y + height
+            && !is_captured;
 
         let was_clicked = if is_hovered && mouse_pressed {
             self.clicked_buttons.push(id);

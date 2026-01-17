@@ -36,6 +36,7 @@ pub struct State {
     pub mouse_pressed: bool,
     pub delta_time: f32,
     pub last_frame: f32,
+    pub window_size_changed: bool,
 }
 
 impl Default for State {
@@ -51,6 +52,7 @@ impl Default for State {
                 width: WIDTH,
                 height: HEIGHT,
             },
+            window_size_changed: false,
             camera: Camera::new(),
             cursor_pos_x: 0.0,
             cursor_pos_y: 0.0,

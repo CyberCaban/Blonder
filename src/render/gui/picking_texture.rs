@@ -1,6 +1,4 @@
-use std::{ffi::c_void, mem, ptr};
-
-use anyhow::Result;
+use anyhow::{Result, bail};
 
 use crate::shader::Shader;
 
@@ -103,6 +101,45 @@ impl PickingTexture {
         unsafe {
             gl::BindFramebuffer(gl::DRAW_FRAMEBUFFER, 0);
         }
+    }
+    pub fn update_screen_size(&self, width: i32, height: i32) -> Result<()> {
+        unsafe {
+            gl::BindFramebuffer(gl::FRAMEBUFFER, self.fbo);
+            // Create picking texture
+            gl::BindTexture(gl::TEXTURE_2D, self.picking_texture);
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGB32UI as i32,
+                width,
+                height,
+                0,
+                gl::RED_INTEGER,
+                gl::UNSIGNED_INT,
+                std::ptr::null(),
+            );
+
+            // attach tex to fbo
+            gl::BindTexture(gl::TEXTURE_2D, self.depth_texture);
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::DEPTH_COMPONENT as i32,
+                width,
+                height,
+                0,
+                gl::DEPTH_COMPONENT,
+                gl::FLOAT,
+                std::ptr::null(),
+            );
+
+            if gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE {
+                bail!("Framebuffer not complete after resize")
+            }
+            gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+            gl::BindTexture(gl::TEXTURE_2D, 0);
+        }
+        Ok(())
     }
     pub fn read_pixel(&self, x: u32, y: u32) -> u32 {
         let mut pixel = 0;

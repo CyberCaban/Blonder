@@ -91,7 +91,6 @@ pub struct Renderer {
     framebuffer: Framebuffer,
     fps_samples: VecDeque<f32>,
 
-    text_renderer: TextRenderer,
     font_atlases: HashMap<String, FontAtlasRef>,
 
     pub ui_manager: UIManager,
@@ -118,7 +117,6 @@ impl Renderer {
                 ViewportScaleStrategy::Stretch,
             )?,
             fps_samples: VecDeque::with_capacity(FPS_SAMPLES),
-            text_renderer: TextRenderer::new()?,
             font_atlases: HashMap::from([(
                 DEFAULT_FONT.to_string(),
                 Arc::new(FontAtlas::new("assets/fonts/OpenSans.ttf", 96)?),
@@ -514,6 +512,10 @@ impl Renderer {
             if let Err(e) = self.use_current_shader() {
                 warn!("Rendering error: [{e}]");
             }
+            self.ui_manager.picking_texture.enable_writing();
+            self.render_unique(glfw, state);
+            self.ui_manager.picking_texture.disable_writing();
+            self.framebuffer.begin_render();
             self.batch_render(glfw, state);
             self.render_ui(glfw, state);
             unsafe {
@@ -532,6 +534,12 @@ impl Renderer {
             self.ui_manager.picking_texture.disable_writing();
             self.batch_render(glfw, state);
             self.render_ui(glfw, state);
+            if state.window_size_changed {
+                self.ui_manager
+                    .picking_texture
+                    .update_screen_size(state.screen.width as i32, state.screen.height as i32);
+                state.window_size_changed = false;
+            }
             unsafe {
                 gl::DepthMask(gl::TRUE);
                 gl::Disable(gl::BLEND);
@@ -608,6 +616,7 @@ impl Renderer {
             mouse_x,
             mouse_y,
             state.mouse_pressed,
+            state.camera.is_captured,
         ) {
             let light_pos_speed = 8.55;
             state.light_pos.y += 0.1 * state.delta_time * light_pos_speed;
@@ -624,6 +633,7 @@ impl Renderer {
             mouse_x,
             mouse_y,
             state.mouse_pressed,
+            state.camera.is_captured,
         ) {
             let light_pos_speed = 8.55;
             state.light_pos.y -= 0.1 * state.delta_time * light_pos_speed;

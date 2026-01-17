@@ -67,6 +67,7 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
             glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
                 state.screen.width = width as u32;
                 state.screen.height = height as u32;
+                state.window_size_changed = true;
                 gl::Viewport(0, 0, width, height);
             },
             glfw::WindowEvent::Key(Key::Escape, _, Action::Press, _) => {
