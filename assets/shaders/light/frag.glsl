@@ -21,8 +21,14 @@ uniform vec3 lightColor;
 uniform vec3 lightPos;
 uniform vec3 cameraPos;
 uniform float uTime;
+
 uniform Light light;
 uniform Material material;
+
+uniform int isSelected;
+uniform vec3 highlightColor;
+uniform float highlightIntensity;
+
 void main() {
     vec4 texColor = texture(tex, TexCoord);
     if(texColor.a < 0.1)
@@ -45,5 +51,18 @@ void main() {
     float spec = pow(max(dot(viewDir, reflectDir), 0.0), material.shininess);
     vec3 specular = light.specular * (spec * specularTex.rgb);
 
-    FragColor = texColor * (vec4(ambient + diffuse + specular + emissionTex.rgb, 1.0));
+    vec3 result = ambient + diffuse + specular + emissionTex.rgb;
+
+    if(isSelected == 1) {
+
+        result = mix(result, highlightColor, highlightIntensity);
+
+        // result = result * (1.0 + highlightIntensity);
+
+        float edge = 1.0 - max(dot(norm, viewDir), 0.0);
+        edge = pow(edge, 3.0) * 2.0;
+        result = mix(result, highlightColor, edge * highlightIntensity);
+    }
+
+    FragColor = vec4(result * texColor.rgb, texColor.a);
 }

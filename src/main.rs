@@ -12,19 +12,12 @@ use crate::{
         plane::Plane,
     },
     render::{
-        color::Color,
-        consts::{HEIGHT, WIDTH},
-        framebuffer::Framebuffer,
-        gui::{
-            font::FontAtlas,
-            text_renderer::{TextRenderParams, TextRenderer},
-        },
         helpers::init_window,
         renderer::{RenderMaterial, RenderObject, Renderer},
         transform::Transform,
     },
     shader::{Shader, ShaderInfo},
-    state::{Screen, State},
+    state::State,
     texture::TextureConfig,
 };
 
@@ -67,7 +60,7 @@ fn main() -> Result<()> {
     ];
 
     let mut objIds = Vec::with_capacity(100);
-    for _ in 0..1 {
+    for _ in 0..10 {
         let position = [
             rng.gen_range(low, high),
             rng.gen_range(low, high),

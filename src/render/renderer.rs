@@ -12,7 +12,6 @@ use crate::render::consts::DEFAULT_FONT;
 use crate::render::consts::{HEIGHT, WIDTH};
 use crate::render::framebuffer::{Framebuffer, ViewportScaleStrategy};
 use crate::render::gui::font::FontAtlas;
-use crate::render::gui::text_renderer::{TextRenderParams, TextRenderer};
 use crate::render::gui::ui_manager::UIManager;
 use crate::state::Screen;
 use crate::texture::TextureConfig;
@@ -363,7 +362,8 @@ impl Renderer {
         let mut batches: HashMap<BatchKey, Vec<usize>> = HashMap::new();
         batches.reserve(self.drawables.len() / 4);
         for (index, render_obj) in self.drawables.iter().enumerate() {
-            let key = BatchKey::from_object(render_obj.drawable.as_ref());
+            let is_selected = state.selected_item == Some(index);
+            let key = BatchKey::from_object(render_obj.drawable.as_ref(), is_selected);
 
             batches.entry(key).or_default().push(index);
         }
@@ -388,23 +388,14 @@ impl Renderer {
                 continue;
             }
             let shader = shader.unwrap();
-            // if key.need_shader {
-            //     if let Some(shader) = self.shaders.get(&key.shader_name) {
-            //         shader.use_shader();
-            //         self.apply_uniforms(shader, glfw, state);
-            //         self.current_shader = Some(key.shader_name.clone());
-            //     } else {
-            //         if let Some(default_shader) = self.shaders.get("default") {
-            //             default_shader.use_shader();
-            //             self.current_shader = Some("default".to_string());
-            //         }
-            //     }
-            // } else {
-            //     if let Some(default_shader) = self.shaders.get("default") {
-            //         default_shader.use_shader();
-            //         self.current_shader = Some("default".to_string());
-            //     }
-            // }
+
+            if key.is_selected {
+                shader.set_int("isSelected", 1);
+                shader.set_vec3("highlightColor", &Vector3::new(0.2, 1.0, 0.2));
+                shader.set_float("highlightIntensity", 0.3);
+            } else {
+                shader.set_int("isSelected", 0);
+            }
 
             if let Some(texture_name) = &key.texture_name
                 && let Some(texture) = self.textures.get(texture_name.as_ref())
@@ -474,6 +465,7 @@ impl Renderer {
                 shader.set_vec3("light.ambient", &ambient_color);
                 shader.set_vec3("light.diffuse", &diffuse_color);
                 shader.set_vec3("light.specular", &Vector3::from_value(1.0));
+
                 render_obj.drawable.draw(glfw, state);
             }
         }
@@ -488,63 +480,47 @@ impl Renderer {
     }
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         self.update_mvp(state);
-        let State {
-            color,
-            wireframe,
-            scale_strategy,
-            ..
-        } = state;
+        self.framebuffer
+            .set_scale_strategy(state.scale_strategy.clone());
+        if state.is_lowres {
+            self.framebuffer.begin_render();
+        }
+        if let Err(e) = self.use_current_shader() {
+            warn!("Rendering error: [{e}]");
+        }
+        self.ui_manager.picking_texture.enable_writing();
+        self.render_unique(glfw, state);
+        self.ui_manager.picking_texture.disable_writing();
         unsafe {
-            gl::ClearColor(color.0, color.1, color.2, color.3);
+            gl::ClearColor(state.color.0, state.color.1, state.color.2, state.color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             // configurable parameters
             gl::PolygonMode(
                 gl::FRONT_AND_BACK,
-                if *wireframe { gl::LINE } else { gl::FILL },
+                if state.wireframe { gl::LINE } else { gl::FILL },
             );
         }
 
-        self.framebuffer.set_scale_strategy(scale_strategy.clone());
-
         if state.is_lowres {
             self.framebuffer.begin_render();
-
-            if let Err(e) = self.use_current_shader() {
-                warn!("Rendering error: [{e}]");
-            }
-            self.ui_manager.picking_texture.enable_writing();
-            self.render_unique(glfw, state);
-            self.ui_manager.picking_texture.disable_writing();
-            self.framebuffer.begin_render();
-            self.batch_render(glfw, state);
-            self.render_ui(glfw, state);
-            unsafe {
-                gl::DepthMask(gl::TRUE);
-                gl::Disable(gl::BLEND);
-                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-            }
+        }
+        self.batch_render(glfw, state);
+        self.render_ui(glfw, state);
+        if state.window_size_changed {
+            let _ = self
+                .ui_manager
+                .picking_texture
+                .update_screen_size(state.screen.width as i32, state.screen.height as i32);
+            state.window_size_changed = false;
+        }
+        unsafe {
+            gl::DepthMask(gl::TRUE);
+            gl::Disable(gl::BLEND);
+            gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
+        }
+        if state.is_lowres {
             self.framebuffer.end_scene_render();
             self.framebuffer.update_screen_size(&state.screen);
-        } else {
-            if let Err(e) = self.use_current_shader() {
-                warn!("Rendering error: [{e}]");
-            }
-            self.ui_manager.picking_texture.enable_writing();
-            self.render_unique(glfw, state);
-            self.ui_manager.picking_texture.disable_writing();
-            self.batch_render(glfw, state);
-            self.render_ui(glfw, state);
-            if state.window_size_changed {
-                self.ui_manager
-                    .picking_texture
-                    .update_screen_size(state.screen.width as i32, state.screen.height as i32);
-                state.window_size_changed = false;
-            }
-            unsafe {
-                gl::DepthMask(gl::TRUE);
-                gl::Disable(gl::BLEND);
-                gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
-            }
         }
         if self.fps_samples.len() >= FPS_SAMPLES {
             self.fps_samples.pop_front();
@@ -599,7 +575,10 @@ impl Renderer {
             Color::white(),
         );
 
-        let (btn_width, btn_height) = (screen.width as f32 / 100.0 * 30.0, 50.0);
+        let (btn_width, btn_height) = (
+            screen.width as f32 / 100.0 * 30.0,
+            screen.height as f32 / 100.0 * 10.0,
+        );
         let (mouse_x, mouse_y) = (
             state.cursor_pos_x * screen.width as f32 / state.screen.width as f32,
             state.cursor_pos_y * screen.height as f32 / state.screen.height as f32,
@@ -618,6 +597,7 @@ impl Renderer {
             state.mouse_pressed,
             state.camera.is_captured,
         ) {
+            state.mouse_free = false;
             let light_pos_speed = 8.55;
             state.light_pos.y += 0.1 * state.delta_time * light_pos_speed;
         }
@@ -635,6 +615,7 @@ impl Renderer {
             state.mouse_pressed,
             state.camera.is_captured,
         ) {
+            state.mouse_free = false;
             let light_pos_speed = 8.55;
             state.light_pos.y -= 0.1 * state.delta_time * light_pos_speed;
         }
@@ -653,20 +634,22 @@ impl Renderer {
             state.cursor_pos_x * screen.width as f32 / state.screen.width as f32,
             state.cursor_pos_y * screen.height as f32 / state.screen.height as f32,
         );
-        if state.mouse_pressed {
+        if state.mouse_free && state.mouse_pressed {
             let p = self
                 .ui_manager
                 .picking_texture
                 .read_pixel(mouse_x as u32, mouse_y as u32);
             if p > 0 {
                 let index = p as usize - 1;
-                println!("ObjId: {}, Index: {}", p, index);
-                // println!("Object: {:?}", self.drawables[index].transform)
+                state.selected_item = Some(index);
+            } else {
+                state.selected_item = None;
             }
         }
-
+        state.mouse_free = true;
         self.ui_manager.end_frame();
     }
+    /// render to another framebuffer with object index as object color
     fn render_unique(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let shader = &self.ui_manager.picking_texture.shader;
         shader.use_shader();
@@ -692,18 +675,23 @@ impl Renderer {
 struct BatchKey {
     texture_name: Option<Arc<str>>,
     shader_name: Option<Arc<str>>,
+    is_selected: bool,
     // blend_mode: BlendMode,
 }
 
 impl BatchKey {
-    fn from_object(object: &dyn Drawable) -> Self {
+    fn from_object(object: &dyn Drawable, is_selected: bool) -> Self {
         BatchKey {
             texture_name: object.get_texture_name().map(|s| Arc::from(s.as_str())),
             shader_name: object
                 .get_shader_name()
                 .and_then(|s| Some(s.get_name()))
                 .map(|s| Arc::from(s.as_str())),
+            is_selected,
             // blend_mode: object.get_blend_mode(),
         }
+    }
+    fn set_shader(&mut self, shader: Option<Arc<str>>) {
+        self.shader_name = shader;
     }
 }

@@ -29,6 +29,8 @@ pub struct State {
     pub wireframe: bool,
     pub is_lowres: bool,
     pub scale_strategy: ViewportScaleStrategy,
+    pub selected_item: Option<usize>,
+    pub mouse_free: bool,
     pub screen: Screen,
     pub camera: Camera,
     pub cursor_pos_x: f32,
@@ -46,6 +48,8 @@ impl Default for State {
             wireframe: false,
             is_lowres: false,
             scale_strategy: ViewportScaleStrategy::Stretch,
+            selected_item: None,
+            mouse_free: false,
             numbers: [0.0; 10],
             light_pos: Vector3::from_value(0.0),
             screen: Screen {
