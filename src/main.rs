@@ -79,6 +79,11 @@ fn main() -> Result<()> {
             texture_name: texture.0,
             texture_config: TextureConfig {
                 texture_filtering: if texture.1 { gl::NEAREST } else { gl::LINEAR } as i32,
+                mipmap_filtering: if texture.1 {
+                    gl::NEAREST
+                } else {
+                    gl::LINEAR_MIPMAP_LINEAR
+                } as i32,
                 ..Default::default()
             },
             ..Default::default()

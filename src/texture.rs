@@ -11,6 +11,7 @@ pub struct TextureConfig {
     pub wrap_s: i32,
     pub wrap_t: i32,
     pub texture_filtering: i32,
+    pub mipmap_filtering: i32,
 }
 impl Default for TextureConfig {
     fn default() -> Self {
@@ -18,6 +19,7 @@ impl Default for TextureConfig {
             wrap_s: gl::REPEAT as i32,
             wrap_t: gl::REPEAT as i32,
             texture_filtering: gl::LINEAR as i32,
+            mipmap_filtering: gl::LINEAR_MIPMAP_LINEAR as i32,
         }
     }
 }
@@ -83,13 +85,11 @@ impl Texture {
             gl::TexParameteri(
                 gl::TEXTURE_2D,
                 gl::TEXTURE_MIN_FILTER,
-                gl::LINEAR_MIPMAP_LINEAR as i32,
+                config.mipmap_filtering,
             );
 
             let image = image::open(texture_path)
-                .context(format!("Cannot find texture [{}]", texture_path))?
-                .rotate180()
-                .fliph();
+                .context(format!("Cannot find texture [{}]", texture_path))?;
             let (width, height) = (image.width(), image.height());
             let raw_image = image.to_rgba().into_raw();
             let data = raw_image.as_ptr() as *const c_void;

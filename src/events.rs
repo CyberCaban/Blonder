@@ -36,23 +36,23 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
 
     let light_pos_speed = 8.55;
     if matches!(window.get_key(glfw::Key::K), Action::Press | Action::Repeat) {
-        state.selected_item_pos.x += 0.1 * state.delta_time * light_pos_speed;
+        state.light_pos.x += 0.1 * state.delta_time * light_pos_speed;
     }
     if matches!(window.get_key(glfw::Key::I), Action::Press | Action::Repeat) {
-        state.selected_item_pos.x -= 0.1 * state.delta_time * light_pos_speed;
+        state.light_pos.x -= 0.1 * state.delta_time * light_pos_speed;
     }
     if matches!(window.get_key(glfw::Key::L), Action::Press | Action::Repeat) {
-        state.selected_item_pos.z -= 0.1 * state.delta_time * light_pos_speed;
+        state.light_pos.z -= 0.1 * state.delta_time * light_pos_speed;
     }
     if matches!(window.get_key(glfw::Key::J), Action::Press | Action::Repeat) {
-        state.selected_item_pos.z += 0.1 * state.delta_time * light_pos_speed;
+        state.light_pos.z += 0.1 * state.delta_time * light_pos_speed;
     }
 
     if matches!(window.get_key(glfw::Key::U), Action::Press | Action::Repeat) {
-        state.selected_item_pos.y += 0.1 * state.delta_time * light_pos_speed;
+        state.light_pos.y += 0.1 * state.delta_time * light_pos_speed;
     }
     if matches!(window.get_key(glfw::Key::O), Action::Press | Action::Repeat) {
-        state.selected_item_pos.y -= 0.1 * state.delta_time * light_pos_speed;
+        state.light_pos.y -= 0.1 * state.delta_time * light_pos_speed;
     }
 
     state.numbers[0] = state.numbers[0].clamp(-1.0, 5.0);
@@ -61,8 +61,8 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
             WindowEvent::FileDrop(param) => {
                 for p in param {
                     println!("{}", p.to_string_lossy());
+                    state.model_path_to_load = Some(p.to_string_lossy().to_string());
                 }
-                println!("Decrement color BLUE {}", state.color.2);
             }
             glfw::WindowEvent::FramebufferSize(width, height) => unsafe {
                 state.screen.width = width as u32;

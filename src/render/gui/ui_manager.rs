@@ -257,17 +257,16 @@ impl UIManager {
         is_captured: bool,
     ) -> Option<f32> {
         let scale = 0.25;
-        let label_width = font.measure_line(label, scale);
         let label_x = x - 10.0;
-        let label_y = y + (height - font.size as f32 * scale) / 2.0;
+        let label_y = y + (height );
 
         self.draw_text(font, label, label_x, label_y, scale, Color::white());
 
         self.slider(
             id,
-            x + label_width,
+            x,
             y,
-            width - label_width,
+            width,
             height,
             current_value,
             min,
@@ -330,6 +329,7 @@ impl UIManager {
         is_hovered: bool,
         is_dragging: bool,
     ) {
+        let value = value.clamp(0.0, 1.0);
         let track_height = height * 0.3;
         let track_y = y + (height - track_height) / 2.0;
 

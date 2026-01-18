@@ -1,4 +1,5 @@
 use cgmath::{Array, Deg, ElementWise, InnerSpace, Matrix4, Rad, Vector3, perspective};
+use log::info;
 use log::warn;
 use num::Zero;
 use std::collections::HashMap;
@@ -10,10 +11,15 @@ use uuid::Uuid;
 
 use crate::render::color::Color;
 use crate::render::consts::DEFAULT_FONT;
+use crate::render::consts::DEFAULT_SHADER_FRAG;
+use crate::render::consts::DEFAULT_SHADER_NAME;
+use crate::render::consts::DEFAULT_SHADER_VERT;
+use crate::render::consts::DEFAULT_WHITE_TEXTURE;
 use crate::render::consts::{HEIGHT, WIDTH};
 use crate::render::framebuffer::{Framebuffer, ViewportScaleStrategy};
 use crate::render::gui::font::FontAtlas;
 use crate::render::gui::ui_manager::UIManager;
+use crate::render::model::Model;
 use crate::state::Screen;
 use crate::texture::TextureConfig;
 use crate::{
@@ -74,15 +80,16 @@ pub struct Renderer {
     dynamic_map: HashMap<Uuid, usize>,
 
     light_source: Option<Light>,
+    model: Option<Model>,
 
     pub textures: HashMap<String, TextureRef>,
 
     shaders: HashMap<String, Shader>,
     current_shader: Option<String>,
 
-    model: Matrix4<f32>,
-    view: Matrix4<f32>,
-    projection: Matrix4<f32>,
+    model_matrix: Matrix4<f32>,
+    view_matrix: Matrix4<f32>,
+    projection_matrix: Matrix4<f32>,
 
     framebuffer: Framebuffer,
     fps_samples: VecDeque<f32>,
@@ -98,12 +105,19 @@ impl Renderer {
             drawables: vec![],
             dynamic_map: HashMap::new(),
             light_source: None,
-            shaders: HashMap::new(),
-            textures: HashMap::new(),
+            model: None,
+            shaders: HashMap::from([(
+                DEFAULT_SHADER_NAME.to_string(),
+                Shader::new(DEFAULT_SHADER_VERT, DEFAULT_SHADER_FRAG)?,
+            )]),
+            textures: HashMap::from([(
+                DEFAULT_WHITE_TEXTURE.to_string(),
+                Arc::new(Texture::white()),
+            )]),
             current_shader: None,
-            model: Matrix4::zero(),
-            view: Matrix4::zero(),
-            projection: Matrix4::zero(),
+            model_matrix: Matrix4::zero(),
+            view_matrix: Matrix4::zero(),
+            projection_matrix: Matrix4::zero(),
             framebuffer: Framebuffer::new(
                 480,
                 360,
@@ -146,9 +160,9 @@ impl Renderer {
             && let Some(shader) = self.shaders.get(shader_name)
         {
             shader.use_shader();
-            shader.set_mat4("model", &self.model);
-            shader.set_mat4("view", &self.view);
-            shader.set_mat4("projection", &self.projection);
+            shader.set_mat4("model", &self.model_matrix);
+            shader.set_mat4("view", &self.view_matrix);
+            shader.set_mat4("projection", &self.projection_matrix);
             // shader.set_mat4("mvp", &(self.projection * self.view * self.model));
         }
         Ok(())
@@ -364,9 +378,9 @@ impl Renderer {
         let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 100.0);
 
         let view_matrix = state.camera.view_matrix();
-        self.model = model_matrix;
-        self.view = view_matrix;
-        self.projection = projection_matrix;
+        self.model_matrix = model_matrix;
+        self.view_matrix = view_matrix;
+        self.projection_matrix = projection_matrix;
     }
     fn batch_render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let mut batches: HashMap<BatchKey, Vec<usize>> = HashMap::new();
@@ -386,9 +400,10 @@ impl Renderer {
                 self.apply_uniforms(shader, glfw, state);
                 self.current_shader = Some(shader_name.to_string());
                 Some(shader)
-            } else if let Some(default_shader) = self.shaders.get("default") {
+            } else if let Some(default_shader) = self.shaders.get(DEFAULT_SHADER_NAME) {
                 default_shader.use_shader();
-                self.current_shader = Some("default".to_string());
+                self.apply_uniforms(default_shader, glfw, state);
+                self.current_shader = Some(DEFAULT_SHADER_NAME.to_string());
                 Some(default_shader)
             } else {
                 None
@@ -414,6 +429,11 @@ impl Renderer {
                     gl::ActiveTexture(gl::TEXTURE0);
                     texture.use_texture();
                 }
+            } else if let Some(default_texture) = self.textures.get(DEFAULT_WHITE_TEXTURE) {
+                unsafe {
+                    gl::ActiveTexture(gl::TEXTURE0);
+                    default_texture.use_texture();
+                }
             }
 
             // key.blend_mode.apply();
@@ -424,7 +444,7 @@ impl Renderer {
                     let model = transform.calculate_model();
                     shader.set_mat4("model", &model);
                 } else {
-                    shader.set_mat4("model", &self.model);
+                    shader.set_mat4("model", &self.model_matrix);
                 }
 
                 // set material
@@ -482,9 +502,8 @@ impl Renderer {
     }
     fn apply_uniforms(&self, shader: &Shader, glfw: &mut glfw::Glfw, state: &State) {
         shader.set_float("uTime", glfw.get_time() as f32);
-        // shader.set_mat4("model", &self.model);
-        shader.set_mat4("view", &self.view);
-        shader.set_mat4("projection", &self.projection);
+        shader.set_mat4("view", &self.view_matrix);
+        shader.set_mat4("projection", &self.projection_matrix);
         shader.set_float("farPlane", 10.0);
         shader.set_vec3("cameraPos", &state.camera.position);
     }
@@ -500,7 +519,6 @@ impl Renderer {
         }
         self.ui_manager.picking_texture.enable_writing();
         self.render_unique(glfw, state);
-        // self.render_ui(glfw, state);
         self.ui_manager.picking_texture.disable_writing();
         unsafe {
             gl::ClearColor(state.color.0, state.color.1, state.color.2, state.color.3);
@@ -510,6 +528,30 @@ impl Renderer {
                 gl::FRONT_AND_BACK,
                 if state.wireframe { gl::LINE } else { gl::FILL },
             );
+
+            if let Some(model_path) = &state.model_path_to_load {
+                let m = Model::new(&model_path);
+                match m {
+                    Ok(m) => {
+                        // dbg!(&m);
+                        let res = self.add_render_object(RenderObject {
+                            drawable: Box::new(m),
+                            transform: Some(Transform::default()),
+                            material: Some(RenderMaterial::default()),
+                        });
+                        match res {
+                            Ok(m) => {
+                                info!("Model succesfully loaded: {}", m);
+                            }
+                            Err(e) => warn!("Failed to load model: [{e}]"),
+                        }
+                    }
+                    Err(e) => {
+                        warn!("Failed to load model: [{e}]");
+                    }
+                }
+                state.model_path_to_load = None;
+            }
         }
 
         if state.is_lowres {
@@ -599,8 +641,7 @@ impl Renderer {
         self.ui_manager.draw_text(
             current_font,
             &format!(
-                "FPS(sampled:{}): {:.0}",
-                self.fps_samples.len(),
+                "FPS: {:.0}",
                 self.fps_samples.iter().sum::<f32>() / self.fps_samples.len() as f32
             ),
             0.0,
@@ -817,8 +858,8 @@ impl Renderer {
     fn render_unique(&mut self, glfw: &mut glfw::Glfw, state: &State) {
         let shader = &self.ui_manager.picking_texture.shader;
         shader.use_shader();
-        shader.set_mat4("view", &self.view);
-        shader.set_mat4("projection", &self.projection);
+        shader.set_mat4("view", &self.view_matrix);
+        shader.set_mat4("projection", &self.projection_matrix);
         for index in 0..self.drawables.len() {
             let render_obj = &self.drawables[index];
             let object_id = (index + 1) as u32;
@@ -827,7 +868,7 @@ impl Renderer {
                 let model = transform.calculate_model();
                 shader.set_mat4("model", &model);
             } else {
-                shader.set_mat4("model", &self.model);
+                shader.set_mat4("model", &self.model_matrix);
             }
 
             render_obj.drawable.draw(glfw, state);

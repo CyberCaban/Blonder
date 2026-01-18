@@ -1,3 +1,5 @@
+use std::ffi::OsStr;
+
 use cgmath::{Array, Vector3};
 use glfw::{GlfwReceiver, WindowEvent};
 
@@ -31,6 +33,7 @@ pub struct State {
     pub scale_strategy: ViewportScaleStrategy,
     pub selected_item: Option<usize>,
     pub selected_item_pos: Vector3<f32>,
+    pub model_path_to_load: Option<String>,
     pub mouse_free: bool,
     pub screen: Screen,
     pub camera: Camera,
@@ -51,6 +54,7 @@ impl Default for State {
             scale_strategy: ViewportScaleStrategy::Stretch,
             selected_item: None,
             selected_item_pos: Vector3::from_value(0.0),
+            model_path_to_load: None,
             mouse_free: false,
             numbers: [0.0; 10],
             light_pos: Vector3::from_value(0.0),

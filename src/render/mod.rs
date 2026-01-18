@@ -11,3 +11,4 @@ pub mod vertex;
 pub mod framebuffer;
 
 pub mod gui;
+pub mod model;
