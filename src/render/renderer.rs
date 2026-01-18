@@ -490,6 +490,7 @@ impl Renderer {
         }
         self.ui_manager.picking_texture.enable_writing();
         self.render_unique(glfw, state);
+        self.render_ui(glfw, state);
         self.ui_manager.picking_texture.disable_writing();
         unsafe {
             gl::ClearColor(state.color.0, state.color.1, state.color.2, state.color.3);
@@ -575,22 +576,35 @@ impl Renderer {
             Color::white(),
         );
 
-        let (btn_width, btn_height) = (
-            screen.width as f32 / 100.0 * 30.0,
-            screen.height as f32 / 100.0 * 10.0,
-        );
         let (mouse_x, mouse_y) = (
             state.cursor_pos_x * screen.width as f32 / state.screen.width as f32,
             state.cursor_pos_y * screen.height as f32 / state.screen.height as f32,
         );
 
-        if self.ui_manager.button(
-            0,
-            "Light Up",
+        let panel_width = screen.width as f32 * 0.3;
+        let panel_x = 0.0;
+        let panel_height = screen.height as f32;
+
+        self.ui_manager.draw_rect(
+            panel_x,
             0.0,
-            screen.height as f32 / 100.0 * 50.0,
-            btn_width,
-            btn_height,
+            panel_width,
+            panel_height,
+            Color::new(0.1, 0.1, 0.15, 0.8),
+        );
+
+        let button_width = panel_width * 0.8;
+        let button_height = 40.0;
+        let margin_x = panel_x + panel_width * 0.1;
+        let mut current_y = 20.0;
+
+        if self.ui_manager.button(
+            1,
+            "Light Up",
+            margin_x,
+            current_y,
+            button_width,
+            button_height,
             current_font,
             mouse_x,
             mouse_y,
@@ -598,17 +612,17 @@ impl Renderer {
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
-            let light_pos_speed = 8.55;
-            state.light_pos.y += 0.1 * state.delta_time * light_pos_speed;
+            state.light_pos.y += 0.1 * state.delta_time * 8.55;
         }
+        current_y += button_height + 10.0;
 
         if self.ui_manager.button(
             0,
             "Light Down",
-            0.0,
-            screen.height as f32 / 100.0 * 50.0 - btn_height,
-            btn_width,
-            btn_height,
+            margin_x,
+            current_y,
+            button_width,
+            button_height,
             current_font,
             mouse_x,
             mouse_y,
@@ -616,9 +630,29 @@ impl Renderer {
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
-            let light_pos_speed = 8.55;
-            state.light_pos.y -= 0.1 * state.delta_time * light_pos_speed;
+            state.light_pos.y -= 0.1 * state.delta_time * 8.55;
         }
+        current_y += button_height + 20.0;
+
+        if let Some(value) = self.ui_manager.slider_with_value(
+            5,
+            "Hello world",
+            margin_x,
+            current_y,
+            button_width,
+            10.0,
+            state.numbers[2],
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.numbers[2] = value;
+            println!("New value: {value}");
+        }
+
         let screen = if state.is_lowres {
             Screen {
                 width: self.framebuffer.render_width as u32,

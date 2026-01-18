@@ -29,6 +29,7 @@ pub struct UIManager {
     pub picking_texture: PickingTexture,
 
     clicked_buttons: Vec<u32>,
+    active_slider: Option<u32>,
 }
 
 impl UIManager {
@@ -38,6 +39,7 @@ impl UIManager {
             text_renderer: TextRenderer::new()?,
             picking_texture: PickingTexture::new(WIDTH as i32, HEIGHT as i32)?,
             clicked_buttons: Vec::new(),
+            active_slider: None,
         })
     }
     pub fn begin_frame(&mut self, state: &State, render_screen: &Screen) {
@@ -92,11 +94,11 @@ impl UIManager {
     ) {
         self.ui_renderer.end_frame();
 
-        unsafe {
-            gl::Enable(gl::BLEND);
-            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-            gl::Disable(gl::DEPTH_TEST);
-        }
+        // unsafe {
+        //     gl::Enable(gl::BLEND);
+        //     gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+        //     gl::Disable(gl::DEPTH_TEST);
+        // }
 
         let params = TextRenderParams { scale, color };
 
@@ -155,5 +157,193 @@ impl UIManager {
 
         self.draw_text(font, text, text_x, text_y, scale, text_color);
         was_clicked
+    }
+    pub fn slider(
+        &mut self,
+        id: u32,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        current_value: f32,
+        mouse_x: f32,
+        mouse_y: f32,
+        mouse_pressed: bool,
+        is_captured: bool,
+    ) -> Option<f32> {
+        let mut new_value = current_value;
+        let mut value_changed = false;
+        let is_active = self.active_slider == Some(id);
+
+        let is_hovered = mouse_x >= x
+            && mouse_x <= x + width
+            && mouse_y >= y
+            && mouse_y <= y + height
+            && !is_captured;
+
+        if is_hovered && mouse_pressed && !is_active {
+            self.active_slider = Some(id);
+        }
+
+        if is_active && mouse_pressed {
+            let relative_x = (mouse_x - x).max(0.0).min(width);
+            new_value = relative_x / width;
+            value_changed = true;
+        }
+        if !mouse_pressed && is_active {
+            self.active_slider = None;
+        }
+
+        let is_dragging = is_active && mouse_pressed;
+        self.draw_slider(x, y, width, height, new_value, is_hovered, is_dragging);
+
+        if value_changed { Some(new_value) } else { None }
+    }
+    pub fn slider_with_label(
+        &mut self,
+        id: u32,
+        label: &str,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        current_value: f32,
+        font: &FontAtlasRef,
+        mouse_x: f32,
+        mouse_y: f32,
+        mouse_pressed: bool,
+        is_captured: bool,
+    ) -> Option<f32> {
+        let scale = 0.25;
+        let label_width = font.measure_line(label, scale);
+        let label_x = x - 10.0;
+        let label_y = y + (height - font.size as f32 * scale) / 2.0;
+
+        self.draw_text(font, label, label_x, label_y, scale, Color::white());
+
+        self.slider(
+            id,
+            x + label_width,
+            y,
+            width - label_width,
+            height,
+            current_value,
+            mouse_x,
+            mouse_y,
+            mouse_pressed,
+            is_captured,
+        )
+    }
+    pub fn slider_with_value(
+        &mut self,
+        id: u32,
+        label: &str,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        current_value: f32,
+        font: &FontAtlasRef,
+        mouse_x: f32,
+        mouse_y: f32,
+        mouse_pressed: bool,
+        is_captured: bool,
+    ) -> Option<f32> {
+        let result = self.slider(
+            id,
+            x,
+            y,
+            width,
+            height,
+            current_value,
+            mouse_x,
+            mouse_y,
+            mouse_pressed,
+            is_captured,
+        );
+
+        let value_text = format!("{:.2}", current_value);
+        let scale = 0.25;
+        let text_width = font.measure_line(&value_text, scale);
+        let text_x = x + width + 10.0;
+        let text_y = y + (height - font.size as f32 * scale) / 2.0;
+
+        self.draw_text(font, &value_text, text_x, text_y, scale, Color::white());
+
+        result
+    }
+    fn draw_slider(
+        &mut self,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        value: f32,
+        is_hovered: bool,
+        is_dragging: bool,
+    ) {
+        let track_height = height * 0.3;
+        let track_y = y + (height - track_height) / 2.0;
+
+        let track_color = if is_hovered || is_dragging {
+            Color::new(0.4, 0.4, 0.5, 1.0)
+        } else {
+            Color::new(0.3, 0.3, 0.4, 1.0)
+        };
+        self.draw_rect(x, track_y, width, track_height, track_color);
+
+        let fill_color = if is_dragging {
+            Color::new(0.2, 0.6, 0.9, 1.0)
+        } else {
+            Color::new(0.1, 0.5, 0.8, 1.0)
+        };
+        self.draw_rect(x, track_y, width * value, track_height, fill_color);
+
+        let handle_width = height * 0.8;
+        let handle_height = height * 0.8;
+        let handle_x = x + width * value - handle_width / 2.0;
+        let handle_y = y + (height - handle_height) / 2.0;
+
+        let handle_color = if is_dragging {
+            Color::new(0.9, 0.9, 1.0, 1.0)
+        } else if is_hovered {
+            Color::new(0.8, 0.8, 1.0, 1.0)
+        } else {
+            Color::new(0.7, 0.7, 1.0, 1.0)
+        };
+
+        self.draw_rect(
+            handle_x,
+            handle_y,
+            handle_width,
+            handle_height,
+            handle_color,
+        );
+
+        let outline_color = if is_dragging {
+            Color::new(0.3, 0.6, 0.9, 1.0)
+        } else {
+            Color::new(0.2, 0.4, 0.7, 1.0)
+        };
+        // self.draw_rect_outline(
+        //     handle_x,
+        //     handle_y,
+        //     handle_width,
+        //     handle_height,
+        //     2.0,
+        //     outline_color,
+        // );
+
+        let line_width = handle_width * 0.6;
+        let line_height = handle_height * 0.1;
+        let line_x = handle_x + (handle_width - line_width) / 2.0;
+        let line_y = handle_y + (handle_height - line_height) / 2.0;
+
+        let line_color = if is_dragging {
+            Color::new(0.5, 0.5, 0.7, 1.0)
+        } else {
+            Color::new(0.4, 0.4, 0.6, 1.0)
+        };
+        self.draw_rect(line_x, line_y, line_width, line_height, line_color);
     }
 }
