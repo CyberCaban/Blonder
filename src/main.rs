@@ -68,9 +68,9 @@ fn main() -> Result<()> {
         ];
 
         let rotation = [
+            0.0, // rng.r#gen::<f32>() * 360.0,
             rng.r#gen::<f32>() * 360.0,
-            rng.r#gen::<f32>() * 360.0,
-            rng.r#gen::<f32>() * 360.0,
+            0.0, // rng.r#gen::<f32>() * 360.0,
         ];
         let texture = texture_pool[rng.gen_range(0, texture_pool.len())];
         let cube = Cube::new(CubeSettings {
@@ -118,10 +118,15 @@ fn main() -> Result<()> {
     })?;
     let light_ro = RenderObject {
         drawable: Box::new(light_src),
-        transform: Some(Transform::new(None, None, Some(Vector3::from_value(0.5)))),
+        transform: Some(Transform::new(
+            Some(Vector3::from_value(0.0)),
+            None,
+            Some(Vector3::from_value(0.5)),
+        )),
         material: Some(RenderMaterial::default()),
     };
     let light_id = renderer.add_render_object(light_ro)?;
+    let _ = renderer.set_light_src(&light_id);
 
     let w = 10.0;
     let y = -1.0;
@@ -130,7 +135,6 @@ fn main() -> Result<()> {
         [0.0, 0.0, 0.0],
     )?;
     let _ = renderer.add_static_drawable(plane);
-
 
     let mut frames = 0u32;
     while !window.should_close() {
@@ -160,11 +164,6 @@ fn main() -> Result<()> {
                     // tr.rotation.z = (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
                 }
             }
-        }
-        if let Some(ro) = renderer.get_transform_mut(&light_id)
-            && let Some(tr) = ro.get_transform_mut()
-        {
-            tr.set_position(state.light_pos);
         }
 
         renderer.render_checkerboard(&mut glfw, &mut state);

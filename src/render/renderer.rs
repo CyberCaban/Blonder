@@ -3,6 +3,7 @@ use log::warn;
 use num::Zero;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::f32::consts::PI;
 use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
@@ -39,19 +40,11 @@ impl Default for RenderMaterial {
         }
     }
 }
-// impl From<Material> for RenderMaterial {
-//     fn from(value: Material) -> Self {
-//         let specular = match value.get_specular() {
-//             Some(texture_path) => {
-//                 Texture::new(texture_path)
-//             }
-//         }
-//         Self {
-//             specular,
-//             shininess: value.get_shininess(),
-//         }
-//     }
-// }
+
+struct Light {
+    id: usize,
+    position: Vector3<f32>,
+}
 
 pub struct RenderObject {
     pub drawable: Box<dyn Drawable>,
@@ -69,6 +62,8 @@ impl RenderObject {
 pub enum RendererError {
     #[error("Shader [{0}] not found")]
     ShaderNotFound(String),
+    #[error("Object with id: [{0}] not found")]
+    ObjectNotFound(String),
 }
 
 pub type TextureRef = Arc<Texture>;
@@ -77,6 +72,8 @@ pub type FontAtlasRef = Arc<FontAtlas>;
 pub struct Renderer {
     drawables: Vec<RenderObject>,
     dynamic_map: HashMap<Uuid, usize>,
+
+    light_source: Option<Light>,
 
     pub textures: HashMap<String, TextureRef>,
 
@@ -100,6 +97,7 @@ impl Renderer {
         let mut renderer = (Self {
             drawables: vec![],
             dynamic_map: HashMap::new(),
+            light_source: None,
             shaders: HashMap::new(),
             textures: HashMap::new(),
             current_shader: None,
@@ -190,7 +188,7 @@ impl Renderer {
         }
         let render_object = RenderObject {
             drawable: Box::new(object),
-            transform: None,
+            transform: Some(Transform::default()),
             material: None,
         };
         self.drawables.push(render_object);
@@ -317,6 +315,18 @@ impl Renderer {
         self.dynamic_map
             .get(id)
             .map(|index| &mut self.drawables[*index])
+    }
+    pub fn set_light_src(&mut self, id: &Uuid) -> Result<()> {
+        let a = self
+            .dynamic_map
+            .get(id)
+            // .map(|index| &mut self.drawables[*index])
+            .ok_or(RendererError::ObjectNotFound(id.to_string()))?;
+        self.light_source = Some(Light {
+            id: *a,
+            position: Vector3::from_value(0.0),
+        });
+        Ok(())
     }
     pub fn get_or_load_texture(
         &mut self,
@@ -490,7 +500,7 @@ impl Renderer {
         }
         self.ui_manager.picking_texture.enable_writing();
         self.render_unique(glfw, state);
-        self.render_ui(glfw, state);
+        // self.render_ui(glfw, state);
         self.ui_manager.picking_texture.disable_writing();
         unsafe {
             gl::ClearColor(state.color.0, state.color.1, state.color.2, state.color.3);
@@ -529,7 +539,7 @@ impl Renderer {
         self.fps_samples.push_back(1.0 / state.delta_time);
     }
     fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
-        let scale = if state.is_lowres { 0.25 } else { 1.0 };
+        let scale = if state.is_lowres { 0.25 } else { 0.5 };
         let screen = if state.is_lowres {
             Screen {
                 width: self.framebuffer.render_width as u32,
@@ -561,6 +571,29 @@ impl Renderer {
         //     Color::white(),
         // );
 
+        let (mouse_x, mouse_y) = (
+            state.cursor_pos_x * screen.width as f32 / state.screen.width as f32,
+            state.cursor_pos_y * screen.height as f32 / state.screen.height as f32,
+        );
+
+        let panel_width = screen.width as f32 * 0.3;
+        let panel_x = 0.0;
+        let panel_height = screen.height as f32;
+
+        if self.ui_manager.panel(
+            0,
+            panel_x,
+            0.0,
+            panel_width,
+            panel_height,
+            Color::new(0.3, 0.3, 0.3, 0.5),
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+        }
         let current_font = self.font_atlases.get(DEFAULT_FONT).unwrap();
         let font_height = (current_font.size as f32 * scale / 2.0);
         self.ui_manager.draw_text(
@@ -576,31 +609,17 @@ impl Renderer {
             Color::white(),
         );
 
-        let (mouse_x, mouse_y) = (
-            state.cursor_pos_x * screen.width as f32 / state.screen.width as f32,
-            state.cursor_pos_y * screen.height as f32 / state.screen.height as f32,
-        );
-
-        let panel_width = screen.width as f32 * 0.3;
-        let panel_x = 0.0;
-        let panel_height = screen.height as f32;
-
-        self.ui_manager.draw_rect(
-            panel_x,
-            0.0,
-            panel_width,
-            panel_height,
-            Color::new(0.1, 0.1, 0.15, 0.8),
-        );
-
-        let button_width = panel_width * 0.8;
+        let button_width = panel_width * 0.8 / 3.0;
         let button_height = 40.0;
+        let spacing_y = 10.0;
+        let spacing_x = 10.0;
         let margin_x = panel_x + panel_width * 0.1;
         let mut current_y = 20.0;
 
+        // bottom row
         if self.ui_manager.button(
-            1,
-            "Light Up",
+            0,
+            "-X",
             margin_x,
             current_y,
             button_width,
@@ -612,13 +631,48 @@ impl Renderer {
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
-            state.light_pos.y += 0.1 * state.delta_time * 8.55;
+            state.selected_item_pos.x -= 0.1 * state.delta_time * 8.55;
         }
-        current_y += button_height + 10.0;
 
         if self.ui_manager.button(
             0,
-            "Light Down",
+            "-Z",
+            margin_x + button_width + spacing_x,
+            current_y,
+            button_width,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_pos.z -= 0.1 * state.delta_time * 8.55;
+        }
+
+        if self.ui_manager.button(
+            0,
+            "-Y",
+            margin_x + (button_width + spacing_x) * 2.0,
+            current_y,
+            button_width,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_pos.y -= 0.1 * state.delta_time * 8.55;
+        }
+        current_y += button_height + spacing_y;
+
+        // 2nd row
+        if self.ui_manager.button(
+            0,
+            "+X",
             margin_x,
             current_y,
             button_width,
@@ -630,18 +684,88 @@ impl Renderer {
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
-            state.light_pos.y -= 0.1 * state.delta_time * 8.55;
+            state.selected_item_pos.x += 0.1 * state.delta_time * 8.55;
         }
-        current_y += button_height + 20.0;
 
-        if let Some(value) = self.ui_manager.slider_with_value(
-            5,
-            "Hello world",
-            margin_x,
+        if self.ui_manager.button(
+            0,
+            "+Z",
+            margin_x + button_width + spacing_x,
             current_y,
             button_width,
-            10.0,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_pos.z += 0.1 * state.delta_time * 8.55;
+        }
+
+        if self.ui_manager.button(
+            0,
+            "+Y",
+            margin_x + (button_width + spacing_x) * 2.0,
+            current_y,
+            button_width,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_pos.y += 0.1 * state.delta_time * 8.55;
+        }
+        current_y += button_height + spacing_y;
+
+        if let Some(i) = state.selected_item
+            && let Some(tr) = &mut self.drawables[i].transform
+        {
+            tr.set_position(state.selected_item_pos);
+            if let Some(light_src) = &self.light_source
+                && light_src.id == i
+            {
+                state.light_pos = state.selected_item_pos;
+            }
+        }
+
+        let slider_width = panel_width * 0.8;
+        let slider_height = 20.0;
+        if let Some(value) = self.ui_manager.slider_with_label(
+            4,
+            "Light intensity",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            state.numbers[1],
+            -2.0,
+            2.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.numbers[1] = value;
+        }
+        current_y += slider_height + spacing_y;
+
+        if let Some(value) = self.ui_manager.slider_with_label(
+            5,
+            "Rotation",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
             state.numbers[2],
+            0.0,
+            2.0 * PI,
             current_font,
             mouse_x,
             mouse_y,
@@ -650,8 +774,8 @@ impl Renderer {
         ) {
             state.mouse_free = false;
             state.numbers[2] = value;
-            println!("New value: {value}");
         }
+        current_y += slider_height + spacing_y;
 
         let screen = if state.is_lowres {
             Screen {
@@ -676,6 +800,12 @@ impl Renderer {
             if p > 0 {
                 let index = p as usize - 1;
                 state.selected_item = Some(index);
+                let selected_item_pos = self.drawables[index]
+                    .transform
+                    .clone()
+                    .unwrap()
+                    .get_position();
+                state.selected_item_pos = selected_item_pos;
             } else {
                 state.selected_item = None;
             }

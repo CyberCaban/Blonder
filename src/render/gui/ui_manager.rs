@@ -106,6 +106,36 @@ impl UIManager {
 
         self.ui_renderer.begin_frame();
     }
+    pub fn panel(
+        &mut self,
+        id: u32,
+        x: f32,
+        y: f32,
+        width: f32,
+        height: f32,
+        color: Color,
+        mouse_x: f32,
+        mouse_y: f32,
+        mouse_pressed: bool,
+        is_captured: bool,
+    ) -> bool {
+        let is_hovered = mouse_x >= x
+            && mouse_x <= x + width
+            && mouse_y >= y
+            && mouse_y <= y + height
+            && !is_captured;
+
+        let was_clicked = if is_hovered && mouse_pressed {
+            self.clicked_buttons.push(id);
+            true
+        } else {
+            false
+        };
+
+        self.draw_rect(x, y, width, height, color);
+
+        was_clicked
+    }
     pub fn button(
         &mut self,
         id: u32,
@@ -166,6 +196,8 @@ impl UIManager {
         width: f32,
         height: f32,
         current_value: f32,
+        min: f32,
+        max: f32,
         mouse_x: f32,
         mouse_y: f32,
         mouse_pressed: bool,
@@ -187,7 +219,7 @@ impl UIManager {
 
         if is_active && mouse_pressed {
             let relative_x = (mouse_x - x).max(0.0).min(width);
-            new_value = relative_x / width;
+            new_value = min + (relative_x / width) * (min - max).abs();
             value_changed = true;
         }
         if !mouse_pressed && is_active {
@@ -195,7 +227,15 @@ impl UIManager {
         }
 
         let is_dragging = is_active && mouse_pressed;
-        self.draw_slider(x, y, width, height, new_value, is_hovered, is_dragging);
+        self.draw_slider(
+            x,
+            y,
+            width,
+            height,
+            (new_value - min) / (min - max).abs(),
+            is_hovered,
+            is_dragging,
+        );
 
         if value_changed { Some(new_value) } else { None }
     }
@@ -208,6 +248,8 @@ impl UIManager {
         width: f32,
         height: f32,
         current_value: f32,
+        min: f32,
+        max: f32,
         font: &FontAtlasRef,
         mouse_x: f32,
         mouse_y: f32,
@@ -228,6 +270,8 @@ impl UIManager {
             width - label_width,
             height,
             current_value,
+            min,
+            max,
             mouse_x,
             mouse_y,
             mouse_pressed,
@@ -243,6 +287,8 @@ impl UIManager {
         width: f32,
         height: f32,
         current_value: f32,
+        min: f32,
+        max: f32,
         font: &FontAtlasRef,
         mouse_x: f32,
         mouse_y: f32,
@@ -256,6 +302,8 @@ impl UIManager {
             width,
             height,
             current_value,
+            min,
+            max,
             mouse_x,
             mouse_y,
             mouse_pressed,
