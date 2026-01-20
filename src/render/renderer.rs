@@ -14,12 +14,19 @@ use crate::render::consts::DEFAULT_SHADER_FRAG;
 use crate::render::consts::DEFAULT_SHADER_NAME;
 use crate::render::consts::DEFAULT_SHADER_VERT;
 use crate::render::consts::DEFAULT_WHITE_TEXTURE;
+use crate::render::consts::MAX_DIR_LIGHTS;
+use crate::render::consts::MAX_POINT_LIGHTS;
+use crate::render::consts::MAX_SPOT_LIGHTS;
 use crate::render::consts::{HEIGHT, WIDTH};
 use crate::render::framebuffer::{Framebuffer, ViewportScaleStrategy};
 use crate::render::gui::font::FontAtlas;
 use crate::render::gui::ui_manager::UIManager;
+use crate::render::light::DirLight;
+use crate::render::light::PointLight;
+use crate::render::light::SpotLight;
 use crate::render::model::Model;
 use crate::render::shader::Shader;
+use crate::render::shader::pass_uniforms::PassUniforms;
 use crate::state::Screen;
 use crate::texture::TextureConfig;
 use crate::{
@@ -44,11 +51,6 @@ impl Default for RenderMaterial {
             shininess: 64.0,
         }
     }
-}
-
-struct Light {
-    id: usize,
-    position: Vector3<f32>,
 }
 
 pub struct RenderObject {
@@ -78,10 +80,11 @@ pub struct Renderer {
     drawables: Vec<RenderObject>,
     dynamic_map: HashMap<Uuid, usize>,
 
-    light_source: Option<Light>,
-    model: Option<Model>,
-
     pub textures: HashMap<String, TextureRef>,
+
+    point_lights: VecDeque<PointLight>,
+    dir_lights: VecDeque<DirLight>,
+    spot_lights: VecDeque<SpotLight>,
 
     shaders: HashMap<String, Shader>,
     current_shader: Option<String>,
@@ -103,8 +106,6 @@ impl Renderer {
         let renderer = Self {
             drawables: vec![],
             dynamic_map: HashMap::new(),
-            light_source: None,
-            model: None,
             shaders: HashMap::from([(
                 DEFAULT_SHADER_NAME.to_string(),
                 Shader::new(DEFAULT_SHADER_VERT, DEFAULT_SHADER_FRAG)?,
@@ -113,6 +114,9 @@ impl Renderer {
                 DEFAULT_WHITE_TEXTURE.to_string(),
                 Arc::new(Texture::white()),
             )]),
+            point_lights: VecDeque::with_capacity(MAX_POINT_LIGHTS),
+            dir_lights: VecDeque::with_capacity(MAX_DIR_LIGHTS),
+            spot_lights: VecDeque::with_capacity(MAX_SPOT_LIGHTS),
             current_shader: None,
             model_matrix: Matrix4::zero(),
             view_matrix: Matrix4::zero(),
@@ -319,6 +323,24 @@ impl Renderer {
         self.dynamic_map.insert(id, self.drawables.len() - 1);
         Ok(id)
     }
+    pub fn add_point_light(&mut self, light: PointLight) {
+        if self.point_lights.len() >= MAX_POINT_LIGHTS {
+            self.point_lights.pop_front();
+        }
+        self.point_lights.push_back(light);
+    }
+    pub fn add_dir_light(&mut self, light: DirLight) {
+        if self.dir_lights.len() >= MAX_DIR_LIGHTS {
+            self.dir_lights.pop_front();
+        }
+        self.dir_lights.push_back(light);
+    }
+    pub fn add_spot_light(&mut self, light: SpotLight) {
+        if self.spot_lights.len() >= MAX_SPOT_LIGHTS {
+            self.spot_lights.pop_front();
+        }
+        self.spot_lights.push_back(light);
+    }
     pub fn get_transform(&self, id: &Uuid) -> Option<&RenderObject> {
         self.dynamic_map
             .get(id)
@@ -328,18 +350,6 @@ impl Renderer {
         self.dynamic_map
             .get(id)
             .map(|index| &mut self.drawables[*index])
-    }
-    pub fn set_light_src(&mut self, id: &Uuid) -> Result<()> {
-        let a = self
-            .dynamic_map
-            .get(id)
-            // .map(|index| &mut self.drawables[*index])
-            .ok_or(RendererError::ObjectNotFound(id.to_string()))?;
-        self.light_source = Some(Light {
-            id: *a,
-            position: Vector3::from_value(0.0),
-        });
-        Ok(())
     }
     pub fn get_or_load_texture(
         &mut self,
@@ -453,16 +463,16 @@ impl Renderer {
                     &RenderMaterial::default()
                 };
                 shader.set_float("material.shininess", obj_material.shininess);
-                shader.set_vec3(
-                    "lightPos",
-                    // &Vector3::new(1.0, 0.0, 0.0),
-                    &state.light_pos,
-                    // &Vector3::new(
-                    //     (glfw.get_time() as f32).sin() * 3.0,
-                    //     1.0,
-                    //     (glfw.get_time() as f32).cos() * 3.0,
-                    // ),
-                );
+                // shader.set_vec3(
+                //     "lightPos",
+                //     // &Vector3::new(1.0, 0.0, 0.0),
+                //     &state.light_pos,
+                //     // &Vector3::new(
+                //     //     (glfw.get_time() as f32).sin() * 3.0,
+                //     //     1.0,
+                //     //     (glfw.get_time() as f32).cos() * 3.0,
+                //     // ),
+                // );
 
                 // set specular
                 if let Some(render_mat) = &render_obj.material {
@@ -487,12 +497,19 @@ impl Renderer {
                     }
                 }
 
-                let light_color = Vector3::new(1.0, 1.0, 1.0);
-                let diffuse_color = light_color.mul_element_wise(Vector3::from_value(0.5));
-                let ambient_color = diffuse_color.mul_element_wise(Vector3::from_value(-1.2));
-                shader.set_vec3("light.ambient", &ambient_color);
-                shader.set_vec3("light.diffuse", &diffuse_color);
-                shader.set_vec3("light.specular", &Vector3::from_value(1.0));
+                shader.set_int("numDirLights", self.dir_lights.len() as i32);
+                shader.set_int("numPointLights", self.point_lights.len() as i32);
+                shader.set_int("numSpotLights", self.spot_lights.len() as i32);
+
+                for (index, light) in self.point_lights.iter().enumerate() {
+                    light.pass_uniforms(shader, &format!("pointLights[{}]", index));
+                }
+                for (index, light) in self.dir_lights.iter().enumerate() {
+                    light.pass_uniforms(shader, &format!("dirLights[{}]", index));
+                }
+                for (index, light) in self.spot_lights.iter().enumerate() {
+                    light.pass_uniforms(shader, &format!("spotLights[{}]", index));
+                }
 
                 render_obj.drawable.draw(glfw, state);
             }
@@ -756,11 +773,11 @@ impl Renderer {
             && let Some(tr) = &mut self.drawables[i].transform
         {
             tr.set_position(state.selected_item_pos);
-            if let Some(light_src) = &self.light_source
-                && light_src.id == i
-            {
-                state.light_pos = state.selected_item_pos;
-            }
+            //     if let Some(light_src) = &self.light_source
+            //         && light_src.id == i
+            //     {
+            //         state.light_pos = state.selected_item_pos;
+            //     }
         }
 
         let slider_width = panel_width * 0.8;

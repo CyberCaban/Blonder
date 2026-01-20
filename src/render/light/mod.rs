@@ -2,16 +2,30 @@ use cgmath::Vector3;
 
 use crate::render::shader::pass_uniforms::PassUniforms;
 
+pub enum LightType {
+    Point(PointLight),
+    Dir(DirLight),
+    Spot(SpotLight),
+}
+
+impl PassUniforms for LightType {
+    fn pass_uniforms(&self, shader: &super::shader::Shader, prefix: &str) {
+        match self {
+            LightType::Point(point_light) => point_light.pass_uniforms(shader, prefix),
+            LightType::Dir(dir_light) => dir_light.pass_uniforms(shader, prefix),
+            LightType::Spot(spot_light) => spot_light.pass_uniforms(shader, prefix),
+        }
+    }
+}
+
 pub struct PointLight {
-    position: Vector3<f32>,
-
-    constant: f32,
-    linear: f32,
-    quadratic: f32,
-
-    ambient: Vector3<f32>,
-    diffuse: Vector3<f32>,
-    specular: Vector3<f32>,
+    pub position: Vector3<f32>,
+    pub constant: f32,
+    pub linear: f32,
+    pub quadratic: f32,
+    pub ambient: Vector3<f32>,
+    pub diffuse: Vector3<f32>,
+    pub specular: Vector3<f32>,
 }
 
 impl PassUniforms for PointLight {
@@ -27,11 +41,10 @@ impl PassUniforms for PointLight {
 }
 
 pub struct DirLight {
-    direction: Vector3<f32>,
-
-    ambient: Vector3<f32>,
-    diffuse: Vector3<f32>,
-    specular: Vector3<f32>,
+    pub direction: Vector3<f32>,
+    pub ambient: Vector3<f32>,
+    pub diffuse: Vector3<f32>,
+    pub specular: Vector3<f32>,
 }
 
 impl PassUniforms for DirLight {
@@ -44,17 +57,15 @@ impl PassUniforms for DirLight {
 }
 
 pub struct SpotLight {
-    direction: Vector3<f32>,
-    cut_off: f32,
-    cut_off_outer: f32,
-
-    constant: f32,
-    linear: f32,
-    quadratic: f32,
-
-    ambient: Vector3<f32>,
-    diffuse: Vector3<f32>,
-    specular: Vector3<f32>,
+    pub direction: Vector3<f32>,
+    pub cut_off: f32,
+    pub cut_off_outer: f32,
+    pub constant: f32,
+    pub linear: f32,
+    pub quadratic: f32,
+    pub ambient: Vector3<f32>,
+    pub diffuse: Vector3<f32>,
+    pub specular: Vector3<f32>,
 }
 
 impl PassUniforms for SpotLight {

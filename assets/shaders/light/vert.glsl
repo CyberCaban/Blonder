@@ -8,13 +8,13 @@ uniform mat4 projection;
 uniform mat4 mvp;
 uniform float uTime;
 uniform vec3 lightPos;
-out vec2 TexCoord;
+out vec2 TexCoords;
 out vec3 FragPos;
 out vec3 Normal;
 void main() {
     FragPos = vec3(model * vec4(aPos, 1.0));
     // TODO: Make inverse matrices on CPU
     Normal = mat3(transpose(inverse(model))) * aNormal;
-    TexCoord = aTexCoord;
+    TexCoords = aTexCoord;
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }

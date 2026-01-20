@@ -1,6 +1,6 @@
 use ::log::info;
 use anyhow::{Context as _, Result};
-use cgmath::{Array, Vector3};
+use cgmath::{Angle, Array, Deg, InnerSpace, Vector3};
 use glfw::Context;
 use rand::Rng;
 
@@ -13,6 +13,7 @@ use crate::{
     },
     render::{
         helpers::init_window,
+        light::{DirLight, PointLight, SpotLight},
         renderer::{RenderMaterial, RenderObject, Renderer},
         shader::{Shader, ShaderInfo},
         transform::Transform,
@@ -130,7 +131,40 @@ fn main() -> Result<()> {
         material: Some(RenderMaterial::default()),
     };
     let light_id = renderer.add_render_object(light_ro)?;
-    let _ = renderer.set_light_src(&light_id);
+    // let _ = renderer.set_light_src(&light_id);
+
+    // 2. Точечный свет 1 (теплый, слева)
+    let _ = renderer.add_point_light(PointLight {
+        position: Vector3::new(-3.0, 2.0, 0.0), // Слева сверху
+        constant: 1.0,
+        linear: 0.09,
+        quadratic: 0.032,
+        ambient: Vector3::new(0.05, 0.03, 0.01), // Теплый ambient
+        diffuse: Vector3::new(1.0, 0.8, 0.6),    // Теплый оранжевый
+        specular: Vector3::new(1.0, 0.9, 0.8),   // Теплые блики
+    });
+
+    // 3. Точечный свет 2 (холодный, справа)
+    let _ = renderer.add_point_light(PointLight {
+        position: Vector3::new(3.0, 2.0, 1.0), // Справа сверху, немного вперед
+        constant: 1.0,
+        linear: 0.07, // Меньше затухание
+        quadratic: 0.017,
+        ambient: Vector3::new(0.01, 0.02, 0.05), // Холодный ambient
+        diffuse: Vector3::new(0.6, 0.8, 1.0),    // Холодный синий
+        specular: Vector3::new(0.8, 0.9, 1.0),   // Холодные блики
+    });
+
+    // 4. Точечный свет 3 (нейтральный, сзади)
+    let _ = renderer.add_point_light(PointLight {
+        position: Vector3::new(0.0, 1.5, -3.0), // Сзади сверху
+        constant: 1.0,
+        linear: 0.14, // Больше затухание
+        quadratic: 0.07,
+        ambient: Vector3::new(0.03, 0.03, 0.03), // Нейтральный ambient
+        diffuse: Vector3::new(0.9, 0.9, 0.9),    // Нейтральный белый
+        specular: Vector3::new(1.0, 1.0, 1.0),   // Белые блики
+    });
 
     let w = 10.0;
     let y = -1.0;
@@ -164,7 +198,7 @@ fn main() -> Result<()> {
                     // tr.scale.y = state.numbers[0];
                     // tr.scale.z = state.numbers[0];
                     let r = tr.get_rotation();
-                    tr.set_rotation(Vector3::new(r.x, glfw.get_time() as f32, r.z));
+                    // tr.set_rotation(Vector3::new(r.x, glfw.get_time() as f32, r.z));
                     // tr.rotation.x = (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
                     // tr.rotation.z = (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
                 }
