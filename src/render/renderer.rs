@@ -400,17 +400,17 @@ impl Renderer {
     fn batch_render(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         let mut batches: HashMap<BatchKey, Vec<usize>> = HashMap::new();
         batches.reserve(self.drawables.len() / 4);
-        let mut transparent_objects: Vec<(usize, f32)> = Vec::new();
+        let mut transparent_objects: Vec<(usize, f32, BatchKey)> = Vec::new();
         for (index, render_obj) in self.drawables.iter().enumerate() {
             let is_selected = state.selected_item == Some(index);
             let key = BatchKey::from_object(render_obj.drawable.as_ref(), is_selected);
 
-            if render_obj.drawable.get_blend_mode() == BlendMode::Opaque || true {
+            if render_obj.drawable.get_blend_mode() == BlendMode::Opaque {
                 batches.entry(key).or_default().push(index);
             } else {
                 let distance =
                     (state.camera.position - render_obj.transform.get_position()).magnitude();
-                transparent_objects.push((index, distance));
+                transparent_objects.push((index, distance, key));
             }
         }
 
@@ -420,16 +420,9 @@ impl Renderer {
             state.display_debug_info = false;
             dbg!(&batches, &transparent_objects);
         }
-        self.draw_batch(glfw, state, batches);
-    }
-    fn draw_batch(
-        &mut self,
-        glfw: &mut glfw::Glfw,
-        state: &mut State,
-        batches: HashMap<BatchKey, Vec<usize>>,
-    ) {
+        // draw opaque objects
         for (key, objects) in batches {
-            self.apply_shaders(&key, glfw, state);
+            self.apply_shaders(&key.shader_name, glfw, state);
             if self.current_shader.is_none() {
                 continue;
             }
@@ -448,6 +441,30 @@ impl Renderer {
                 self.apply_material(render_obj, &key);
                 render_obj.drawable.draw(glfw, state);
             }
+        }
+        unsafe {
+            gl::Enable(gl::DEPTH_TEST);
+            gl::DepthMask(gl::FALSE);
+            gl::Enable(gl::BLEND);
+            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
+        }
+        for (index, objects, key) in transparent_objects {
+            self.apply_shaders(&key.shader_name, glfw, state);
+            if self.current_shader.is_none() {
+                continue;
+            }
+            let shader = self.current_shader.as_ref().unwrap();
+
+            self.apply_batch_uniforms(&key, glfw, state);
+            self.apply_batch_textures(&key);
+
+            let render_obj = &self.drawables[index];
+            // set transform
+            self.apply_transform(render_obj);
+
+            // set material
+            self.apply_material(render_obj, &key);
+            render_obj.drawable.draw(glfw, state);
         }
     }
     fn apply_uniforms(&self, shader: &Shader, glfw: &mut glfw::Glfw, state: &State) {
@@ -471,8 +488,13 @@ impl Renderer {
             light.pass_uniforms(shader, &format!("spotLights[{}]", index));
         }
     }
-    fn apply_shaders(&mut self, key: &BatchKey, glfw: &mut glfw::Glfw, state: &mut State) -> bool {
-        let shader = if let Some(shader_name) = &key.shader_name
+    fn apply_shaders(
+        &mut self,
+        shader_name: &Option<Arc<str>>,
+        glfw: &mut glfw::Glfw,
+        state: &mut State,
+    ) -> bool {
+        let shader = if let Some(shader_name) = shader_name
             && let Some(shader) = self.shaders.get(shader_name.as_ref())
         {
             shader.use_shader();
