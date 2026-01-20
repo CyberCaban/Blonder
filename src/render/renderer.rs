@@ -42,7 +42,7 @@ impl Default for RenderMaterial {
         Self {
             specular: None,
             emission: None,
-            shininess: 32.0,
+            shininess: 64.0,
         }
     }
 }

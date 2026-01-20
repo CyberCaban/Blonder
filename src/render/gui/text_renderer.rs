@@ -99,9 +99,6 @@ impl TextRenderer {
         );
         self.projection_matrix = projection_matrix;
     }
-    pub fn render(&mut self, glfw: &mut glfw::Glfw, state: &State) -> Result<()> {
-        Ok(())
-    }
     pub fn render_text(
         &mut self,
         font_atlas: &FontAtlas,

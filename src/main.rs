@@ -102,7 +102,7 @@ fn main() -> Result<()> {
                 specular: Some(texture.0.to_string()),
                 // emission: Some("assets/textures/emission.jpg".to_string()),
                 emission: None,
-                shininess: 32.0,
+                shininess: 128.0,
             }),
             transform: Some(transform),
         };
