@@ -554,7 +554,9 @@ impl Renderer {
             self.framebuffer.begin_render();
         }
         self.batch_render(glfw, state);
-        self.render_ui(glfw, state);
+        if state.show_ui {
+            self.render_ui(glfw, state);
+        }
         if state.window_size_changed {
             let _ = self
                 .ui_manager

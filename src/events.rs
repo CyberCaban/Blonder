@@ -70,6 +70,9 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
             WindowEvent::Key(Key::X, _, Action::Press | Action::Repeat, _) => {
                 state.wireframe = !state.wireframe;
             }
+            WindowEvent::Key(Key::Tab, _, Action::Press | Action::Repeat, _) => {
+                state.show_ui = !state.show_ui;
+            }
             WindowEvent::Key(Key::R, _, Action::Press | Action::Repeat, _) => {
                 state.scale_strategy = match state.scale_strategy {
                     ViewportScaleStrategy::Fit => ViewportScaleStrategy::PixelPerfect,

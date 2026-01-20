@@ -27,7 +27,7 @@ pub struct Screen {
 #[derive(Debug)]
 pub struct State {
     pub color: (f32, f32, f32, f32),
-
+    pub show_ui: bool,
     pub light_pos: Vector3<f32>,
     pub wireframe: bool,
     pub is_lowres: bool,
@@ -57,6 +57,7 @@ impl Default for State {
             selected_item_pos: Vector3::from_value(0.0),
             model_path_to_load: None,
             mouse_free: false,
+            show_ui: false,
             light_pos: Vector3::from_value(0.0),
             screen: Screen {
                 width: WIDTH,
