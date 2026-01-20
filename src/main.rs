@@ -99,9 +99,10 @@ fn main() -> Result<()> {
             drawable: Box::new(cube),
             material: Some(RenderMaterial {
                 // specular: Some("assets/textures/specular.png".to_string()),
-                specular: Some(texture.0.to_string()),
-                // emission: Some("assets/textures/emission.jpg".to_string()),
-                emission: None,
+                // specular: Some(texture.0.to_string()),
+                specular: None,
+                emission: Some("assets/textures/emission.jpg".to_string()),
+                // emission: None,
                 shininess: 128.0,
             }),
             transform: Some(transform),
@@ -133,15 +134,15 @@ fn main() -> Result<()> {
     let light_id = renderer.add_render_object(light_ro)?;
     // let _ = renderer.set_light_src(&light_id);
 
-    // 2. Точечный свет 1 (теплый, слева)
+    // Точечный свет 1 (теплый, слева)
     let _ = renderer.add_point_light(PointLight {
         position: Vector3::new(-3.0, 2.0, 0.0), // Слева сверху
         constant: 1.0,
         linear: 0.09,
         quadratic: 0.032,
         ambient: Vector3::new(0.05, 0.03, 0.01), // Теплый ambient
-        diffuse: Vector3::new(1.0, 0.8, 0.6),    // Теплый оранжевый
-        specular: Vector3::new(1.0, 0.9, 0.8),   // Теплые блики
+        diffuse: Vector3::new(1.0, 0.8, 0.6) * 0.4, // Теплый оранжевый
+        specular: Vector3::new(1.0, 0.9, 0.8) * 0.6, // Теплые блики
     });
 
     // 3. Точечный свет 2 (холодный, справа)
@@ -151,19 +152,32 @@ fn main() -> Result<()> {
         linear: 0.07, // Меньше затухание
         quadratic: 0.017,
         ambient: Vector3::new(0.01, 0.02, 0.05), // Холодный ambient
-        diffuse: Vector3::new(0.6, 0.8, 1.0),    // Холодный синий
-        specular: Vector3::new(0.8, 0.9, 1.0),   // Холодные блики
+        diffuse: Vector3::new(0.6, 0.8, 1.0) * 0.4,    // Холодный синий
+        specular: Vector3::new(0.8, 0.9, 1.0) * 0.5,   // Холодные блики
     });
 
-    // 4. Точечный свет 3 (нейтральный, сзади)
+    // // 4. Точечный свет 3 (нейтральный, сзади)
     let _ = renderer.add_point_light(PointLight {
         position: Vector3::new(0.0, 1.5, -3.0), // Сзади сверху
         constant: 1.0,
         linear: 0.14, // Больше затухание
         quadratic: 0.07,
         ambient: Vector3::new(0.03, 0.03, 0.03), // Нейтральный ambient
-        diffuse: Vector3::new(0.9, 0.9, 0.9),    // Нейтральный белый
-        specular: Vector3::new(1.0, 1.0, 1.0),   // Белые блики
+        diffuse: Vector3::new(0.9, 0.9, 0.9) * 0.4,    // Нейтральный белый
+        specular: Vector3::new(1.0, 1.0, 1.0) * 0.5,   // Белые блики
+    });
+
+    let _ = renderer.add_dir_light(DirLight {
+        direction: Vector3::new(0.5, -0.3, -0.4).normalize(),
+        ambient: Vector3::from_value(0.3),
+        diffuse: Vector3::from_value(0.3),
+        specular: Vector3::from_value(0.5),
+    });
+    let _ = renderer.add_dir_light(DirLight {
+        direction: Vector3::new(-0.8, 0.3, 0.2).normalize(),
+        ambient: Vector3::from_value(0.05),
+        diffuse: Vector3::new(0.06, 0.05, 0.03),
+        specular: Vector3::from_value(0.0),
     });
 
     let w = 10.0;

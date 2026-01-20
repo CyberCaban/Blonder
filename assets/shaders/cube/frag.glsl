@@ -77,18 +77,15 @@ void main() {
 
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(cameraPos - FragPos);
-    vec3 emission = vec3(texture(material.emission, TexCoords));
+    vec3 emission = vec3(texture(material.emission, vec2(TexCoords.x, TexCoords.y + uTime / 10)));
 
-    vec3 result = vec3(0);
+    vec3 result = emission;
 
-    for(int i = 0; i < numDirLights; i++)
-        result += CalcDirLight(dirLights[i], norm, viewDir);
+    for(int i = 0; i < numDirLights; i++) result += CalcDirLight(dirLights[i], norm, viewDir);
 
-    for(int i = 0; i < numPointLights; i++)
-        result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
+    for(int i = 0; i < numPointLights; i++) result += CalcPointLight(pointLights[i], norm, FragPos, viewDir);
 
-    for(int i = 0; i < numSpotLights; i++)
-        result += CalcSpotLight(spotLights[i], norm, FragPos, viewDir);
+    for(int i = 0; i < numSpotLights; i++) result += CalcSpotLight(spotLights[i], norm, FragPos, viewDir);
 
     if(isSelected == 1) {
         result = mix(result, highlightColor, highlightIntensity);
@@ -102,8 +99,7 @@ void main() {
 }
 
 // calculates the color when using a directional light.
-vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
-{
+vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     vec3 lightDir = normalize(-light.direction);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
@@ -118,8 +114,7 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir)
 }
 
 // calculates the color when using a point light.
-vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
-{
+vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     vec3 lightDir = normalize(light.position - fragPos);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
@@ -140,8 +135,7 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
 }
 
 // calculates the color when using a spot light.
-vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir)
-{
+vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     vec3 lightDir = normalize(light.position - fragPos);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);

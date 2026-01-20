@@ -9,6 +9,7 @@ pub const MAX_SPOT_LIGHTS: usize = 4;
 
 pub const DEFAULT_FONT: &str = "OpenSans";
 pub const DEFAULT_WHITE_TEXTURE: &str = "DEFAULT";
+pub const DEFAULT_BLACK_TEXTURE: &str = "DEFAULT_BLACK";
 pub const DEFAULT_SHADER_NAME: &str = "DEFAULT";
 pub const DEFAULT_SHADER_VERT: &str = "assets/shaders/light/vert.glsl";
 pub const DEFAULT_SHADER_FRAG: &str = "assets/shaders/light/frag.glsl";

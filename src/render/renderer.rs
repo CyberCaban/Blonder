@@ -9,6 +9,7 @@ use thiserror::Error;
 use uuid::Uuid;
 
 use crate::render::color::Color;
+use crate::render::consts::DEFAULT_BLACK_TEXTURE;
 use crate::render::consts::DEFAULT_FONT;
 use crate::render::consts::DEFAULT_SHADER_FRAG;
 use crate::render::consts::DEFAULT_SHADER_NAME;
@@ -110,10 +111,16 @@ impl Renderer {
                 DEFAULT_SHADER_NAME.to_string(),
                 Shader::new(DEFAULT_SHADER_VERT, DEFAULT_SHADER_FRAG)?,
             )]),
-            textures: HashMap::from([(
-                DEFAULT_WHITE_TEXTURE.to_string(),
-                Arc::new(Texture::white()),
-            )]),
+            textures: HashMap::from([
+                (
+                    DEFAULT_WHITE_TEXTURE.to_string(),
+                    Arc::new(Texture::white()),
+                ),
+                (
+                    DEFAULT_BLACK_TEXTURE.to_string(),
+                    Arc::new(Texture::black()),
+                ),
+            ]),
             point_lights: VecDeque::with_capacity(MAX_POINT_LIGHTS),
             dir_lights: VecDeque::with_capacity(MAX_DIR_LIGHTS),
             spot_lights: VecDeque::with_capacity(MAX_SPOT_LIGHTS),
@@ -463,52 +470,39 @@ impl Renderer {
                     &RenderMaterial::default()
                 };
                 shader.set_float("material.shininess", obj_material.shininess);
-                // shader.set_vec3(
-                //     "lightPos",
-                //     // &Vector3::new(1.0, 0.0, 0.0),
-                //     &state.light_pos,
-                //     // &Vector3::new(
-                //     //     (glfw.get_time() as f32).sin() * 3.0,
-                //     //     1.0,
-                //     //     (glfw.get_time() as f32).cos() * 3.0,
-                //     // ),
-                // );
 
                 // set specular
-                if let Some(render_mat) = &render_obj.material {
-                    if let Some(spec) = &render_mat.specular
-                        && let Some(spec_texture) = self.textures.get(spec)
-                    {
-                        shader.set_int("material.specular", 1);
-                        unsafe {
-                            gl::ActiveTexture(gl::TEXTURE1);
-                            spec_texture.use_texture();
-                        }
-                    }
-
-                    if let Some(emission) = &render_mat.emission
-                        && let Some(emission_texture) = self.textures.get(emission)
-                    {
-                        shader.set_int("material.emission", 2);
-                        unsafe {
-                            gl::ActiveTexture(gl::TEXTURE2);
-                            emission_texture.use_texture();
-                        }
-                    }
+                shader.set_int("material.specular", 1);
+                unsafe {
+                    gl::ActiveTexture(gl::TEXTURE1);
+                }
+                if let Some(spec) = &obj_material.specular
+                    && let Some(spec_texture) = self.textures.get(spec)
+                {
+                    spec_texture.use_texture();
+                }
+                // load RO texture as specular texture if one's missing
+                else if let Some(texture_name) = &key.texture_name
+                    && let Some(texture) = self.textures.get(texture_name.as_ref())
+                {
+                    texture.use_texture();
+                } else if let Some(default_texture) = self.textures.get(DEFAULT_WHITE_TEXTURE) {
+                    default_texture.use_texture();
                 }
 
-                shader.set_int("numDirLights", self.dir_lights.len() as i32);
-                shader.set_int("numPointLights", self.point_lights.len() as i32);
-                shader.set_int("numSpotLights", self.spot_lights.len() as i32);
-
-                for (index, light) in self.point_lights.iter().enumerate() {
-                    light.pass_uniforms(shader, &format!("pointLights[{}]", index));
+                // set emission
+                shader.set_int("material.emission", 2);
+                unsafe {
+                    gl::ActiveTexture(gl::TEXTURE2);
                 }
-                for (index, light) in self.dir_lights.iter().enumerate() {
-                    light.pass_uniforms(shader, &format!("dirLights[{}]", index));
-                }
-                for (index, light) in self.spot_lights.iter().enumerate() {
-                    light.pass_uniforms(shader, &format!("spotLights[{}]", index));
+                if let Some(emission) = &obj_material.emission
+                    && let Some(emission_texture) = self.textures.get(emission)
+                {
+                    emission_texture.use_texture();
+                } else {
+                    // emission texture must be present even if RO doesn't specify it
+                    let black_emission = self.textures.get(DEFAULT_BLACK_TEXTURE).unwrap();
+                    black_emission.use_texture();
                 }
 
                 render_obj.drawable.draw(glfw, state);
@@ -521,6 +515,20 @@ impl Renderer {
         shader.set_mat4("projection", &self.projection_matrix);
         shader.set_float("farPlane", 10.0);
         shader.set_vec3("cameraPos", &state.camera.position);
+
+        shader.set_int("numDirLights", self.dir_lights.len() as i32);
+        shader.set_int("numPointLights", self.point_lights.len() as i32);
+        shader.set_int("numSpotLights", self.spot_lights.len() as i32);
+
+        for (index, light) in self.point_lights.iter().enumerate() {
+            light.pass_uniforms(shader, &format!("pointLights[{}]", index));
+        }
+        for (index, light) in self.dir_lights.iter().enumerate() {
+            light.pass_uniforms(shader, &format!("dirLights[{}]", index));
+        }
+        for (index, light) in self.spot_lights.iter().enumerate() {
+            light.pass_uniforms(shader, &format!("spotLights[{}]", index));
+        }
     }
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         self.update_mvp(state);

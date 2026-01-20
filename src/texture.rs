@@ -56,6 +56,32 @@ impl Texture {
             Self { id }
         }
     }
+    pub fn black() -> Self {
+        unsafe {
+            let mut id = 0;
+            gl::GenTextures(1, &mut id);
+            gl::BindTexture(gl::TEXTURE_2D, id);
+
+            let white_pixel: [u8; 4] = [0, 0, 0, 1];
+
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGBA as i32,
+                1,
+                1,
+                0,
+                gl::RGBA,
+                gl::UNSIGNED_BYTE,
+                white_pixel.as_ptr() as *const _,
+            );
+
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+
+            Self { id }
+        }
+    }
     pub fn empty_texture() -> Self {
         Self { id: 0 }
     }
