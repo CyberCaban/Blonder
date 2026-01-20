@@ -26,9 +26,9 @@ impl FontAtlas {
         #[cfg(debug_assertions)]
         let now = Instant::now();
         let font_data =
-            fs::read(font_path).context(format!("Failed to load font [{}]", font_path))?;
+            fs::read(font_path).context(format!("Failed to load font [{font_path}]"))?;
         let font = Font::try_from_vec(font_data)
-            .context(format!("Failed to parse font: [{}]", font_path))?;
+            .context(format!("Failed to parse font: [{font_path}]"))?;
         let scale = Scale::uniform(font_size as f32);
         let v_metrics = font.v_metrics(scale);
         let mut characters = HashMap::new();
@@ -89,8 +89,7 @@ impl FontAtlas {
                     },
                 )
                 .context(format!(
-                    "Failed to create texture for font [{}], char [{}]",
-                    font_path, ch
+                    "Failed to create texture for font [{font_path}], char [{ch}]"
                 ))?;
                 let character = Character {
                     texture_id: texture,

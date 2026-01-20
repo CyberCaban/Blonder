@@ -5,7 +5,7 @@ pub fn setup_logger() -> Result<(), fern::InitError> {
     if !logs_dir.exists()
         && let Err(e) = fs::create_dir_all(logs_dir)
     {
-        eprintln!("Failed to create logs directory [{}]", e);
+        eprintln!("Failed to create logs directory [{e}]");
     }
     fern::Dispatch::new()
         .format(|out, message, record| {

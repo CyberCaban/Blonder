@@ -62,7 +62,7 @@ fn main() {
 
     // Проверяем существование папки libs
     if !lib_dir.exists() {
-        panic!("Папка 'libs' не найдена в: {:?}", current_dir);
+        panic!("Папка 'libs' не найдена в: {current_dir:?}");
     }
 
     // Проверяем существование файла glfw3.lib
@@ -71,7 +71,7 @@ fn main() {
     #[cfg(target_os = "linux")]
     let glfw_lib = lib_dir.join("libglfw3.a");
     if !glfw_lib.exists() {
-        panic!("Файл 'glfw3.lib' не найден в: {:?}", lib_dir);
+        panic!("Файл 'glfw3.lib' не найден в: {lib_dir:?}");
     }
 
     println!("cargo:rerun-if-changed={}", lib_dir.display());

@@ -1,6 +1,6 @@
 use std::cell::Cell;
 
-use cgmath::{Array, Matrix4, Rad, SquareMatrix, Vector3};
+use cgmath::{Array, Matrix4, SquareMatrix, Vector3};
 use num::Zero;
 
 #[derive(Debug, Clone)]

@@ -101,7 +101,7 @@ pub struct Renderer {
 
 impl Renderer {
     pub fn new() -> Result<Self> {
-        let mut renderer = (Self {
+        let renderer = Self {
             drawables: vec![],
             dynamic_map: HashMap::new(),
             light_source: None,
@@ -133,7 +133,7 @@ impl Renderer {
                 Arc::new(FontAtlas::new("assets/fonts/OpenSans.ttf", 96)?),
             )]),
             ui_manager: UIManager::new()?,
-        });
+        };
 
         Ok(renderer)
     }
@@ -150,7 +150,7 @@ impl Renderer {
             self.current_shader = Some(name.to_string());
             Ok(())
         } else {
-            warn!("Shader [{}] not found", name);
+            warn!("Shader [{name}] not found");
             Err(RendererError::ShaderNotFound(name.to_string()).into())
         }
     }
@@ -183,7 +183,7 @@ impl Renderer {
                         .insert(texture_name.clone(), Arc::new(texture));
                 }
                 Err(e) => {
-                    warn!("Failed to load texture: {}", e);
+                    warn!("Failed to load texture: {e}");
                 }
             }
         }
@@ -196,7 +196,7 @@ impl Renderer {
                     self.shaders.insert(shader_name.name, s);
                 }
                 Err(e) => {
-                    warn!("Failer to load shader: [{}]", e);
+                    warn!("Failer to load shader: [{e}]");
                 }
             }
         }
@@ -224,7 +224,7 @@ impl Renderer {
                         .insert(texture_name.clone(), Arc::new(texture));
                 }
                 Err(e) => {
-                    warn!("Failed to load texture: {}", e);
+                    warn!("Failed to load texture: {e}");
                 }
             }
         }
@@ -237,7 +237,7 @@ impl Renderer {
                     self.shaders.insert(shader_name.name, s);
                 }
                 Err(e) => {
-                    warn!("Failer to load shader: [{}]", e);
+                    warn!("Failer to load shader: [{e}]");
                 }
             }
         }
@@ -268,7 +268,7 @@ impl Renderer {
                         .insert(texture_name.clone(), Arc::new(texture));
                 }
                 Err(e) => {
-                    warn!("Failed to load texture: {}", e);
+                    warn!("Failed to load texture: {e}");
                 }
             }
         }
@@ -281,7 +281,7 @@ impl Renderer {
                     self.shaders.insert(shader_name.name, s);
                 }
                 Err(e) => {
-                    warn!("Failer to load shader: [{}]", e);
+                    warn!("Failer to load shader: [{e}]");
                 }
             }
         }
@@ -296,7 +296,7 @@ impl Renderer {
                         .insert(specular_map.clone(), Arc::new(texture));
                 }
                 Err(e) => {
-                    warn!("Failed to load texture: {}", e);
+                    warn!("Failed to load texture: {e}");
                 }
             }
         }
@@ -311,7 +311,7 @@ impl Renderer {
                         .insert(emission_map.clone(), Arc::new(texture));
                 }
                 Err(e) => {
-                    warn!("Failed to load texture: {}", e);
+                    warn!("Failed to load texture: {e}");
                 }
             }
         }
@@ -361,7 +361,7 @@ impl Renderer {
                         .insert(texture_path.to_owned(), Arc::new(texture));
                 }
                 Err(e) => {
-                    warn!("Failed to load texture: {}", e);
+                    warn!("Failed to load texture: {e}");
                 }
             }
             self.textures.get(texture_path).unwrap().clone()
@@ -510,7 +510,7 @@ impl Renderer {
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         self.update_mvp(state);
         self.framebuffer
-            .set_scale_strategy(state.scale_strategy.clone());
+            .set_scale_strategy(state.scale_strategy);
         if state.is_lowres {
             self.framebuffer.begin_render();
         }
@@ -541,7 +541,7 @@ impl Renderer {
                         });
                         match res {
                             Ok(m) => {
-                                info!("Model succesfully loaded: {}", m);
+                                info!("Model succesfully loaded: {m}");
                             }
                             Err(e) => warn!("Failed to load model: [{e}]"),
                         }
@@ -637,7 +637,7 @@ impl Renderer {
             state.mouse_free = false;
         }
         let current_font = self.font_atlases.get(DEFAULT_FONT).unwrap();
-        let font_height = (current_font.size as f32 * scale / 2.0);
+        let font_height = current_font.size as f32 * scale / 2.0;
         self.ui_manager.draw_text(
             current_font,
             &format!(
@@ -889,8 +889,7 @@ impl BatchKey {
         BatchKey {
             texture_name: object.get_texture_name().map(|s| Arc::from(s.as_str())),
             shader_name: object
-                .get_shader_name()
-                .and_then(|s| Some(s.get_name()))
+                .get_shader_name().map(|s| s.get_name())
                 .map(|s| Arc::from(s.as_str())),
             is_selected,
             // blend_mode: object.get_blend_mode(),

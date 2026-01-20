@@ -5,7 +5,7 @@ use std::{ffi::CString, fs::File, io::Read, ptr};
 use anyhow::{Context, Result};
 use cgmath::{Matrix, Matrix4, Vector3, Vector4};
 use gl::types::{GLchar, GLint};
-use log::{error, info, warn};
+use log::{error, info};
 
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct ShaderInfo {
@@ -39,13 +39,13 @@ impl Shader {
         let mut vertex_source = String::new();
         let mut fragment_source = String::new();
         File::open(vertex_path)
-            .context(format!("Cannot find shader [{}]", vertex_path))?
+            .context(format!("Cannot find shader [{vertex_path}]"))?
             .read_to_string(&mut vertex_source)
-            .context(format!("Cannot read shader [{}]", vertex_path))?;
+            .context(format!("Cannot read shader [{vertex_path}]"))?;
         File::open(fragment_path)
-            .context(format!("Cannot find shader [{}]", fragment_path))?
+            .context(format!("Cannot find shader [{fragment_path}]"))?
             .read_to_string(&mut fragment_source)
-            .context(format!("Cannot read shader [{}]", fragment_path))?;
+            .context(format!("Cannot read shader [{fragment_path}]"))?;
         let id = Self::create_shader_program(&vertex_source, &fragment_source);
 
         #[cfg(debug_assertions)]
@@ -161,7 +161,7 @@ impl Shader {
             gl::ShaderSource(vertex_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
             gl::CompileShader(vertex_shader);
             if Self::check_shader_compile_errors(vertex_shader) {
-                error!("Vertex shader failed to compile [{}]", vertex_source);
+                error!("Vertex shader failed to compile [{vertex_source}]");
             }
 
             let fragment_shader = gl::CreateShader(gl::FRAGMENT_SHADER);
@@ -169,7 +169,7 @@ impl Shader {
             gl::ShaderSource(fragment_shader, 1, &c_str_vert.as_ptr(), std::ptr::null());
             gl::CompileShader(fragment_shader);
             if Self::check_shader_compile_errors(fragment_shader) {
-                error!("Fragment shader failed to compile [{}]", fragment_source);
+                error!("Fragment shader failed to compile [{fragment_source}]");
             }
 
             let shader_program = gl::CreateProgram();

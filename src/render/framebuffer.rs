@@ -136,7 +136,7 @@ impl Framebuffer {
                 gl::FLOAT,
                 gl::FALSE,
                 4 * std::mem::size_of::<f32>() as i32,
-                0 as *const _,
+                std::ptr::null(),
             );
             gl::EnableVertexAttribArray(0);
 

@@ -1,4 +1,4 @@
-use cgmath::{Angle, Array, InnerSpace, Matrix4, Point3, Rad, Vector3};
+use cgmath::{Angle, InnerSpace, Matrix4, Point3, Rad, Vector3};
 use glfw::Action;
 use num::Zero;
 

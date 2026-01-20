@@ -1,14 +1,14 @@
 use anyhow::Result;
 use std::{
-    collections::HashMap, ffi::c_void, mem::{self, offset_of}, ptr
+    ffi::c_void, mem::{self, offset_of}, ptr
 };
 
-use cgmath::{Matrix, Matrix4, ortho};
+use cgmath::{Matrix, Matrix4};
 use gl::types::{GLsizei, GLsizeiptr};
 use num::Zero;
 
 use crate::{
-    render::{color::Color, helpers::set_buffer_data_with_indices, renderer::TextureRef, vertex::Vertex},
+    render::{color::Color, renderer::TextureRef},
     shader::Shader,
     texture::Texture,
 };
@@ -46,7 +46,7 @@ impl UIRenderer {
             gl::GenBuffers(1, &mut ebo);
         }
         let white_texture = Texture::white();
-        let mut renderer = (Self {
+        let renderer = Self {
             white_texture,
             shader: Shader::new("assets/shaders/ui/vert.glsl", "assets/shaders/ui/frag.glsl")?,
             projection_matrix: Matrix4::zero(),
@@ -57,7 +57,7 @@ impl UIRenderer {
             vao,
             vbo,
             ebo,
-        });
+        };
         renderer.setup_buffers();
         Ok(renderer)
     }

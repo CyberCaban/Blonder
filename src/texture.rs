@@ -89,7 +89,7 @@ impl Texture {
             );
 
             let image = image::open(texture_path)
-                .context(format!("Cannot find texture [{}]", texture_path))?;
+                .context(format!("Cannot find texture [{texture_path}]"))?;
             let (width, height) = (image.width(), image.height());
             let raw_image = image.to_rgba().into_raw();
             let data = raw_image.as_ptr() as *const c_void;

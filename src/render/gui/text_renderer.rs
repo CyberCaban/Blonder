@@ -2,11 +2,9 @@ use anyhow::Result;
 use cgmath::{Matrix4, Vector4};
 use num::Zero;
 
-use crate::state::State;
 use crate::{
     render::{color::Color, gui::font::FontAtlas},
     shader::Shader,
-    state::Screen,
 };
 
 #[derive(Debug, Default)]
@@ -30,7 +28,7 @@ impl TextRenderer {
             "assets/shaders/text/frag.glsl",
         )?;
 
-        let mut renderer = TextRenderer {
+        let renderer = TextRenderer {
             vao,
             vbo,
             shader_program: shader,

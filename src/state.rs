@@ -1,4 +1,3 @@
-use std::ffi::OsStr;
 
 use cgmath::{Array, Vector3};
 use glfw::{GlfwReceiver, WindowEvent};

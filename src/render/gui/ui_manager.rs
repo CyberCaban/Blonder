@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 
 use anyhow::Result;
 
@@ -43,7 +42,7 @@ impl UIManager {
         })
     }
     pub fn begin_frame(&mut self, state: &State, render_screen: &Screen) {
-        let State { screen, .. } = state;
+        let State {  .. } = state;
         self.ui_renderer
             .update_projection(render_screen.width as f32, render_screen.height as f32);
         self.text_renderer
@@ -309,7 +308,7 @@ impl UIManager {
             is_captured,
         );
 
-        let value_text = format!("{:.2}", current_value);
+        let value_text = format!("{current_value:.2}");
         let scale = 0.25;
         let text_width = font.measure_line(&value_text, scale);
         let text_x = x + width + 10.0;
