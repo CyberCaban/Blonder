@@ -2,13 +2,13 @@ use anyhow::Result;
 use cgmath::Vector3;
 
 use crate::{
+    render::shader::ShaderInfo,
     render::{
         blend_mode::BlendMode,
         drawable::Drawable,
         helpers::set_buffer_data,
         vertex::{Vertex, calculate_normals},
     },
-    shader::ShaderInfo,
     state::State,
 };
 

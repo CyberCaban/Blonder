@@ -1,5 +1,8 @@
-use crate::{render::blend_mode::BlendMode, shader::ShaderInfo, state::State, texture::TextureConfig};
-
+use crate::{
+    render::{blend_mode::BlendMode, shader::ShaderInfo},
+    state::State,
+    texture::TextureConfig,
+};
 
 pub trait Drawable {
     fn draw(&self, glfw: &glfw::Glfw, state: &State);

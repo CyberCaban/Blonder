@@ -1,6 +1,6 @@
 use anyhow::{Result, bail};
 
-use crate::shader::Shader;
+use crate::render::shader::Shader;
 
 #[repr(C)]
 #[derive(Debug)]

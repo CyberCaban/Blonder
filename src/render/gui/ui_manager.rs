@@ -1,4 +1,3 @@
-
 use anyhow::Result;
 
 use crate::{
@@ -42,7 +41,7 @@ impl UIManager {
         })
     }
     pub fn begin_frame(&mut self, state: &State, render_screen: &Screen) {
-        let State {  .. } = state;
+        let State { .. } = state;
         self.ui_renderer
             .update_projection(render_screen.width as f32, render_screen.height as f32);
         self.text_renderer
@@ -257,7 +256,7 @@ impl UIManager {
     ) -> Option<f32> {
         let scale = 0.25;
         let label_x = x - 10.0;
-        let label_y = y + (height );
+        let label_y = y + (height);
 
         self.draw_text(font, label, label_x, label_y, scale, Color::white());
 

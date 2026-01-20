@@ -1,6 +1,8 @@
 use anyhow::Result;
 use std::{
-    ffi::c_void, mem::{self, offset_of}, ptr
+    ffi::c_void,
+    mem::{self, offset_of},
+    ptr,
 };
 
 use cgmath::{Matrix, Matrix4};
@@ -8,8 +10,8 @@ use gl::types::{GLsizei, GLsizeiptr};
 use num::Zero;
 
 use crate::{
+    render::shader::Shader,
     render::{color::Color, renderer::TextureRef},
-    shader::Shader,
     texture::Texture,
 };
 

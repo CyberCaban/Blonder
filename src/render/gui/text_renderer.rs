@@ -3,8 +3,8 @@ use cgmath::{Matrix4, Vector4};
 use num::Zero;
 
 use crate::{
+    render::shader::Shader,
     render::{color::Color, gui::font::FontAtlas},
-    shader::Shader,
 };
 
 #[derive(Debug, Default)]

@@ -2,14 +2,15 @@ use anyhow::Result;
 use cgmath::Vector3;
 
 use crate::{
+    render::shader::ShaderInfo,
     render::{
         blend_mode::BlendMode,
         drawable::Drawable,
         helpers::set_buffer_data,
         vertex::{Vertex, calculate_normals},
     },
-    shader::ShaderInfo,
-    state::State, texture::TextureConfig,
+    state::State,
+    texture::TextureConfig,
 };
 
 #[derive(Debug)]
@@ -144,7 +145,6 @@ impl Drawable for Cube {
     fn get_blend_mode(&self) -> BlendMode {
         self.blend_mode
     }
-
 }
 
 impl Drop for Cube {

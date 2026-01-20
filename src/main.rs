@@ -14,9 +14,9 @@ use crate::{
     render::{
         helpers::init_window,
         renderer::{RenderMaterial, RenderObject, Renderer},
+        shader::{Shader, ShaderInfo},
         transform::Transform,
     },
-    shader::{Shader, ShaderInfo},
     state::State,
     texture::TextureConfig,
 };
@@ -29,7 +29,6 @@ mod events;
 mod log;
 mod models;
 mod render;
-mod shader;
 mod state;
 mod texture;
 
@@ -141,19 +140,20 @@ fn main() -> Result<()> {
     )?;
     let _ = renderer.add_static_drawable(plane);
 
-    let mut frames = 0u32;
+    let mut update_timer = 0.0;
     while !window.should_close() {
         glfw.poll_events();
         let current_frame = glfw.get_time() as f32;
         state.delta_time = current_frame - state.last_frame;
         state.last_frame = current_frame;
 
-        frames += 1;
+        update_timer += state.delta_time;
 
         process_events(&mut window, &events, &mut state);
         state.camera.process_input(&mut window, state.delta_time);
 
-        if frames % 2 == 0 {
+        if update_timer >= 0.05 {
+            update_timer = 0.0;
             for (i, obj) in objIds.iter().enumerate() {
                 if let Ok(id) = obj
                     && let Some(render_object) = renderer.get_transform_mut(id)
@@ -164,7 +164,7 @@ fn main() -> Result<()> {
                     // tr.scale.y = state.numbers[0];
                     // tr.scale.z = state.numbers[0];
                     let r = tr.get_rotation();
-                    tr.set_rotation(Vector3::new(r.x, state.numbers[2], r.z));
+                    tr.set_rotation(Vector3::new(r.x, glfw.get_time() as f32, r.z));
                     // tr.rotation.x = (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
                     // tr.rotation.z = (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
                 }

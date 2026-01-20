@@ -2,7 +2,7 @@ use std::ptr;
 
 use crate::render::{
     blend_mode::BlendMode, drawable::Drawable, helpers::set_buffer_data_with_indices,
-    renderer::TextureRef, vertex::Vertex,
+    renderer::TextureRef, shader::ShaderInfo, vertex::Vertex,
 };
 
 #[derive(Debug)]
@@ -63,7 +63,7 @@ impl Drawable for Mesh {
     fn get_blend_mode(&self) -> BlendMode {
         BlendMode::Opaque
     }
-    fn get_shader_name(&self) -> Option<crate::shader::ShaderInfo> {
+    fn get_shader_name(&self) -> Option<ShaderInfo> {
         None
     }
     fn get_texture_config(&self) -> Option<crate::texture::TextureConfig> {

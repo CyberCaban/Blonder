@@ -4,7 +4,10 @@ use anyhow::Result;
 use thiserror::Error;
 
 use crate::{
-    render::{drawable::Drawable, model::mesh::Mesh, renderer::TextureRef, vertex::Vertex},
+    render::{
+        drawable::Drawable, model::mesh::Mesh, renderer::TextureRef, shader::ShaderInfo,
+        vertex::Vertex,
+    },
     texture::Texture,
 };
 
@@ -13,7 +16,7 @@ mod mesh;
 #[derive(Error, Debug)]
 pub enum LoadModelError {
     #[error("Invalid model or model file")]
-    InvalidModel
+    InvalidModel,
 }
 
 #[derive(Debug)]
@@ -93,7 +96,7 @@ impl Drawable for Model {
     fn get_blend_mode(&self) -> super::blend_mode::BlendMode {
         super::blend_mode::BlendMode::Opaque
     }
-    fn get_shader_name(&self) -> Option<crate::shader::ShaderInfo> {
+    fn get_shader_name(&self) -> Option<ShaderInfo> {
         None
     }
     fn get_texture_config(&self) -> Option<crate::texture::TextureConfig> {

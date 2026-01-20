@@ -7,6 +7,8 @@ use cgmath::{Matrix, Matrix4, Vector3, Vector4};
 use gl::types::{GLchar, GLint};
 use log::{error, info};
 
+pub mod pass_uniforms;
+
 #[derive(Debug, Hash, PartialEq, Eq, Clone)]
 pub struct ShaderInfo {
     pub name: String,

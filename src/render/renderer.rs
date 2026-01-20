@@ -4,7 +4,6 @@ use log::warn;
 use num::Zero;
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::f32::consts::PI;
 use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
@@ -20,11 +19,11 @@ use crate::render::framebuffer::{Framebuffer, ViewportScaleStrategy};
 use crate::render::gui::font::FontAtlas;
 use crate::render::gui::ui_manager::UIManager;
 use crate::render::model::Model;
+use crate::render::shader::Shader;
 use crate::state::Screen;
 use crate::texture::TextureConfig;
 use crate::{
     render::{drawable::Drawable, transform::Transform},
-    shader::Shader,
     state::State,
     texture::Texture,
 };
@@ -490,8 +489,7 @@ impl Renderer {
 
                 let light_color = Vector3::new(1.0, 1.0, 1.0);
                 let diffuse_color = light_color.mul_element_wise(Vector3::from_value(0.5));
-                let ambient_color =
-                    diffuse_color.mul_element_wise(Vector3::from_value(state.numbers[1]));
+                let ambient_color = diffuse_color.mul_element_wise(Vector3::from_value(-1.2));
                 shader.set_vec3("light.ambient", &ambient_color);
                 shader.set_vec3("light.diffuse", &diffuse_color);
                 shader.set_vec3("light.specular", &Vector3::from_value(1.0));
@@ -509,8 +507,7 @@ impl Renderer {
     }
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         self.update_mvp(state);
-        self.framebuffer
-            .set_scale_strategy(state.scale_strategy);
+        self.framebuffer.set_scale_strategy(state.scale_strategy);
         if state.is_lowres {
             self.framebuffer.begin_render();
         }
@@ -529,28 +526,10 @@ impl Renderer {
                 if state.wireframe { gl::LINE } else { gl::FILL },
             );
 
-            if let Some(model_path) = &state.model_path_to_load {
-                let m = Model::new(&model_path);
-                match m {
-                    Ok(m) => {
-                        // dbg!(&m);
-                        let res = self.add_render_object(RenderObject {
-                            drawable: Box::new(m),
-                            transform: Some(Transform::default()),
-                            material: Some(RenderMaterial::default()),
-                        });
-                        match res {
-                            Ok(m) => {
-                                info!("Model succesfully loaded: {m}");
-                            }
-                            Err(e) => warn!("Failed to load model: [{e}]"),
-                        }
-                    }
-                    Err(e) => {
-                        warn!("Failed to load model: [{e}]");
-                    }
+            if let Some(_) = &state.model_path_to_load {
+                if let Err(e) = self.load_model(state) {
+                    warn!("Failed to load model: [{e}]");
                 }
-                state.model_path_to_load = None;
             }
         }
 
@@ -579,6 +558,16 @@ impl Renderer {
             self.fps_samples.pop_front();
         }
         self.fps_samples.push_back(1.0 / state.delta_time);
+    }
+    fn load_model(&mut self, state: &mut State) -> Result<()> {
+        let m = Model::new(&state.model_path_to_load.as_ref().unwrap())?;
+        self.add_render_object(RenderObject {
+            drawable: Box::new(m),
+            transform: Some(Transform::default()),
+            material: Some(RenderMaterial::default()),
+        })?;
+        state.model_path_to_load = None;
+        Ok(())
     }
     fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         let scale = if state.is_lowres { 0.25 } else { 0.5 };
@@ -776,47 +765,47 @@ impl Renderer {
 
         let slider_width = panel_width * 0.8;
         let slider_height = 20.0;
-        if let Some(value) = self.ui_manager.slider_with_label(
-            4,
-            "Light intensity",
-            margin_x,
-            current_y,
-            slider_width,
-            slider_height,
-            state.numbers[1],
-            -2.0,
-            2.0,
-            current_font,
-            mouse_x,
-            mouse_y,
-            state.mouse_pressed,
-            state.camera.is_captured,
-        ) {
-            state.mouse_free = false;
-            state.numbers[1] = value;
-        }
-        current_y += slider_height + spacing_y;
+        // if let Some(value) = self.ui_manager.slider_with_label(
+        //     4,
+        //     "Light intensity",
+        //     margin_x,
+        //     current_y,
+        //     slider_width,
+        //     slider_height,
+        //     state.numbers[1],
+        //     -2.0,
+        //     2.0,
+        //     current_font,
+        //     mouse_x,
+        //     mouse_y,
+        //     state.mouse_pressed,
+        //     state.camera.is_captured,
+        // ) {
+        //     state.mouse_free = false;
+        //     state.numbers[1] = value;
+        // }
+        // current_y += slider_height + spacing_y;
 
-        if let Some(value) = self.ui_manager.slider_with_label(
-            5,
-            "Rotation",
-            margin_x,
-            current_y,
-            slider_width,
-            slider_height,
-            state.numbers[2],
-            0.0,
-            2.0 * PI,
-            current_font,
-            mouse_x,
-            mouse_y,
-            state.mouse_pressed,
-            state.camera.is_captured,
-        ) {
-            state.mouse_free = false;
-            state.numbers[2] = value;
-        }
-        current_y += slider_height + spacing_y;
+        // if let Some(value) = self.ui_manager.slider_with_label(
+        //     5,
+        //     "Rotation",
+        //     margin_x,
+        //     current_y,
+        //     slider_width,
+        //     slider_height,
+        //     state.numbers[2],
+        //     0.0,
+        //     2.0 * PI,
+        //     current_font,
+        //     mouse_x,
+        //     mouse_y,
+        //     state.mouse_pressed,
+        //     state.camera.is_captured,
+        // ) {
+        //     state.mouse_free = false;
+        //     state.numbers[2] = value;
+        // }
+        // current_y += slider_height + spacing_y;
 
         let screen = if state.is_lowres {
             Screen {
@@ -889,7 +878,8 @@ impl BatchKey {
         BatchKey {
             texture_name: object.get_texture_name().map(|s| Arc::from(s.as_str())),
             shader_name: object
-                .get_shader_name().map(|s| s.get_name())
+                .get_shader_name()
+                .map(|s| s.get_name())
                 .map(|s| Arc::from(s.as_str())),
             is_selected,
             // blend_mode: object.get_blend_mode(),

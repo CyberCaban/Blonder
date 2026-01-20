@@ -1,4 +1,4 @@
-use crate::{shader::Shader, state::Screen, texture::Texture};
+use crate::{render::shader::Shader, state::Screen, texture::Texture};
 use anyhow::Result;
 
 #[derive(Debug, Clone, Copy)]

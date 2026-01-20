@@ -1,6 +1,6 @@
 use crate::{
+    render::shader::ShaderInfo,
     render::{drawable::Drawable, helpers::set_buffer_data, vertex::Vertex},
-    shader::ShaderInfo,
     texture::Texture,
 };
 
