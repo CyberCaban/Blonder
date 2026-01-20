@@ -12,6 +12,7 @@ use crate::{
         plane::Plane,
     },
     render::{
+        blend_mode::BlendMode,
         helpers::init_window,
         light::{DirLight, PointLight, SpotLight},
         renderer::{RenderMaterial, RenderObject, Renderer},
@@ -55,7 +56,7 @@ fn main() -> Result<()> {
 
     let texture_pool = [
         ("assets/textures/transparency.png", true),
-        ("assets/textures/skebob.png", false),
+        ("assets/textures/colored_glass.png", true),
         ("assets/textures/white.png", false),
     ];
 
@@ -86,6 +87,11 @@ fn main() -> Result<()> {
                 } as i32,
                 ..Default::default()
             },
+            blend_mode: if texture.1 {
+                BlendMode::AlphaTest
+            } else {
+                BlendMode::Opaque
+            },
             ..Default::default()
         })
         .unwrap();
@@ -97,15 +103,15 @@ fn main() -> Result<()> {
 
         let render_object = RenderObject {
             drawable: Box::new(cube),
-            material: Some(RenderMaterial {
+            material: RenderMaterial {
                 // specular: Some("assets/textures/specular.png".to_string()),
                 // specular: Some(texture.0.to_string()),
                 specular: None,
-                emission: Some("assets/textures/emission.jpg".to_string()),
-                // emission: None,
+                // emission: Some("assets/textures/emission.jpg".to_string()),
+                emission: None,
                 shininess: 128.0,
-            }),
-            transform: Some(transform),
+            },
+            transform: transform,
         };
         let id = renderer.add_render_object(render_object);
         objIds.push(id);
@@ -124,12 +130,12 @@ fn main() -> Result<()> {
     })?;
     let light_ro = RenderObject {
         drawable: Box::new(light_src),
-        transform: Some(Transform::new(
+        transform: Transform::new(
             Some(Vector3::from_value(0.0)),
             None,
             Some(Vector3::from_value(0.5)),
-        )),
-        material: Some(RenderMaterial::default()),
+        ),
+        material: RenderMaterial::default(),
     };
     let light_id = renderer.add_render_object(light_ro)?;
     // let _ = renderer.set_light_src(&light_id);
@@ -152,8 +158,8 @@ fn main() -> Result<()> {
         linear: 0.07, // Меньше затухание
         quadratic: 0.017,
         ambient: Vector3::new(0.01, 0.02, 0.05), // Холодный ambient
-        diffuse: Vector3::new(0.6, 0.8, 1.0) * 0.4,    // Холодный синий
-        specular: Vector3::new(0.8, 0.9, 1.0) * 0.5,   // Холодные блики
+        diffuse: Vector3::new(0.6, 0.8, 1.0) * 0.4, // Холодный синий
+        specular: Vector3::new(0.8, 0.9, 1.0) * 0.5, // Холодные блики
     });
 
     // // 4. Точечный свет 3 (нейтральный, сзади)
@@ -163,8 +169,8 @@ fn main() -> Result<()> {
         linear: 0.14, // Больше затухание
         quadratic: 0.07,
         ambient: Vector3::new(0.03, 0.03, 0.03), // Нейтральный ambient
-        diffuse: Vector3::new(0.9, 0.9, 0.9) * 0.4,    // Нейтральный белый
-        specular: Vector3::new(1.0, 1.0, 1.0) * 0.5,   // Белые блики
+        diffuse: Vector3::new(0.9, 0.9, 0.9) * 0.4, // Нейтральный белый
+        specular: Vector3::new(1.0, 1.0, 1.0) * 0.5, // Белые блики
     });
 
     let _ = renderer.add_dir_light(DirLight {
@@ -205,7 +211,7 @@ fn main() -> Result<()> {
             for (i, obj) in objIds.iter().enumerate() {
                 if let Ok(id) = obj
                     && let Some(render_object) = renderer.get_transform_mut(id)
-                    && let Some(tr) = render_object.get_transform_mut()
+                    && let tr = render_object.get_transform_mut()
                 {
                     tr.set_scale(Vector3::from_value(1.0));
                     // tr.scale.x = state.numbers[0];

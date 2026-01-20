@@ -8,6 +8,7 @@ use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
 
+use crate::render::blend_mode::BlendMode;
 use crate::render::color::Color;
 use crate::render::consts::DEFAULT_BLACK_TEXTURE;
 use crate::render::consts::DEFAULT_FONT;
@@ -56,13 +57,13 @@ impl Default for RenderMaterial {
 
 pub struct RenderObject {
     pub drawable: Box<dyn Drawable>,
-    pub transform: Option<Transform>,
-    pub material: Option<RenderMaterial>,
+    pub transform: Transform,
+    pub material: RenderMaterial,
 }
 
 impl RenderObject {
-    pub fn get_transform_mut(&mut self) -> Option<&mut Transform> {
-        self.transform.as_mut()
+    pub fn get_transform_mut(&mut self) -> &mut Transform {
+        &mut self.transform
     }
 }
 
@@ -76,6 +77,7 @@ pub enum RendererError {
 
 pub type TextureRef = Arc<Texture>;
 pub type FontAtlasRef = Arc<FontAtlas>;
+pub type ShaderRef = Arc<Shader>;
 
 pub struct Renderer {
     drawables: Vec<RenderObject>,
@@ -87,8 +89,8 @@ pub struct Renderer {
     dir_lights: VecDeque<DirLight>,
     spot_lights: VecDeque<SpotLight>,
 
-    shaders: HashMap<String, Shader>,
-    current_shader: Option<String>,
+    shaders: HashMap<String, ShaderRef>,
+    current_shader: Option<ShaderRef>,
 
     model_matrix: Matrix4<f32>,
     view_matrix: Matrix4<f32>,
@@ -109,7 +111,7 @@ impl Renderer {
             dynamic_map: HashMap::new(),
             shaders: HashMap::from([(
                 DEFAULT_SHADER_NAME.to_string(),
-                Shader::new(DEFAULT_SHADER_VERT, DEFAULT_SHADER_FRAG)?,
+                Arc::new(Shader::new(DEFAULT_SHADER_VERT, DEFAULT_SHADER_FRAG)?),
             )]),
             textures: HashMap::from([
                 (
@@ -148,16 +150,16 @@ impl Renderer {
         Ok(renderer)
     }
     pub fn add_shader(&mut self, name: &str, shader: Shader) {
-        self.shaders.insert(name.to_string(), shader);
+        self.shaders.insert(name.to_string(), shader.into());
     }
     pub fn add_default_shader(&mut self, shader: Shader) {
-        self.shaders.insert("default".to_string(), shader);
+        self.shaders.insert("default".to_string(), shader.into());
         let _ = self.use_shader("default");
     }
     pub fn use_shader(&mut self, name: &str) -> Result<()> {
         if let Some(shader) = self.shaders.get(name) {
             shader.use_shader();
-            self.current_shader = Some(name.to_string());
+            self.current_shader = Some(shader.clone());
             Ok(())
         } else {
             warn!("Shader [{name}] not found");
@@ -166,9 +168,7 @@ impl Renderer {
     }
     pub fn use_current_shader(&self) -> Result<()> {
         let current_shader = &self.current_shader;
-        if let Some(shader_name) = current_shader
-            && let Some(shader) = self.shaders.get(shader_name)
-        {
+        if let Some(shader) = current_shader {
             shader.use_shader();
             shader.set_mat4("model", &self.model_matrix);
             shader.set_mat4("view", &self.view_matrix);
@@ -203,7 +203,7 @@ impl Renderer {
         {
             match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
                 Ok(s) => {
-                    self.shaders.insert(shader_name.name, s);
+                    self.shaders.insert(shader_name.name, s.into());
                 }
                 Err(e) => {
                     warn!("Failer to load shader: [{e}]");
@@ -212,8 +212,8 @@ impl Renderer {
         }
         let render_object = RenderObject {
             drawable: Box::new(object),
-            transform: Some(Transform::default()),
-            material: None,
+            transform: Transform::default(),
+            material: RenderMaterial::default(),
         };
         self.drawables.push(render_object);
         Ok(())
@@ -244,7 +244,7 @@ impl Renderer {
         {
             match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
                 Ok(s) => {
-                    self.shaders.insert(shader_name.name, s);
+                    self.shaders.insert(shader_name.name, s.into());
                 }
                 Err(e) => {
                     warn!("Failer to load shader: [{e}]");
@@ -254,8 +254,8 @@ impl Renderer {
         let id = Uuid::new_v4();
         let render_object = RenderObject {
             drawable: Box::new(object),
-            transform: Some(Transform::default()),
-            material: None,
+            transform: Transform::default(),
+            material: RenderMaterial::default(),
         };
         self.drawables.push(render_object);
         self.dynamic_map.insert(id, self.drawables.len() - 1);
@@ -288,16 +288,16 @@ impl Renderer {
         {
             match Shader::new(&shader_name.vertex_path, &shader_name.fragment_path) {
                 Ok(s) => {
-                    self.shaders.insert(shader_name.name, s);
+                    self.shaders.insert(shader_name.name, s.into());
                 }
                 Err(e) => {
                     warn!("Failer to load shader: [{e}]");
                 }
             }
         }
+        let material = &object.material;
         // load specular map
-        if let Some(material) = &object.material
-            && let Some(specular_map) = &material.specular
+        if let Some(specular_map) = &material.specular
             && !self.textures.contains_key(specular_map)
         {
             match Texture::new(specular_map) {
@@ -311,8 +311,7 @@ impl Renderer {
             }
         }
         // load emission map
-        if let Some(material) = &object.material
-            && let Some(emission_map) = &material.emission
+        if let Some(emission_map) = &material.emission
             && !self.textures.contains_key(emission_map)
         {
             match Texture::new(emission_map) {
@@ -398,113 +397,55 @@ impl Renderer {
         self.view_matrix = view_matrix;
         self.projection_matrix = projection_matrix;
     }
-    fn batch_render(&mut self, glfw: &mut glfw::Glfw, state: &State) {
+    fn batch_render(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         let mut batches: HashMap<BatchKey, Vec<usize>> = HashMap::new();
         batches.reserve(self.drawables.len() / 4);
+        let mut transparent_objects: Vec<(usize, f32)> = Vec::new();
         for (index, render_obj) in self.drawables.iter().enumerate() {
             let is_selected = state.selected_item == Some(index);
             let key = BatchKey::from_object(render_obj.drawable.as_ref(), is_selected);
 
-            batches.entry(key).or_default().push(index);
+            if render_obj.drawable.get_blend_mode() == BlendMode::Opaque || true {
+                batches.entry(key).or_default().push(index);
+            } else {
+                let distance =
+                    (state.camera.position - render_obj.transform.get_position()).magnitude();
+                transparent_objects.push((index, distance));
+            }
         }
 
-        for (key, objects) in batches {
-            let shader = if let Some(shader_name) = &key.shader_name
-                && let Some(shader) = self.shaders.get(shader_name.as_ref())
-            {
-                shader.use_shader();
-                self.apply_uniforms(shader, glfw, state);
-                self.current_shader = Some(shader_name.to_string());
-                Some(shader)
-            } else if let Some(default_shader) = self.shaders.get(DEFAULT_SHADER_NAME) {
-                default_shader.use_shader();
-                self.apply_uniforms(default_shader, glfw, state);
-                self.current_shader = Some(DEFAULT_SHADER_NAME.to_string());
-                Some(default_shader)
-            } else {
-                None
-            };
+        transparent_objects.sort_by(|a, b| (b.1).partial_cmp(&a.1).unwrap());
 
-            if shader.is_none() {
+        if state.display_debug_info {
+            state.display_debug_info = false;
+            dbg!(&batches, &transparent_objects);
+        }
+        self.draw_batch(glfw, state, batches);
+    }
+    fn draw_batch(
+        &mut self,
+        glfw: &mut glfw::Glfw,
+        state: &mut State,
+        batches: HashMap<BatchKey, Vec<usize>>,
+    ) {
+        for (key, objects) in batches {
+            self.apply_shaders(&key, glfw, state);
+            if self.current_shader.is_none() {
                 continue;
             }
-            let shader = shader.unwrap();
+            let shader = self.current_shader.as_ref().unwrap();
 
-            if key.is_selected {
-                shader.set_int("isSelected", 1);
-                shader.set_vec3("highlightColor", &Vector3::new(0.2, 1.0, 0.2));
-                shader.set_float("highlightIntensity", 0.3);
-            } else {
-                shader.set_int("isSelected", 0);
-            }
+            self.apply_batch_uniforms(&key, glfw, state);
+            self.apply_batch_textures(&key);
 
-            if let Some(texture_name) = &key.texture_name
-                && let Some(texture) = self.textures.get(texture_name.as_ref())
-            {
-                unsafe {
-                    gl::ActiveTexture(gl::TEXTURE0);
-                    texture.use_texture();
-                }
-            } else if let Some(default_texture) = self.textures.get(DEFAULT_WHITE_TEXTURE) {
-                unsafe {
-                    gl::ActiveTexture(gl::TEXTURE0);
-                    default_texture.use_texture();
-                }
-            }
-
-            // key.blend_mode.apply();
+            key.blend_mode.apply();
             for index in &objects {
                 let render_obj = &self.drawables[*index];
                 // set transform
-                if let Some(transform) = &render_obj.transform {
-                    let model = transform.calculate_model();
-                    shader.set_mat4("model", &model);
-                } else {
-                    shader.set_mat4("model", &self.model_matrix);
-                }
+                self.apply_transform(render_obj);
 
                 // set material
-                let obj_material = if let Some(material) = &render_obj.material {
-                    material
-                } else {
-                    &RenderMaterial::default()
-                };
-                shader.set_float("material.shininess", obj_material.shininess);
-
-                // set specular
-                shader.set_int("material.specular", 1);
-                unsafe {
-                    gl::ActiveTexture(gl::TEXTURE1);
-                }
-                if let Some(spec) = &obj_material.specular
-                    && let Some(spec_texture) = self.textures.get(spec)
-                {
-                    spec_texture.use_texture();
-                }
-                // load RO texture as specular texture if one's missing
-                else if let Some(texture_name) = &key.texture_name
-                    && let Some(texture) = self.textures.get(texture_name.as_ref())
-                {
-                    texture.use_texture();
-                } else if let Some(default_texture) = self.textures.get(DEFAULT_WHITE_TEXTURE) {
-                    default_texture.use_texture();
-                }
-
-                // set emission
-                shader.set_int("material.emission", 2);
-                unsafe {
-                    gl::ActiveTexture(gl::TEXTURE2);
-                }
-                if let Some(emission) = &obj_material.emission
-                    && let Some(emission_texture) = self.textures.get(emission)
-                {
-                    emission_texture.use_texture();
-                } else {
-                    // emission texture must be present even if RO doesn't specify it
-                    let black_emission = self.textures.get(DEFAULT_BLACK_TEXTURE).unwrap();
-                    black_emission.use_texture();
-                }
-
+                self.apply_material(render_obj, &key);
                 render_obj.drawable.draw(glfw, state);
             }
         }
@@ -528,6 +469,94 @@ impl Renderer {
         }
         for (index, light) in self.spot_lights.iter().enumerate() {
             light.pass_uniforms(shader, &format!("spotLights[{}]", index));
+        }
+    }
+    fn apply_shaders(&mut self, key: &BatchKey, glfw: &mut glfw::Glfw, state: &mut State) -> bool {
+        let shader = if let Some(shader_name) = &key.shader_name
+            && let Some(shader) = self.shaders.get(shader_name.as_ref())
+        {
+            shader.use_shader();
+            self.apply_uniforms(shader, glfw, state);
+            self.current_shader = Some(shader.clone());
+            Some(shader)
+        } else if let Some(default_shader) = self.shaders.get(DEFAULT_SHADER_NAME) {
+            default_shader.use_shader();
+            self.apply_uniforms(default_shader, glfw, state);
+            self.current_shader = Some(default_shader.clone());
+            Some(default_shader)
+        } else {
+            None
+        };
+        shader.is_some()
+    }
+    fn apply_batch_textures(&self, key: &BatchKey) {
+        if let Some(texture_name) = &key.texture_name
+            && let Some(texture) = self.textures.get(texture_name.as_ref())
+        {
+            unsafe {
+                gl::ActiveTexture(gl::TEXTURE0);
+                texture.use_texture();
+            }
+        } else if let Some(default_texture) = self.textures.get(DEFAULT_WHITE_TEXTURE) {
+            unsafe {
+                gl::ActiveTexture(gl::TEXTURE0);
+                default_texture.use_texture();
+            }
+        }
+    }
+    fn apply_batch_uniforms(&self, key: &BatchKey, glfw: &mut glfw::Glfw, state: &mut State) {
+        let shader = self.current_shader.as_ref().unwrap();
+        if key.is_selected {
+            shader.set_int("isSelected", 1);
+            shader.set_vec3("highlightColor", &Vector3::new(0.2, 1.0, 0.2));
+            shader.set_float("highlightIntensity", 0.3);
+        } else {
+            shader.set_int("isSelected", 0);
+        }
+    }
+    fn apply_transform(&self, render_obj: &RenderObject) {
+        let transform = &render_obj.transform;
+        let model = transform.calculate_model();
+        let shader = self.current_shader.as_ref().unwrap();
+        shader.set_mat4("model", &model);
+    }
+    fn apply_material(&self, render_obj: &RenderObject, key: &BatchKey) {
+        let shader = self.current_shader.as_ref().unwrap();
+        let obj_material = &render_obj.material;
+        shader.set_float("material.shininess", obj_material.shininess);
+
+        // set specular
+        shader.set_int("material.specular", 1);
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE1);
+        }
+        if let Some(spec) = &obj_material.specular
+            && let Some(spec_texture) = self.textures.get(spec)
+        {
+            spec_texture.use_texture();
+        }
+        // load RO texture as specular texture if one's missing
+        else if let Some(texture_name) = &key.texture_name
+            && let Some(texture) = self.textures.get(texture_name.as_ref())
+        {
+            texture.use_texture();
+        } else if let Some(default_texture) = self.textures.get(DEFAULT_WHITE_TEXTURE) {
+            default_texture.use_texture();
+        }
+
+        // set emission
+        shader.set_int("material.emission", 2);
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE2);
+        }
+        if let Some(emission) = &obj_material.emission
+            && let Some(emission_texture) = self.textures.get(emission)
+        {
+            emission_texture.use_texture();
+        } else {
+            // emission texture must be present even if RO doesn't specify it
+            let black_emission = self.textures.get(DEFAULT_BLACK_TEXTURE).unwrap();
+            black_emission.use_texture();
         }
     }
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
@@ -590,8 +619,8 @@ impl Renderer {
         let m = Model::new(&state.model_path_to_load.as_ref().unwrap())?;
         self.add_render_object(RenderObject {
             drawable: Box::new(m),
-            transform: Some(Transform::default()),
-            material: Some(RenderMaterial::default()),
+            transform: Transform::default(),
+            material: RenderMaterial::default(),
         })?;
         state.model_path_to_load = None;
         Ok(())
@@ -780,7 +809,7 @@ impl Renderer {
         current_y += button_height + spacing_y;
 
         if let Some(i) = state.selected_item
-            && let Some(tr) = &mut self.drawables[i].transform
+            && let tr = &mut self.drawables[i].transform
         {
             tr.set_position(state.selected_item_pos);
             //     if let Some(light_src) = &self.light_source
@@ -857,11 +886,7 @@ impl Renderer {
             if p > 0 {
                 let index = p as usize - 1;
                 state.selected_item = Some(index);
-                let selected_item_pos = self.drawables[index]
-                    .transform
-                    .clone()
-                    .unwrap()
-                    .get_position();
+                let selected_item_pos = self.drawables[index].transform.clone().get_position();
                 state.selected_item_pos = selected_item_pos;
             } else {
                 state.selected_item = None;
@@ -880,12 +905,9 @@ impl Renderer {
             let render_obj = &self.drawables[index];
             let object_id = (index + 1) as u32;
             shader.set_uint("objectId", object_id);
-            if let Some(transform) = &render_obj.transform {
-                let model = transform.calculate_model();
-                shader.set_mat4("model", &model);
-            } else {
-                shader.set_mat4("model", &self.model_matrix);
-            }
+            let transform = &render_obj.transform;
+            let model = transform.calculate_model();
+            shader.set_mat4("model", &model);
 
             render_obj.drawable.draw(glfw, state);
         }
@@ -897,7 +919,7 @@ struct BatchKey {
     texture_name: Option<Arc<str>>,
     shader_name: Option<Arc<str>>,
     is_selected: bool,
-    // blend_mode: BlendMode,
+    blend_mode: BlendMode,
 }
 
 impl BatchKey {
@@ -909,7 +931,7 @@ impl BatchKey {
                 .map(|s| s.get_name())
                 .map(|s| Arc::from(s.as_str())),
             is_selected,
-            // blend_mode: object.get_blend_mode(),
+            blend_mode: object.get_blend_mode(),
         }
     }
     fn set_shader(&mut self, shader: Option<Arc<str>>) {
