@@ -165,7 +165,7 @@ impl UIRenderer {
 
             gl::ActiveTexture(gl::TEXTURE0);
             self.white_texture.use_texture();
-            // self.shader.set_int("texture1", 0);
+            self.shader.set_int("uTexture", 0);
 
             gl::Enable(gl::BLEND);
             gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
@@ -242,10 +242,6 @@ impl UIRenderer {
         }
     }
     pub fn draw_rect(&mut self, x: f32, y: f32, width: f32, height: f32, color: &Color) {
-        unsafe {
-            gl::ActiveTexture(gl::TEXTURE0);
-            self.white_texture.use_texture();
-        }
         let start_index = self.vertex_data.len() as u32;
         let color = color.as_array();
 

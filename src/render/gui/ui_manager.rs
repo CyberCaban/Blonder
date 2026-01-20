@@ -48,12 +48,6 @@ impl UIManager {
             .set_projection(render_screen.width as f32, render_screen.height as f32);
 
         self.ui_renderer.begin_frame();
-
-        unsafe {
-            gl::Enable(gl::BLEND);
-            gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-            gl::Disable(gl::DEPTH_TEST);
-        }
     }
     pub fn end_frame(&mut self) {
         self.ui_renderer.end_frame();
