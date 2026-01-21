@@ -25,7 +25,6 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
     glfw.window_hint(glfw::WindowHint::OpenGlProfile(
         glfw::OpenGlProfileHint::Core,
     ));
-    glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
     let (mut window, events) = glfw
         .create_window(WIDTH, HEIGHT, "Hello", glfw::WindowMode::Windowed)
         .context("Failed to create window")?;
@@ -43,6 +42,7 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
             .map(|ptr| ptr as *const c_void)
             .unwrap_or(std::ptr::null())
     });
+    glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
     unsafe {
         // depth buffer
         gl::Enable(gl::DEPTH_TEST);
@@ -50,10 +50,6 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
         gl::Enable(gl::CULL_FACE);
         gl::CullFace(gl::BACK);
         gl::FrontFace(gl::CCW);
-        // texture blending
-        gl::Enable(gl::BLEND);
-        gl::BlendFunc(gl::SRC_ALPHA, gl::ONE_MINUS_SRC_ALPHA);
-        gl::BlendEquation(gl::FUNC_ADD);
     }
 
     #[cfg(debug_assertions)]

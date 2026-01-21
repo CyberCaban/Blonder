@@ -1,3 +1,5 @@
+use std::{thread, time::Duration};
+
 use ::log::info;
 use anyhow::{Context as _, Result};
 use cgmath::{Angle, Array, Deg, InnerSpace, Vector3};
@@ -107,8 +109,8 @@ fn main() -> Result<()> {
                 // specular: Some("assets/textures/specular.png".to_string()),
                 // specular: Some(texture.0.to_string()),
                 specular: None,
-                // emission: Some("assets/textures/emission.jpg".to_string()),
-                emission: None,
+                emission: Some("assets/textures/emission.jpg".to_string()),
+                // emission: None,
                 shininess: 128.0,
             },
             transform: transform,
@@ -175,7 +177,7 @@ fn main() -> Result<()> {
 
     let _ = renderer.add_dir_light(DirLight {
         direction: Vector3::new(0.5, -0.3, -0.4).normalize(),
-        ambient: Vector3::from_value(0.3),
+        ambient: Vector3::from_value(0.15),
         diffuse: Vector3::from_value(0.3),
         specular: Vector3::from_value(0.5),
     });
@@ -208,16 +210,16 @@ fn main() -> Result<()> {
 
         if update_timer >= 0.05 {
             update_timer = 0.0;
-            for (i, obj) in objIds.iter().enumerate() {
+            for (_, obj) in objIds.iter().enumerate() {
                 if let Ok(id) = obj
                     && let Some(render_object) = renderer.get_transform_mut(id)
-                    && let tr = render_object.get_transform_mut()
                 {
+                    let tr = render_object.get_transform_mut();
                     tr.set_scale(Vector3::from_value(1.0));
                     // tr.scale.x = state.numbers[0];
                     // tr.scale.y = state.numbers[0];
                     // tr.scale.z = state.numbers[0];
-                    let r = tr.get_rotation();
+                    // let r = tr.get_rotation();
                     // tr.set_rotation(Vector3::new(r.x, glfw.get_time() as f32, r.z));
                     // tr.rotation.x = (glfw.get_time() as f32) * ((i % 10) as f32) + (i * 100) as f32;
                     // tr.rotation.z = (glfw.get_time() as f32) * ((i % 5) as f32) + (i * 100) as f32;
@@ -228,6 +230,7 @@ fn main() -> Result<()> {
         renderer.render_checkerboard(&mut glfw, &mut state);
 
         window.swap_buffers();
+        thread::sleep(Duration::from_secs(1) / 30 - Duration::from_millis(state.delta_time as u64));
     }
     Ok(())
 }
