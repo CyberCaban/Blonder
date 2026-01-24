@@ -7,7 +7,8 @@ uniform mat4 view;
 uniform mat4 projection;
 uniform mat4 mvp;
 uniform float uTime;
-uniform vec3 lightPos;
+// vertex snapping
+uniform float snapFactor = 0.0;
 out VS_OUT {
     vec2 TexCoords;
     vec3 FragPos;
@@ -18,5 +19,15 @@ void main() {
     // TODO: Make inverse matrices on CPU
     vs_out.Normal = mat3(transpose(inverse(model))) * aNormal;
     vs_out.TexCoords = aTexCoord;
-    gl_Position = projection * view * vec4(vs_out.FragPos, 1.0);
+    vec4 clipPos = projection * view * vec4(vs_out.FragPos, 1.0);
+
+    // vertex snapping
+    vec2 screenPos = clipPos.xy / clipPos.w;
+    float snapFactor = max(snapFactor, 0.1);
+    if(snapFactor > 0.1) {
+        screenPos = floor(screenPos * snapFactor) / snapFactor;
+        clipPos.xy = screenPos * clipPos.w;
+    }
+
+    gl_Position = clipPos;
 }

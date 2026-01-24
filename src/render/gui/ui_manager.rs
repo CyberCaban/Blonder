@@ -286,6 +286,12 @@ impl UIManager {
         mouse_pressed: bool,
         is_captured: bool,
     ) -> Option<f32> {
+        let scale = 0.25;
+        let label_x = x - 10.0;
+        let label_y = y + (height);
+
+        self.draw_text(font, &format!("{label}: {current_value:.2}"), label_x, label_y, scale, Color::white());
+
         let result = self.slider(
             id,
             x,
@@ -300,14 +306,6 @@ impl UIManager {
             mouse_pressed,
             is_captured,
         );
-
-        let value_text = format!("{current_value:.2}");
-        let scale = 0.25;
-        let text_width = font.measure_line(&value_text, scale);
-        let text_x = x + width + 10.0;
-        let text_y = y + (height - font.size as f32 * scale) / 2.0;
-
-        self.draw_text(font, &value_text, text_x, text_y, scale, Color::white());
 
         result
     }

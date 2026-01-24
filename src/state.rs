@@ -5,7 +5,7 @@ use crate::{
     camera::Camera,
     render::{
         consts::{HEIGHT, WIDTH},
-        framebuffer::ViewportScaleStrategy,
+        framebuffer::ViewportScaleStrategy, shader::Shader,
     },
 };
 
@@ -19,6 +19,20 @@ enum TextureFiltering {
     Bilinear = (gl::LINEAR),
 }
 
+#[derive(Debug, Default)]
+pub struct ShaderSettings {
+    // vertex snapping
+    pub snapping_factor: f32,
+    // dithering
+    pub dither_intensity: f32,
+}
+impl ShaderSettings {
+    pub fn apply(&self, shader: &Shader) {
+        shader.set_float("snapFactor", self.snapping_factor);
+        shader.set_float("ditherIntensity", self.dither_intensity);
+    }
+}
+
 #[derive(Debug)]
 pub struct Screen {
     pub width: u32,
@@ -28,7 +42,7 @@ pub struct Screen {
 pub struct State {
     pub color: (f32, f32, f32, f32),
     pub show_ui: bool,
-    pub light_pos: Vector3<f32>,
+    pub shader_settings: ShaderSettings,
     pub wireframe: bool,
     pub is_lowres: bool,
     pub display_debug_info: bool,
@@ -55,12 +69,12 @@ impl Default for State {
             is_lowres: false,
             scale_strategy: ViewportScaleStrategy::Stretch,
             selected_item: None,
+            shader_settings: ShaderSettings::default(),
             selected_item_pos: Vector3::from_value(0.0),
             model_path_to_load: None,
             display_debug_info: false,
             mouse_free: false,
             show_ui: false,
-            light_pos: Vector3::from_value(0.0),
             screen: Screen {
                 width: WIDTH,
                 height: HEIGHT,

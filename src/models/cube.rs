@@ -31,8 +31,8 @@ impl Default for CubeSettings<'_> {
             texture_name: "",
             shader_name: ShaderInfo {
                 name: "cube".to_string(),
-                fragment_path: "assets/shaders/cube/frag.glsl".to_string(),
-                vertex_path: "assets/shaders/cube/vert.glsl".to_string(),
+                fragment_path: "assets/shaders/light/frag.glsl".to_string(),
+                vertex_path: "assets/shaders/light/vert.glsl".to_string(),
             },
             blend_mode: BlendMode::default(),
             texture_config: TextureConfig::default(),

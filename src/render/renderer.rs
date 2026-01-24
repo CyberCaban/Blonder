@@ -487,6 +487,8 @@ impl Renderer {
         for (index, light) in self.spot_lights.iter().enumerate() {
             light.pass_uniforms(shader, &format!("spotLights[{}]", index));
         }
+
+        state.shader_settings.apply(shader);
     }
     fn apply_shaders(
         &mut self,
@@ -831,59 +833,54 @@ impl Renderer {
         current_y += button_height + spacing_y;
 
         if let Some(i) = state.selected_item
-            && let tr = &mut self.drawables[i].transform
         {
+            let tr = &mut self.drawables[i].transform;
             tr.set_position(state.selected_item_pos);
-            //     if let Some(light_src) = &self.light_source
-            //         && light_src.id == i
-            //     {
-            //         state.light_pos = state.selected_item_pos;
-            //     }
         }
 
         let slider_width = panel_width * 0.8;
         let slider_height = 20.0;
-        // if let Some(value) = self.ui_manager.slider_with_label(
-        //     4,
-        //     "Light intensity",
-        //     margin_x,
-        //     current_y,
-        //     slider_width,
-        //     slider_height,
-        //     state.numbers[1],
-        //     -2.0,
-        //     2.0,
-        //     current_font,
-        //     mouse_x,
-        //     mouse_y,
-        //     state.mouse_pressed,
-        //     state.camera.is_captured,
-        // ) {
-        //     state.mouse_free = false;
-        //     state.numbers[1] = value;
-        // }
-        // current_y += slider_height + spacing_y;
+        if let Some(value) = self.ui_manager.slider_with_value(
+            4,
+            "Vertex snapping",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            state.shader_settings.snapping_factor,
+            0.1,
+            256.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.shader_settings.snapping_factor = value;
+        }
+        current_y += slider_height + spacing_y;
 
-        // if let Some(value) = self.ui_manager.slider_with_label(
-        //     5,
-        //     "Rotation",
-        //     margin_x,
-        //     current_y,
-        //     slider_width,
-        //     slider_height,
-        //     state.numbers[2],
-        //     0.0,
-        //     2.0 * PI,
-        //     current_font,
-        //     mouse_x,
-        //     mouse_y,
-        //     state.mouse_pressed,
-        //     state.camera.is_captured,
-        // ) {
-        //     state.mouse_free = false;
-        //     state.numbers[2] = value;
-        // }
-        // current_y += slider_height + spacing_y;
+        if let Some(value) = self.ui_manager.slider_with_value(
+            5,
+            "Dithering",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            state.shader_settings.dither_intensity,
+            0.0,
+            200.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.shader_settings.dither_intensity = value;
+        }
+        current_y += slider_height + spacing_y;
 
         let screen = if state.is_lowres {
             Screen {
