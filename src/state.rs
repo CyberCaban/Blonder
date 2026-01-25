@@ -25,11 +25,14 @@ pub struct ShaderSettings {
     pub snapping_factor: f32,
     // dithering
     pub dither_intensity: f32,
+    // scanlines
+    pub scanline_intensity: f32,
 }
 impl ShaderSettings {
     pub fn apply(&self, shader: &Shader) {
         shader.set_float("snapFactor", self.snapping_factor);
         shader.set_float("ditherIntensity", self.dither_intensity);
+        shader.set_float("scanlineIntensity", self.scanline_intensity);
     }
 }
 

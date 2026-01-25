@@ -832,8 +832,7 @@ impl Renderer {
         }
         current_y += button_height + spacing_y;
 
-        if let Some(i) = state.selected_item
-        {
+        if let Some(i) = state.selected_item {
             let tr = &mut self.drawables[i].transform;
             tr.set_position(state.selected_item_pos);
         }
@@ -879,6 +878,27 @@ impl Renderer {
         ) {
             state.mouse_free = false;
             state.shader_settings.dither_intensity = value;
+        }
+        current_y += slider_height + spacing_y;
+
+        if let Some(value) = self.ui_manager.slider_with_value(
+            6,
+            "Scanline",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            state.shader_settings.scanline_intensity,
+            0.0,
+            3.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.shader_settings.scanline_intensity = value;
         }
         current_y += slider_height + spacing_y;
 
