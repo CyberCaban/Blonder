@@ -5,7 +5,8 @@ use crate::{
     camera::Camera,
     render::{
         consts::{HEIGHT, WIDTH},
-        framebuffer::ViewportScaleStrategy, shader::Shader,
+        framebuffer::resolution::ViewportScaleStrategy,
+        shader::Shader,
     },
 };
 

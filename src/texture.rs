@@ -7,6 +7,98 @@ use image::{DynamicImage, GenericImage};
 use log::info;
 
 #[derive(Debug, Clone, Copy)]
+pub enum TextureFormatColor {
+    RGBA8,
+    RGBA16F,
+    RGB8,
+    R8,
+    R16F,
+}
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum TextureFormatDepth {
+    Depth16,
+    Depth24,
+    Depth32F,
+    Depth24Stencil8,
+}
+#[derive(Debug, Clone, Copy)]
+pub enum TextureFormat {
+    Color(TextureFormatColor),
+    Depth(TextureFormatDepth),
+}
+impl TextureFormatColor {
+    pub fn to_gl_enums(&self) -> (u32, u32, u32) {
+        match self {
+            &TextureFormatColor::RGBA8 => (gl::RGBA8, gl::RGBA, gl::UNSIGNED_BYTE),
+            TextureFormatColor::RGBA16F => (gl::RGBA16F, gl::RGBA, gl::FLOAT),
+            TextureFormatColor::RGB8 => (gl::RGB8, gl::RGB, gl::UNSIGNED_BYTE),
+            TextureFormatColor::R8 => (gl::R8, gl::RED, gl::UNSIGNED_BYTE),
+            TextureFormatColor::R16F => (gl::R16F, gl::RED, gl::FLOAT),
+        }
+    }
+}
+impl TextureFormatDepth {
+    pub fn to_gl_enums(&self) -> (u32, u32, u32, u32) {
+        match self {
+            TextureFormatDepth::Depth16 => (
+                gl::DEPTH_COMPONENT16,
+                gl::DEPTH_ATTACHMENT,
+                gl::DEPTH_COMPONENT,
+                gl::UNSIGNED_SHORT,
+            ),
+            TextureFormatDepth::Depth24 => (
+                gl::DEPTH_COMPONENT24,
+                gl::DEPTH_ATTACHMENT,
+                gl::DEPTH_COMPONENT,
+                gl::UNSIGNED_INT,
+            ),
+            TextureFormatDepth::Depth32F => (
+                gl::DEPTH_COMPONENT32F,
+                gl::DEPTH_ATTACHMENT,
+                gl::DEPTH_COMPONENT,
+                gl::FLOAT,
+            ),
+            TextureFormatDepth::Depth24Stencil8 => (
+                gl::DEPTH24_STENCIL8,
+                gl::DEPTH_STENCIL_ATTACHMENT,
+                gl::DEPTH_STENCIL,
+                gl::UNSIGNED_INT_24_8,
+            ),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TextureFilter {
+    Nearest,
+    Linear,
+}
+impl TextureFilter {
+    pub fn to_gl_enums(&self) -> (u32, u32) {
+        match self {
+            TextureFilter::Nearest => (gl::NEAREST, gl::NEAREST),
+            TextureFilter::Linear => (gl::LINEAR, gl::LINEAR),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
+pub enum TextureWrap {
+    Repeat,
+    ClampToEdge,
+    ClampToBorder,
+}
+impl TextureWrap {
+    pub fn to_gl_enums(&self) -> u32 {
+        match self {
+            TextureWrap::Repeat => gl::REPEAT,
+            TextureWrap::ClampToEdge => gl::CLAMP_TO_EDGE,
+            TextureWrap::ClampToBorder => gl::CLAMP_TO_BORDER,
+        }
+    }
+}
+
+#[derive(Debug, Clone, Copy)]
 pub struct TextureConfig {
     pub wrap_s: i32,
     pub wrap_t: i32,

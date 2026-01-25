@@ -20,7 +20,8 @@ use crate::render::consts::MAX_DIR_LIGHTS;
 use crate::render::consts::MAX_POINT_LIGHTS;
 use crate::render::consts::MAX_SPOT_LIGHTS;
 use crate::render::consts::{HEIGHT, WIDTH};
-use crate::render::framebuffer::{Framebuffer, ViewportScaleStrategy};
+use crate::render::framebuffer::resolution::ResolutionFramebuffer;
+use crate::render::framebuffer::resolution::ViewportScaleStrategy;
 use crate::render::gui::font::FontAtlas;
 use crate::render::gui::ui_manager::UIManager;
 use crate::render::light::DirLight;
@@ -96,7 +97,7 @@ pub struct Renderer {
     view_matrix: Matrix4<f32>,
     projection_matrix: Matrix4<f32>,
 
-    framebuffer: Framebuffer,
+    framebuffer: ResolutionFramebuffer,
     fps_samples: VecDeque<f32>,
 
     font_atlases: HashMap<String, FontAtlasRef>,
@@ -130,7 +131,7 @@ impl Renderer {
             model_matrix: Matrix4::zero(),
             view_matrix: Matrix4::zero(),
             projection_matrix: Matrix4::zero(),
-            framebuffer: Framebuffer::new(
+            framebuffer: ResolutionFramebuffer::new(
                 480,
                 360,
                 &Screen {
@@ -586,6 +587,8 @@ impl Renderer {
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         self.update_mvp(state);
         self.framebuffer.set_scale_strategy(state.scale_strategy);
+        
+        // render prepass
         if state.is_lowres {
             self.framebuffer.begin_render();
         }
@@ -611,6 +614,7 @@ impl Renderer {
             }
         }
 
+        // render pass
         if state.is_lowres {
             self.framebuffer.begin_render();
         }

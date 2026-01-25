@@ -1,8 +1,7 @@
 use glfw::{Action, Key, WindowEvent};
 
 use crate::{
-    render::framebuffer::ViewportScaleStrategy,
-    state::{Events, State},
+    render::framebuffer::resolution::ViewportScaleStrategy, state::{Events, State}
 };
 
 pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut State) {
