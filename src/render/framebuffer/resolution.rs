@@ -12,6 +12,7 @@ pub enum ViewportScaleStrategy {
     PixelPerfect,
 }
 
+#[derive(Debug)]
 pub struct ResolutionFramebuffer {
     framebuffer: Framebuffer,
     pub render_width: i32,
@@ -34,13 +35,13 @@ impl ResolutionFramebuffer {
             TextureFormatColor::RGBA8,
             TextureFilter::Nearest,
             TextureWrap::ClampToEdge,
-        );
+        )?;
         framebuffer.add_depth_attachment(
             TextureFormatDepth::Depth24Stencil8,
             TextureFilter::Nearest,
             TextureWrap::ClampToEdge,
-        );
-        framebuffer.clear_color = (0.1, 0.1, 0.1, 1.0);
+        )?;
+        framebuffer.clear_color = (0.1, 0.1, 0.1, 0.1);
         framebuffer.use_depth_test = true;
         framebuffer.check_complete()?;
 
@@ -74,7 +75,7 @@ impl ResolutionFramebuffer {
     pub fn end_scene_render(&self) {
         self.framebuffer.unbind();
         unsafe {
-            gl::ClearColor(0.0, 0.0, 0.0, 1.0);
+            gl::ClearColor(0.0, 0.0, 0.0, 0.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
             self.render_scene_to_screen();

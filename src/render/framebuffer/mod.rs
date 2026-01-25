@@ -4,12 +4,10 @@ use anyhow::{Result, bail};
 
 use crate::{
     render::shader::Shader,
-    state::Screen,
-    texture::{
-        Texture, TextureFilter, TextureFormat, TextureFormatColor, TextureFormatDepth, TextureWrap,
-    },
+    texture::{Texture, TextureFilter, TextureFormatColor, TextureFormatDepth, TextureWrap},
 };
 
+pub mod manager;
 pub mod resolution;
 pub mod shadow;
 
@@ -20,9 +18,9 @@ pub enum AttachmentType {
     Stencil,
     DepthStencil,
 }
+#[derive(Debug)]
 pub struct Framebuffer {
     fbo: u32,
-    rbo: u32,
     attachments: HashMap<AttachmentType, Texture>,
     pub width: i32,
     pub height: i32,
@@ -35,71 +33,12 @@ pub struct Framebuffer {
 impl Framebuffer {
     pub fn new(width: i32, height: i32) -> Result<Self> {
         let mut fbo = 0;
-        let mut rbo = 0;
-        let mut texture_id = 0;
         unsafe {
             gl::GenFramebuffers(1, &mut fbo);
-            // gl::BindFramebuffer(gl::FRAMEBUFFER, fbo);
-
-            // // Create render texture
-            // gl::GenTextures(1, &mut texture_id);
-            // gl::BindTexture(gl::TEXTURE_2D, texture_id);
-            // gl::TexImage2D(
-            //     gl::TEXTURE_2D,
-            //     0,
-            //     gl::DEPTH_COMPONENT as i32,
-            //     width,
-            //     height,
-            //     0,
-            //     gl::DEPTH_COMPONENT,
-            //     gl::FLOAT,
-            //     std::ptr::null(),
-            // );
-
-            // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
-            // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
-            // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, gl::REPEAT as i32);
-            // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, gl::REPEAT as i32);
-
-            // // attach tex to fbo
-            // gl::BindTexture(gl::TEXTURE_2D, 0);
-            // gl::FramebufferTexture2D(
-            //     gl::FRAMEBUFFER,
-            //     gl::DEPTH_ATTACHMENT,
-            //     gl::TEXTURE_2D,
-            //     texture_id,
-            //     0,
-            // );
-
-            // // make rbo
-            // gl::GenRenderbuffers(1, &mut rbo);
-            // gl::BindRenderbuffer(gl::RENDERBUFFER, rbo);
-            // gl::RenderbufferStorage(gl::RENDERBUFFER, gl::DEPTH24_STENCIL8, 800, 600);
-            // gl::BindRenderbuffer(gl::RENDERBUFFER, 0);
-
-            // // attach rbo to fbo
-            // gl::FramebufferRenderbuffer(
-            //     gl::FRAMEBUFFER,
-            //     gl::DEPTH_STENCIL_ATTACHMENT,
-            //     gl::RENDERBUFFER,
-            //     rbo,
-            // );
-
-            // if gl::CheckFramebufferStatus(gl::FRAMEBUFFER) != gl::FRAMEBUFFER_COMPLETE {
-            //     panic!("Framebuffer not complete")
-            // }
-            // gl::DrawBuffer(gl::NONE);
-            // gl::ReadBuffer(gl::NONE);
-            // gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
         }
         let (screen_quad_vao, screen_quad_vbo) = Self::create_screen_quad();
-        let screen_shader = Shader::new(
-            "assets/shaders/screen/vert.glsl",
-            "assets/shaders/screen/frag.glsl",
-        )?;
         Ok(Self {
             fbo,
-            rbo,
             attachments: HashMap::new(),
             width,
             clear_color: (0.0, 0.0, 0.0, 1.0),
@@ -356,13 +295,13 @@ impl Framebuffer {
         unsafe {
             gl::Viewport(0, 0, self.width, self.height);
 
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::ClearColor(
                 self.clear_color.0,
                 self.clear_color.1,
                 self.clear_color.2,
                 self.clear_color.3,
             );
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             if self.use_depth_test {
                 gl::Enable(gl::DEPTH_TEST);
             } else {

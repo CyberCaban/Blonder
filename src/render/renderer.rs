@@ -15,11 +15,16 @@ use crate::render::consts::DEFAULT_FONT;
 use crate::render::consts::DEFAULT_SHADER_FRAG;
 use crate::render::consts::DEFAULT_SHADER_NAME;
 use crate::render::consts::DEFAULT_SHADER_VERT;
+use crate::render::consts::DEFAULT_SHADOW_SHADER_FRAG;
+use crate::render::consts::DEFAULT_SHADOW_SHADER_NAME;
+use crate::render::consts::DEFAULT_SHADOW_SHADER_VERT;
 use crate::render::consts::DEFAULT_WHITE_TEXTURE;
 use crate::render::consts::MAX_DIR_LIGHTS;
 use crate::render::consts::MAX_POINT_LIGHTS;
 use crate::render::consts::MAX_SPOT_LIGHTS;
 use crate::render::consts::{HEIGHT, WIDTH};
+use crate::render::framebuffer::manager::FrameBufferType;
+use crate::render::framebuffer::manager::FramebufferManager;
 use crate::render::framebuffer::resolution::ResolutionFramebuffer;
 use crate::render::framebuffer::resolution::ViewportScaleStrategy;
 use crate::render::gui::font::FontAtlas;
@@ -97,7 +102,8 @@ pub struct Renderer {
     view_matrix: Matrix4<f32>,
     projection_matrix: Matrix4<f32>,
 
-    framebuffer: ResolutionFramebuffer,
+    framebuffer_manager: FramebufferManager,
+    pub shadow_light_matrix: Option<Matrix4<f32>>,
     fps_samples: VecDeque<f32>,
 
     font_atlases: HashMap<String, FontAtlasRef>,
@@ -110,10 +116,19 @@ impl Renderer {
         let renderer = Self {
             drawables: vec![],
             dynamic_map: HashMap::new(),
-            shaders: HashMap::from([(
-                DEFAULT_SHADER_NAME.to_string(),
-                Arc::new(Shader::new(DEFAULT_SHADER_VERT, DEFAULT_SHADER_FRAG)?),
-            )]),
+            shaders: HashMap::from([
+                (
+                    DEFAULT_SHADER_NAME.to_string(),
+                    Arc::new(Shader::new(DEFAULT_SHADER_VERT, DEFAULT_SHADER_FRAG)?),
+                ),
+                (
+                    DEFAULT_SHADOW_SHADER_NAME.to_string(),
+                    Arc::new(Shader::new(
+                        DEFAULT_SHADOW_SHADER_VERT,
+                        DEFAULT_SHADOW_SHADER_FRAG,
+                    )?),
+                ),
+            ]),
             textures: HashMap::from([
                 (
                     DEFAULT_WHITE_TEXTURE.to_string(),
@@ -131,15 +146,18 @@ impl Renderer {
             model_matrix: Matrix4::zero(),
             view_matrix: Matrix4::zero(),
             projection_matrix: Matrix4::zero(),
-            framebuffer: ResolutionFramebuffer::new(
+            framebuffer_manager: FramebufferManager::new(
                 480,
                 360,
+                1024,
+                1024,
                 &Screen {
                     width: WIDTH,
                     height: HEIGHT,
                 },
                 ViewportScaleStrategy::Stretch,
             )?,
+            shadow_light_matrix: None,
             fps_samples: VecDeque::with_capacity(FPS_SAMPLES),
             font_atlases: HashMap::from([(
                 DEFAULT_FONT.to_string(),
@@ -417,10 +435,10 @@ impl Renderer {
 
         transparent_objects.sort_by(|a, b| (b.1).partial_cmp(&a.1).unwrap());
 
-        if state.display_debug_info {
-            state.display_debug_info = false;
-            dbg!(&batches, &transparent_objects);
-        }
+        // if state.display_debug_info {
+        //     state.display_debug_info = false;
+        //     dbg!(&batches, &transparent_objects);
+        // }
         // draw opaque objects
         for (key, objects) in batches {
             self.apply_shaders(&key.shader_name, glfw, state);
@@ -586,15 +604,28 @@ impl Renderer {
     }
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         self.update_mvp(state);
-        self.framebuffer.set_scale_strategy(state.scale_strategy);
-        
+        // self.framebuffer.set_scale_strategy(state.scale_strategy);
+
         // render prepass
-        if state.is_lowres {
-            self.framebuffer.begin_render();
-        }
+        //     shadows
+        // self.framebuffer_manager
+        //     .begin_frame(FrameBufferType::Shadow, state);
+        // self.render_shadows(glfw, state);
+        // self.framebuffer_manager.end_frame(state);
+
+        let fb_type = if state.is_lowres {
+            FrameBufferType::Resolution
+        } else {
+            FrameBufferType::Default
+        };
+
+        //     resolution
+        self.framebuffer_manager.begin_frame(fb_type, state);
         if let Err(e) = self.use_current_shader() {
             warn!("Rendering error: [{e}]");
         }
+        // self.bind_shadows(state);
+
         self.ui_manager.picking_texture.enable_writing();
         self.render_unique(glfw, state);
         self.ui_manager.picking_texture.disable_writing();
@@ -615,10 +646,9 @@ impl Renderer {
         }
 
         // render pass
-        if state.is_lowres {
-            self.framebuffer.begin_render();
-        }
+        self.framebuffer_manager.begin_frame(fb_type, state);
         self.batch_render(glfw, state);
+        self.framebuffer_manager.end_frame(state);
         if state.show_ui {
             self.render_ui(glfw, state);
         }
@@ -627,6 +657,7 @@ impl Renderer {
                 .ui_manager
                 .picking_texture
                 .update_screen_size(state.screen.width as i32, state.screen.height as i32);
+            self.framebuffer_manager.update_screen_size(&state.screen);
             state.window_size_changed = false;
         }
         unsafe {
@@ -634,10 +665,7 @@ impl Renderer {
             gl::Disable(gl::BLEND);
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
         }
-        if state.is_lowres {
-            self.framebuffer.end_scene_render();
-            self.framebuffer.update_screen_size(&state.screen);
-        }
+
         if self.fps_samples.len() >= FPS_SAMPLES {
             self.fps_samples.pop_front();
         }
@@ -655,10 +683,10 @@ impl Renderer {
     }
     fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         let scale = if state.is_lowres { 0.25 } else { 0.5 };
-        let screen = if state.is_lowres {
+        let screen = if state.is_lowres && false {
             Screen {
-                width: self.framebuffer.render_width as u32,
-                height: self.framebuffer.render_height as u32,
+                width: self.framebuffer_manager.resolution_fb.render_width as u32,
+                height: self.framebuffer_manager.resolution_fb.render_height as u32,
             }
         } else {
             Screen {
@@ -908,8 +936,8 @@ impl Renderer {
 
         let screen = if state.is_lowres {
             Screen {
-                width: self.framebuffer.render_width as u32,
-                height: self.framebuffer.render_height as u32,
+                width: self.framebuffer_manager.resolution_fb.render_width as u32,
+                height: self.framebuffer_manager.resolution_fb.render_height as u32,
             }
         } else {
             Screen {
@@ -926,10 +954,12 @@ impl Renderer {
                 .ui_manager
                 .picking_texture
                 .read_pixel(mouse_x as u32, mouse_y as u32);
-            if p > 0 {
-                let index = p as usize - 1;
+            if p > 0
+                && let index = p as usize - 1
+                && let Some(dr) = self.drawables.get(index)
+            {
                 state.selected_item = Some(index);
-                let selected_item_pos = self.drawables[index].transform.clone().get_position();
+                let selected_item_pos = dr.transform.clone().get_position();
                 state.selected_item_pos = selected_item_pos;
             } else {
                 state.selected_item = None;
@@ -953,6 +983,70 @@ impl Renderer {
             shader.set_mat4("model", &model);
 
             render_obj.drawable.draw(glfw, state);
+        }
+    }
+    fn render_shadows(&mut self, glfw: &glfw::Glfw, state: &mut State) {
+        if let Some(shadow_shader) = self.shaders.get(DEFAULT_SHADOW_SHADER_NAME) {
+            shadow_shader.use_shader();
+
+            if let Some(light_matrix) = self.framebuffer_manager.get_current_shadow_matrix() {
+                shadow_shader.set_mat4("lightSpaceMatrix", &light_matrix);
+
+                // Сохраняем матрицу для передачи в основной шейдер
+                // Нужно добавить поле в Renderer:
+                // shadow_light_matrix: Option<glm::Mat4>
+                self.shadow_light_matrix = Some(light_matrix);
+            }
+
+            // Настройка для рендеринга теней
+            unsafe {
+                gl::CullFace(gl::FRONT); // Уменьшение shadow acne
+            }
+
+            // Рендерим только объекты, которые отбрасывают тени
+            for render_obj in &self.drawables {
+                if
+                // render_obj.cast_shadow
+                true {
+                    let transform = &render_obj.transform;
+                    let model = transform.calculate_model();
+                    shadow_shader.set_mat4("model", &model);
+
+                    render_obj.drawable.draw(glfw, state);
+                }
+            }
+
+            unsafe {
+                gl::CullFace(gl::BACK);
+            }
+        }
+    }
+
+    fn bind_shadows(&self, state: &mut State) {
+        // Получаем текстуру теней
+        if let Some(shadow_texture) = self.framebuffer_manager.get_shadow_depth_texture() {
+            // Используем высокий texture unit чтобы не конфликтовать
+            let shadow_texture_unit = 5;
+
+            unsafe {
+                gl::ActiveTexture(gl::TEXTURE0 + shadow_texture_unit);
+                shadow_texture.use_texture();
+            }
+
+            // Для каждого активного шейдера устанавливаем shadow map
+            if let Some(shader) = &self.current_shader {
+                shader.use_shader();
+                shader.set_int("shadowMap", shadow_texture_unit as i32);
+
+                // Также передаем матрицу света
+                if let Some(light_matrix) = &self.shadow_light_matrix {
+                    if state.display_debug_info {
+                        dbg!(shadow_texture);
+                        state.display_debug_info = false;
+                    }
+                    shader.set_mat4("lightSpaceMatrix", light_matrix);
+                }
+            }
         }
     }
 }

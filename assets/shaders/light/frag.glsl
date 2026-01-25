@@ -79,6 +79,10 @@ const mat4 ditherMatrix = mat4(0.0, 8.0, 2.0, 10.0, 12.0, 4.0, 14.0, 6.0, 3.0, 1
 uniform float scanlineIntensity;
 vec3 applyScanlines(vec3 color, vec2 uv, float intensity);
 
+// shadows
+uniform sampler2D shadowMap;
+uniform mat4 lightSpaceMatrix;
+
 void main() {
     vec4 texColor = texture(tex, fs_in.TexCoords);
     if(texColor.a < 0.1)
@@ -110,6 +114,51 @@ void main() {
     FragColor = vec4(result, 1.0) * texColor;
 }
 
+// Функция расчета тени
+float CalculateShadow(vec3 fragPos, vec3 normal, vec3 lightDir) {
+    vec4 fragPosLightSpace = lightSpaceMatrix * vec4(fragPos, 1.0);
+
+    // Перспективное деление
+    vec3 projCoords = fragPosLightSpace.xyz / fragPosLightSpace.w;
+
+    // Преобразуем к диапазону [0,1]
+    projCoords = projCoords * 0.5 + 0.5;
+
+    // Проверяем, находится ли точка в пределах shadow map
+    if(projCoords.z > 1.0 || projCoords.x < 0.0 || projCoords.x > 1.0 ||
+        projCoords.y < 0.0 || projCoords.y > 1.0) {
+        return 0.0;
+    }
+
+    // Получаем глубину из shadow map
+    float closestDepth = texture(shadowMap, projCoords.xy).r;
+
+    // Текущая глубина
+    float currentDepth = projCoords.z;
+
+    // Увеличиваем bias на основе угла между normal и lightDir
+    float adjustedBias = 0.005 * (1.0 - dot(normal, lightDir));
+    adjustedBias = max(0.005, adjustedBias);
+
+    // Простая проверка тени
+    float shadow = 0.0;
+    if(currentDepth - adjustedBias > closestDepth) {
+        shadow = 1.0;
+    }
+
+    // Простой PCF (Percentage-Closer Filtering) для мягких теней
+    vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
+    for(int x = -1; x <= 1; ++x) {
+        for(int y = -1; y <= 1; ++y) {
+            float pcfDepth = texture(shadowMap, projCoords.xy + vec2(x, y) * texelSize).r;
+            shadow += currentDepth - adjustedBias > pcfDepth ? 1.0 : 0.0;
+        }
+    }
+    shadow /= 9.0;
+
+    return shadow;
+}
+
 vec3 applyScanlines(vec3 color, vec2 uv, float intensity) {
     if(intensity <= 0.0)
         return color;
@@ -139,6 +188,7 @@ vec3 applyDither(vec3 color, vec2 uv, float intensity) {
 // calculates the color when using a directional light.
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     vec3 lightDir = normalize(-light.direction);
+    float shadow = CalculateShadow(fs_in.FragPos, normal, lightDir);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
@@ -148,7 +198,7 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     vec3 ambient = light.ambient * vec3(texture(tex, fs_in.TexCoords));
     vec3 diffuse = light.diffuse * diff * vec3(texture(tex, fs_in.TexCoords));
     vec3 specular = light.specular * spec * vec3(texture(material.specular, fs_in.TexCoords));
-    return (ambient + diffuse + specular);
+    return (1.0 - shadow) * (ambient + diffuse + specular);
 }
 
 // calculates the color when using a point light.

@@ -13,3 +13,7 @@ pub const DEFAULT_BLACK_TEXTURE: &str = "DEFAULT_BLACK";
 pub const DEFAULT_SHADER_NAME: &str = "DEFAULT";
 pub const DEFAULT_SHADER_VERT: &str = "assets/shaders/light/vert.glsl";
 pub const DEFAULT_SHADER_FRAG: &str = "assets/shaders/light/frag.glsl";
+
+pub const DEFAULT_SHADOW_SHADER_NAME: &str = "SHADOW";
+pub const DEFAULT_SHADOW_SHADER_VERT: &str = "assets/shaders/shadow/vert.glsl";
+pub const DEFAULT_SHADOW_SHADER_FRAG: &str = "assets/shaders/shadow/frag.glsl";
