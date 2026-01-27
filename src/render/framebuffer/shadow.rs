@@ -4,7 +4,7 @@ use crate::{
     texture::{Texture, TextureFilter, TextureFormatDepth, TextureWrap},
 };
 use anyhow::Result;
-use cgmath::{Array, Matrix4, Point3, Vector3, ortho};
+use cgmath::{Array, InnerSpace, Matrix4, Point3, Vector3, ortho};
 
 #[derive(Debug)]
 pub struct ShadowFramebuffer {
@@ -24,7 +24,7 @@ impl ShadowFramebuffer {
             TextureFilter::Nearest,
             TextureWrap::ClampToBorder,
         )?;
-        framebuffer.clear_color = (1.0, 0.0, 0.0, 1.0);
+        framebuffer.clear_color = (1.0, 1.0, 1.0, 1.0);
         framebuffer.use_depth_test = true;
         framebuffer.check_complete()?;
         Ok(Self {
@@ -54,6 +54,7 @@ impl ShadowFramebuffer {
 
             gl::Clear(gl::DEPTH_BUFFER_BIT);
 
+            gl::Enable(gl::CULL_FACE);
             gl::CullFace(gl::FRONT);
         }
     }
@@ -66,16 +67,18 @@ impl ShadowFramebuffer {
         self.framebuffer.unbind();
     }
     pub fn calculate_light_space_matrix(&self) -> Matrix4<f32> {
+        let frustum_size = 30.0;
         #[rustfmt::skip]
         let light_projection = ortho(
-            -10.0, 10.0, // left, right
-            -10.0, 10.0, // bottom, top
+            -frustum_size, frustum_size, // left, right
+            -frustum_size, frustum_size, // bottom, top
             self.near_plane,
             self.far_plane,
         );
 
+        let pos = Vector3::new(-0.5, 0.3, 0.4).normalize() * 20.0;
         let light_view = Matrix4::look_at(
-            Point3::from_value(-1.0),
+            Point3::new(pos.x, pos.y, pos.z),
             Point3::from_value(0.0),
             Vector3::unit_y(),
         );

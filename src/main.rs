@@ -57,8 +57,9 @@ fn main() -> Result<()> {
     let (low, high) = (-r, r);
 
     let texture_pool = [
-        ("assets/textures/transparency.png", true),
-        ("assets/textures/colored_glass.png", true),
+        // ("assets/textures/transparency.png", true),
+        // ("assets/textures/colored_glass.png", true),
+        ("assets/textures/liminal_space.png", false),
         ("assets/textures/white.png", false),
     ];
 
@@ -109,8 +110,8 @@ fn main() -> Result<()> {
                 // specular: Some("assets/textures/specular.png".to_string()),
                 // specular: Some(texture.0.to_string()),
                 specular: None,
-                emission: Some("assets/textures/emission.jpg".to_string()),
-                // emission: None,
+                // emission: Some("assets/textures/emission.jpg".to_string()),
+                emission: None,
                 shininess: 128.0,
             },
             transform: transform,
@@ -143,37 +144,37 @@ fn main() -> Result<()> {
     // let _ = renderer.set_light_src(&light_id);
 
     // Точечный свет 1 (теплый, слева)
-    let _ = renderer.add_point_light(PointLight {
-        position: Vector3::new(-3.0, 2.0, 0.0), // Слева сверху
-        constant: 1.0,
-        linear: 0.09,
-        quadratic: 0.032,
-        ambient: Vector3::new(0.05, 0.03, 0.01), // Теплый ambient
-        diffuse: Vector3::new(1.0, 0.8, 0.6) * 0.4, // Теплый оранжевый
-        specular: Vector3::new(1.0, 0.9, 0.8) * 0.6, // Теплые блики
-    });
+    // let _ = renderer.add_point_light(PointLight {
+    //     position: Vector3::new(-3.0, 2.0, 0.0), // Слева сверху
+    //     constant: 1.0,
+    //     linear: 0.09,
+    //     quadratic: 0.032,
+    //     ambient: Vector3::new(0.05, 0.03, 0.01), // Теплый ambient
+    //     diffuse: Vector3::new(1.0, 0.8, 0.6) * 0.4, // Теплый оранжевый
+    //     specular: Vector3::new(1.0, 0.9, 0.8) * 0.6, // Теплые блики
+    // });
 
-    // 3. Точечный свет 2 (холодный, справа)
-    let _ = renderer.add_point_light(PointLight {
-        position: Vector3::new(3.0, 2.0, 1.0), // Справа сверху, немного вперед
-        constant: 1.0,
-        linear: 0.07, // Меньше затухание
-        quadratic: 0.017,
-        ambient: Vector3::new(0.01, 0.02, 0.05), // Холодный ambient
-        diffuse: Vector3::new(0.6, 0.8, 1.0) * 0.4, // Холодный синий
-        specular: Vector3::new(0.8, 0.9, 1.0) * 0.5, // Холодные блики
-    });
+    // // 3. Точечный свет 2 (холодный, справа)
+    // let _ = renderer.add_point_light(PointLight {
+    //     position: Vector3::new(3.0, 2.0, 1.0), // Справа сверху, немного вперед
+    //     constant: 1.0,
+    //     linear: 0.07, // Меньше затухание
+    //     quadratic: 0.017,
+    //     ambient: Vector3::new(0.01, 0.02, 0.05), // Холодный ambient
+    //     diffuse: Vector3::new(0.6, 0.8, 1.0) * 0.4, // Холодный синий
+    //     specular: Vector3::new(0.8, 0.9, 1.0) * 0.5, // Холодные блики
+    // });
 
-    // // 4. Точечный свет 3 (нейтральный, сзади)
-    let _ = renderer.add_point_light(PointLight {
-        position: Vector3::new(0.0, 1.5, -3.0), // Сзади сверху
-        constant: 1.0,
-        linear: 0.14, // Больше затухание
-        quadratic: 0.07,
-        ambient: Vector3::new(0.03, 0.03, 0.03), // Нейтральный ambient
-        diffuse: Vector3::new(0.9, 0.9, 0.9) * 0.4, // Нейтральный белый
-        specular: Vector3::new(1.0, 1.0, 1.0) * 0.5, // Белые блики
-    });
+    // // // 4. Точечный свет 3 (нейтральный, сзади)
+    // let _ = renderer.add_point_light(PointLight {
+    //     position: Vector3::new(0.0, 1.5, -3.0), // Сзади сверху
+    //     constant: 1.0,
+    //     linear: 0.14, // Больше затухание
+    //     quadratic: 0.07,
+    //     ambient: Vector3::new(0.03, 0.03, 0.03), // Нейтральный ambient
+    //     diffuse: Vector3::new(0.9, 0.9, 0.9) * 0.4, // Нейтральный белый
+    //     specular: Vector3::new(1.0, 1.0, 1.0) * 0.5, // Белые блики
+    // });
 
     let _ = renderer.add_dir_light(DirLight {
         direction: Vector3::new(0.5, -0.3, -0.4).normalize(),
@@ -230,7 +231,7 @@ fn main() -> Result<()> {
         renderer.render_checkerboard(&mut glfw, &mut state);
 
         window.swap_buffers();
-        thread::sleep(Duration::from_secs(1) / 30 - Duration::from_millis(state.delta_time as u64));
+        // thread::sleep(Duration::from_secs(1) / 60 - Duration::from_millis(state.delta_time as u64));
     }
     Ok(())
 }

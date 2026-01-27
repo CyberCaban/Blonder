@@ -149,8 +149,8 @@ impl Renderer {
             framebuffer_manager: FramebufferManager::new(
                 480,
                 360,
-                1024,
-                1024,
+                4096,
+                4096,
                 &Screen {
                     width: WIDTH,
                     height: HEIGHT,
@@ -434,12 +434,8 @@ impl Renderer {
 
         transparent_objects.sort_by(|a, b| (b.1).partial_cmp(&a.1).unwrap());
 
-        // if state.display_debug_info {
-        //     state.display_debug_info = false;
-        //     dbg!(&batches, &transparent_objects);
-        // }
         // draw opaque objects
-        for (key, objects) in batches {
+        for (key, objects) in &batches {
             self.apply_shaders(&key.shader_name, glfw, state);
             if self.current_shader.is_none() {
                 continue;
@@ -449,8 +445,7 @@ impl Renderer {
             self.apply_batch_uniforms(&key, glfw, state);
             self.apply_batch_textures(&key);
 
-            key.blend_mode.apply();
-            for index in &objects {
+            for index in objects {
                 let render_obj = &self.drawables[*index];
                 // set transform
                 self.apply_transform(render_obj);
@@ -555,6 +550,9 @@ impl Renderer {
         } else {
             shader.set_int("isSelected", 0);
         }
+        if let Some(shadow) = self.shadow_light_matrix {
+            shader.set_mat4("lightSpaceMatrix", &shadow);
+        }
     }
     fn apply_transform(&self, render_obj: &RenderObject) {
         let transform = &render_obj.transform;
@@ -606,14 +604,15 @@ impl Renderer {
         // self.framebuffer.set_scale_strategy(state.scale_strategy);
 
         // render prepass
-        //     shadows
-        // self.framebuffer_manager
-        //     .begin_frame(FrameBufferType::Shadow, state);
-        // self.render_shadows(glfw, state);
-        // self.framebuffer_manager.end_frame(state);
+        // - picking texture
         self.ui_manager.picking_texture.enable_writing();
         self.render_unique(glfw, state);
         self.ui_manager.picking_texture.disable_writing();
+        // - shadows
+        self.framebuffer_manager
+            .begin_frame(FrameBufferType::Shadow, state);
+        self.render_shadows(glfw, state);
+        self.framebuffer_manager.end_frame(state);
 
         let fb_type = if state.is_lowres {
             FrameBufferType::Resolution
@@ -641,6 +640,7 @@ impl Renderer {
             warn!("Rendering error: [{e}]");
         }
         // render pass
+        self.bind_shadows(state);
         self.batch_render(glfw, state);
         if state.show_ui {
             self.render_ui(glfw, state);
@@ -984,6 +984,10 @@ impl Renderer {
             shadow_shader.use_shader();
 
             if let Some(light_matrix) = self.framebuffer_manager.get_current_shadow_matrix() {
+                let light_matrix = self
+                    .framebuffer_manager
+                    .shadow_fb
+                    .calculate_light_space_matrix();
                 shadow_shader.set_mat4("lightSpaceMatrix", &light_matrix);
 
                 // Сохраняем матрицу для передачи в основной шейдер
@@ -992,26 +996,12 @@ impl Renderer {
                 self.shadow_light_matrix = Some(light_matrix);
             }
 
-            // Настройка для рендеринга теней
-            unsafe {
-                gl::CullFace(gl::FRONT); // Уменьшение shadow acne
-            }
-
             // Рендерим только объекты, которые отбрасывают тени
             for render_obj in &self.drawables {
-                if
-                // render_obj.cast_shadow
-                true {
-                    let transform = &render_obj.transform;
-                    let model = transform.calculate_model();
-                    shadow_shader.set_mat4("model", &model);
+                let model = &render_obj.transform.calculate_model();
+                shadow_shader.set_mat4("model", &model);
 
-                    render_obj.drawable.draw(glfw, state);
-                }
-            }
-
-            unsafe {
-                gl::CullFace(gl::BACK);
+                render_obj.drawable.draw(glfw, state);
             }
         }
     }
@@ -1034,10 +1024,6 @@ impl Renderer {
 
                 // Также передаем матрицу света
                 if let Some(light_matrix) = &self.shadow_light_matrix {
-                    if state.display_debug_info {
-                        dbg!(shadow_texture);
-                        state.display_debug_info = false;
-                    }
                     shader.set_mat4("lightSpaceMatrix", light_matrix);
                 }
             }

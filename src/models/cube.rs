@@ -137,7 +137,8 @@ impl Drawable for Cube {
         Some(self.texture.to_string())
     }
     fn get_shader_name(&self) -> Option<ShaderInfo> {
-        Some(self.shader_info.clone())
+        // Some(self.shader_info.clone())
+        None
     }
     fn get_texture_config(&self) -> Option<TextureConfig> {
         Some(self.texture_config)
