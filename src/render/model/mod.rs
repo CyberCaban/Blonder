@@ -1,12 +1,16 @@
 use std::{collections::HashMap, ffi::OsStr, path::Path, sync::Arc};
 
 use anyhow::Result;
+use log::warn;
 use thiserror::Error;
 
 use crate::{
     render::{
-        drawable::Drawable, model::mesh::Mesh, renderer::TextureRef, shader::ShaderInfo,
-        vertex::Vertex,
+        drawable::Drawable,
+        model::mesh::Mesh,
+        renderer::TextureRef,
+        shader::ShaderInfo,
+        vertex::{Vertex, calculate_normals, calculate_normals_indexed},
     },
     texture::Texture,
 };
@@ -55,9 +59,21 @@ impl Model {
             for i in 0..num_vertices {
                 vertices.push(Vertex {
                     position: [p[i * 3], p[i * 3 + 1], p[i * 3 + 2]],
-                    normal: [n[i * 3], n[i * 3 + 1], n[i * 3 + 2]],
-                    uv: [t[i * 2], t[i * 2 + 1]],
+                    normal: if n.len() > 0 {
+                        [n[i * 3], n[i * 3 + 1], n[i * 3 + 2]]
+                    } else {
+                        [0.0, 0.0, 0.0]
+                    },
+                    uv: if t.len() > 0 {
+                        [t[i * 2], t[i * 2 + 1]]
+                    } else {
+                        [0.0, 0.0]
+                    },
                 });
+            }
+            if n.len() == 0 {
+                calculate_normals_indexed(&mut vertices, &mesh.indices)
+                    .unwrap_or_else(|e| warn!("Failed to calculate normals: {e}"));
             }
             let mut textures = Vec::new();
             if let Some(material_id) = mesh.material_id {
