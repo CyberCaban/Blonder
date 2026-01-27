@@ -155,7 +155,6 @@ impl Renderer {
                     width: WIDTH,
                     height: HEIGHT,
                 },
-                ViewportScaleStrategy::Stretch,
             )?,
             shadow_light_matrix: None,
             fps_samples: VecDeque::with_capacity(FPS_SAMPLES),
@@ -612,6 +611,9 @@ impl Renderer {
         //     .begin_frame(FrameBufferType::Shadow, state);
         // self.render_shadows(glfw, state);
         // self.framebuffer_manager.end_frame(state);
+        self.ui_manager.picking_texture.enable_writing();
+        self.render_unique(glfw, state);
+        self.ui_manager.picking_texture.disable_writing();
 
         let fb_type = if state.is_lowres {
             FrameBufferType::Resolution
@@ -619,16 +621,6 @@ impl Renderer {
             FrameBufferType::Default
         };
 
-        //     resolution
-        self.framebuffer_manager.begin_frame(fb_type, state);
-        if let Err(e) = self.use_current_shader() {
-            warn!("Rendering error: [{e}]");
-        }
-        // self.bind_shadows(state);
-
-        self.ui_manager.picking_texture.enable_writing();
-        self.render_unique(glfw, state);
-        self.ui_manager.picking_texture.disable_writing();
         unsafe {
             gl::ClearColor(state.color.0, state.color.1, state.color.2, state.color.3);
             gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
@@ -644,11 +636,12 @@ impl Renderer {
                 }
             }
         }
-
-        // render pass
         self.framebuffer_manager.begin_frame(fb_type, state);
+        if let Err(e) = self.use_current_shader() {
+            warn!("Rendering error: [{e}]");
+        }
+        // render pass
         self.batch_render(glfw, state);
-        self.framebuffer_manager.end_frame(state);
         if state.show_ui {
             self.render_ui(glfw, state);
         }
@@ -665,6 +658,7 @@ impl Renderer {
             gl::Disable(gl::BLEND);
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
         }
+        self.framebuffer_manager.end_frame(state);
 
         if self.fps_samples.len() >= FPS_SAMPLES {
             self.fps_samples.pop_front();
@@ -682,8 +676,8 @@ impl Renderer {
         Ok(())
     }
     fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
-        let scale = if state.is_lowres { 0.25 } else { 0.5 };
-        let screen = if state.is_lowres && false {
+        let scale = if state.is_lowres { 0.5 } else { 0.5 };
+        let screen = if state.is_lowres {
             Screen {
                 width: self.framebuffer_manager.resolution_fb.render_width as u32,
                 height: self.framebuffer_manager.resolution_fb.render_height as u32,
@@ -946,8 +940,8 @@ impl Renderer {
             }
         };
         let (mouse_x, mouse_y) = (
-            state.cursor_pos_x * screen.width as f32 / state.screen.width as f32,
-            state.cursor_pos_y * screen.height as f32 / state.screen.height as f32,
+            state.cursor_pos_x * screen.width as f32 / screen.width as f32,
+            state.cursor_pos_y * screen.height as f32 / screen.height as f32,
         );
         if state.mouse_free && state.mouse_pressed {
             let p = self

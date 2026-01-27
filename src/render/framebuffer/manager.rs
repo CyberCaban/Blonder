@@ -31,14 +31,9 @@ impl FramebufferManager {
         shadow_width: i32,
         shadow_height: i32,
         screen: &Screen,
-        scale_strategy: ViewportScaleStrategy,
     ) -> Result<Self> {
-        let resolution_fb = ResolutionFramebuffer::new(
-            resolution_width,
-            resolution_height,
-            screen,
-            scale_strategy,
-        )?;
+        let resolution_fb =
+            ResolutionFramebuffer::new(resolution_width, resolution_height, screen)?;
 
         let shadow_fb = ShadowFramebuffer::new(shadow_width, shadow_height, screen)?;
 
@@ -60,12 +55,7 @@ impl FramebufferManager {
                 gl::Enable(gl::DEPTH_TEST);
             },
             FrameBufferType::Resolution => {
-                if state.is_lowres {
-                    self.resolution_fb.begin_render();
-                } else {
-                    // Если низкое разрешение выключено, рендерим напрямую
-                    self.begin_frame(FrameBufferType::Default, state);
-                }
+                self.resolution_fb.begin_render();
             }
             FrameBufferType::Shadow => {
                 self.shadow_fb.begin_render();
@@ -77,6 +67,13 @@ impl FramebufferManager {
             FrameBufferType::Resolution => {
                 if state.is_lowres {
                     self.resolution_fb.end_scene_render();
+                } else {
+                    // Если is_lowres false, но мы рендерили в Resolution буфер,
+                    // нужно переключиться на дефолтный буфер
+                    unsafe {
+                        gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
+                        gl::Viewport(0, 0, state.screen.width as i32, state.screen.height as i32);
+                    }
                 }
             }
             FrameBufferType::Shadow => {
