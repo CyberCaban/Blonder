@@ -148,7 +148,7 @@ float ShadowCalculation(vec4 fragPosLightSpace, vec3 lightPos) {
     float depthFactor = 1.0 - currentDepth;
     int radius = int(mix(1.0, 3.0, depthFactor)); // Больше размытия для дальних объектов
     float samples = float((radius * 2 + 1) * (radius * 2 + 1));
-    shadow /= samples;
+    shadow /= 9.0;
 
     float transition = 1.0 - smoothstep(0.8, 1.0, projCoords.z);
     shadow *= transition;

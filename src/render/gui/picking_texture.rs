@@ -1,6 +1,8 @@
+use std::sync::Arc;
+
 use anyhow::{Result, bail};
 
-use crate::render::shader::Shader;
+use crate::render::{renderer::ShaderRef, shader::Shader};
 
 #[repr(C)]
 #[derive(Debug)]
@@ -14,7 +16,7 @@ pub struct PickingTexture {
     fbo: u32,
     picking_texture: u32,
     depth_texture: u32,
-    pub shader: Shader,
+    pub shader: ShaderRef,
 }
 
 impl PickingTexture {
@@ -85,10 +87,10 @@ impl PickingTexture {
             fbo,
             picking_texture,
             depth_texture,
-            shader: Shader::new(
+            shader: Arc::new(Shader::new(
                 "assets/shaders/ui/picking/vert.glsl",
                 "assets/shaders/ui/picking/frag.glsl",
-            )?,
+            )?),
         })
     }
     pub fn enable_writing(&self) {

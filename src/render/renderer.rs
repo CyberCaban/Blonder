@@ -1,4 +1,4 @@
-use cgmath::{perspective, Array, Deg, ElementWise, InnerSpace, Matrix4, Rad, Vector3};
+use cgmath::{Array, Deg, ElementWise, InnerSpace, Matrix4, Rad, Vector3, perspective};
 use log::info;
 use log::warn;
 use num::Zero;
@@ -34,8 +34,8 @@ use crate::render::light::DirLight;
 use crate::render::light::PointLight;
 use crate::render::light::SpotLight;
 use crate::render::model::Model;
-use crate::render::shader::pass_uniforms::PassUniforms;
 use crate::render::shader::Shader;
+use crate::render::shader::pass_uniforms::PassUniforms;
 use crate::state::Screen;
 use crate::texture::TextureConfig;
 use crate::{
@@ -150,8 +150,8 @@ impl Renderer {
             framebuffer_manager: FramebufferManager::new(
                 480,
                 360,
-                4096,
-                4096,
+                1024,
+                1024,
                 &Screen {
                     width: WIDTH,
                     height: HEIGHT,
@@ -161,7 +161,10 @@ impl Renderer {
             fps_samples: VecDeque::with_capacity(FPS_SAMPLES),
             font_atlases: HashMap::from([(
                 DEFAULT_FONT.to_string(),
-                Arc::new(FontAtlas::new("assets/fonts/OpenSans.ttf", 96)?),
+                Arc::new(FontAtlas::new(
+                    "assets/fonts/OpenSans_Condensed-Bold.ttf",
+                    96,
+                )?),
             )]),
             ui_manager: UIManager::new()?,
         };
@@ -605,13 +608,44 @@ impl Renderer {
         // render prepass
         // - picking texture
         self.ui_manager.picking_texture.enable_writing();
-        self.render_unique(glfw, state);
+        self.render_simple(glfw, state, &self.ui_manager.picking_texture.shader.clone());
         self.ui_manager.picking_texture.disable_writing();
 
         // - shadows
         self.framebuffer_manager
             .begin_frame(FrameBufferType::Shadow, state);
         self.render_shadows(glfw, state);
+        self.framebuffer_manager.end_frame(state);
+
+        // - normals
+        self.framebuffer_manager
+            .begin_frame(FrameBufferType::Mini, state);
+        if let Some(shader) = self.framebuffer_manager.get_shader() {
+            if state.display_debug_info {
+                state.display_debug_info = false;
+                dbg!(&shader);
+            }
+            shader.use_shader();
+            shader.set_mat4("view", &self.view_matrix);
+            shader.set_mat4("projection", &self.projection_matrix);
+            for index in 0..self.drawables.len() {
+                let render_obj = &self.drawables[index];
+                let transform = &render_obj.transform;
+                let model = transform.calculate_model();
+                shader.set_mat4("model", &model);
+                if let Some(texture_name) = render_obj.drawable.get_texture_name()
+                    && let Some(texture) = self.textures.get(&texture_name)
+                {
+                    unsafe {
+                        gl::ActiveTexture(gl::TEXTURE0);
+                        texture.use_texture();
+                    }
+                }
+
+                render_obj.drawable.draw(glfw, state);
+            }
+            // self.render_shadows(glfw, state);
+        }
         self.framebuffer_manager.end_frame(state);
 
         let fb_type = if state.is_lowres {
@@ -635,6 +669,7 @@ impl Renderer {
                 }
             }
         }
+
         self.framebuffer_manager.begin_frame(fb_type, state);
         if let Err(e) = self.use_current_shader() {
             warn!("Rendering error: [{e}]");
@@ -642,6 +677,10 @@ impl Renderer {
         // render pass
         self.bind_shadows(state);
         self.batch_render(glfw, state);
+        self.framebuffer_manager
+            .mini_fb
+            .render_scene_to_screen(state);
+
         if state.show_ui {
             self.render_ui(glfw, state);
         }
@@ -676,17 +715,10 @@ impl Renderer {
         Ok(())
     }
     fn render_ui(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
-        let scale = if state.is_lowres { 0.5 } else { 0.5 };
-        let screen = if state.is_lowres {
-            Screen {
-                width: self.framebuffer_manager.resolution_fb.render_width as u32,
-                height: self.framebuffer_manager.resolution_fb.render_height as u32,
-            }
-        } else {
-            Screen {
-                width: state.screen.width,
-                height: state.screen.height,
-            }
+        let scale = 0.5;
+        let screen = Screen {
+            width: state.screen.width,
+            height: state.screen.height,
         };
 
         self.ui_manager.begin_frame(state, &screen);
@@ -713,7 +745,7 @@ impl Renderer {
             state.cursor_pos_y * screen.height as f32 / state.screen.height as f32,
         );
 
-        let panel_width = screen.width as f32 * 0.3;
+        let panel_width = 350.0;
         let panel_x = 0.0;
         let panel_height = screen.height as f32;
 
@@ -859,18 +891,6 @@ impl Renderer {
             state.selected_item_pos.y += 0.1 * state.delta_time * 8.55;
         }
         current_y += button_height + spacing_y;
-
-        // Rotation controls
-        let rotation_label_y = current_y + button_height / 2.0 - font_height / 2.0;
-        self.ui_manager.draw_text(
-            current_font,
-            "ROTATION",
-            margin_x,
-            rotation_label_y,
-            scale,
-            Color::new(0.7, 0.7, 0.7, 1.0),
-        );
-        current_y += button_height + spacing_y / 2.0;
 
         // Rotation X axis
         if self.ui_manager.button(
@@ -1146,21 +1166,8 @@ impl Renderer {
         }
         current_y += slider_height + spacing_y;
 
-        let screen = if state.is_lowres {
-            Screen {
-                width: self.framebuffer_manager.resolution_fb.render_width as u32,
-                height: self.framebuffer_manager.resolution_fb.render_height as u32,
-            }
-        } else {
-            Screen {
-                width: state.screen.width,
-                height: state.screen.height,
-            }
-        };
-        let (mouse_x, mouse_y) = (
-            state.cursor_pos_x * screen.width as f32 / screen.width as f32,
-            state.cursor_pos_y * screen.height as f32 / screen.height as f32,
-        );
+        // Mouse coordinates always use full screen resolution for UI
+        let (mouse_x, mouse_y) = (state.cursor_pos_x, state.cursor_pos_y);
         if state.mouse_free && state.mouse_pressed {
             let p = self
                 .ui_manager
@@ -1190,8 +1197,7 @@ impl Renderer {
         self.ui_manager.end_frame();
     }
     /// render to another framebuffer with object index as object color
-    fn render_unique(&mut self, glfw: &mut glfw::Glfw, state: &State) {
-        let shader = &self.ui_manager.picking_texture.shader;
+    fn render_simple(&mut self, glfw: &mut glfw::Glfw, state: &State, shader: &Shader) {
         shader.use_shader();
         shader.set_mat4("view", &self.view_matrix);
         shader.set_mat4("projection", &self.projection_matrix);
@@ -1218,19 +1224,8 @@ impl Renderer {
 
             self.shadow_light_matrix = Some(light_matrix);
 
-            // Рендерим только непрозрачные объекты
             for render_obj in &self.drawables {
                 if render_obj.drawable.get_blend_mode() == BlendMode::Opaque || true {
-                    if let Some(texture_name) = render_obj.drawable.get_texture_name()
-                        && let Some(texture) = self.textures.get(&texture_name)
-                    {
-                        unsafe {
-                            gl::ActiveTexture(gl::TEXTURE0);
-                            texture.use_texture();
-                        }
-                        shadow_shader.set_int("tex", 0);
-                    }
-
                     let model = &render_obj.transform.calculate_model();
                     shadow_shader.set_mat4("model", &model);
                     render_obj.drawable.draw(glfw, state);

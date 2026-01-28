@@ -76,7 +76,7 @@ impl ShadowFramebuffer {
             self.far_plane,
         );
 
-        let pos = Vector3::new(-0.5, 0.3, 0.4).normalize() * 20.0;
+        let pos = Vector3::new(-20.0, 21.0, 18.0) ;
         let light_view = Matrix4::look_at(
             Point3::new(pos.x, pos.y, pos.z),
             Point3::from_value(0.0),

@@ -4,10 +4,12 @@ use anyhow::{Result, bail};
 
 use crate::{
     render::shader::Shader,
+    state::State,
     texture::{Texture, TextureFilter, TextureFormatColor, TextureFormatDepth, TextureWrap},
 };
 
 pub mod manager;
+pub mod mini;
 pub mod resolution;
 pub mod shadow;
 
@@ -317,8 +319,19 @@ impl Framebuffer {
             .get(&AttachmentType::Depth)
             .or_else(|| self.attachments.get(&AttachmentType::DepthStencil))
     }
-    pub fn render_to_screen(&self, shader: &Shader, viewport: Option<(i32, i32, i32, i32)>) {
+    pub fn render_to_screen(
+        &self,
+        state: &State,
+        shader: &Shader,
+        viewport: Option<(i32, i32, i32, i32)>,
+    ) {
         unsafe {
+            gl::ClearColor(
+                self.clear_color.0,
+                self.clear_color.1,
+                self.clear_color.2,
+                self.clear_color.3,
+            );
             gl::Disable(gl::DEPTH_TEST);
             shader.use_shader();
 
@@ -347,6 +360,10 @@ impl Framebuffer {
             gl::BindVertexArray(0);
 
             gl::Enable(gl::DEPTH_TEST);
+            // reset viewport
+            unsafe {
+                gl::Viewport(0, 0, state.screen.width as i32, state.screen.height as i32);
+            }
         }
     }
 }

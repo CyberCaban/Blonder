@@ -2,9 +2,14 @@ use anyhow::Result;
 use cgmath::Matrix4;
 
 use crate::{
-    render::framebuffer::{
-        resolution::{ResolutionFramebuffer, ViewportScaleStrategy},
-        shadow::ShadowFramebuffer,
+    render::{
+        framebuffer::{
+            mini::Mini,
+            resolution::{ResolutionFramebuffer, ViewportScaleStrategy},
+            shadow::ShadowFramebuffer,
+        },
+        renderer::ShaderRef,
+        shader::Shader,
     },
     state::Screen,
     texture::Texture,
@@ -15,6 +20,7 @@ pub struct FramebufferManager {
     pub resolution_fb: ResolutionFramebuffer,
     pub shadow_fb: ShadowFramebuffer,
     pub current_fb: FrameBufferType,
+    pub mini_fb: Mini,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -22,6 +28,7 @@ pub enum FrameBufferType {
     Default,
     Resolution,
     Shadow,
+    Mini,
 }
 
 impl FramebufferManager {
@@ -37,8 +44,11 @@ impl FramebufferManager {
 
         let shadow_fb = ShadowFramebuffer::new(shadow_width, shadow_height, screen)?;
 
+        let mini_fb = Mini::new(320, 320)?;
+
         Ok(Self {
             resolution_fb,
+            mini_fb,
             shadow_fb,
             current_fb: FrameBufferType::Default,
         })
@@ -60,39 +70,32 @@ impl FramebufferManager {
             FrameBufferType::Shadow => {
                 self.shadow_fb.begin_render();
             }
+            FrameBufferType::Mini => {
+                self.mini_fb.begin_render();
+            }
         }
     }
     pub fn end_frame(&self, state: &crate::state::State) {
         match self.current_fb {
             FrameBufferType::Resolution => {
                 if state.is_lowres {
-                    self.resolution_fb.end_scene_render();
+                    self.resolution_fb.end_scene_render(state);
                 } else {
-                    // Если is_lowres false, но мы рендерили в Resolution буфер,
-                    // нужно переключиться на дефолтный буфер
-                    unsafe {
-                        gl::BindFramebuffer(gl::FRAMEBUFFER, 0);
-                        gl::Viewport(0, 0, state.screen.width as i32, state.screen.height as i32);
-                    }
                 }
             }
             FrameBufferType::Shadow => {
                 self.shadow_fb.end_scene_render();
             }
+            FrameBufferType::Mini => {
+                self.mini_fb.end_scene_render();
+            }
             _ => {}
         }
     }
-    pub fn get_current_shadow_matrix(&self) -> Option<Matrix4<f32>> {
-        if self.current_fb == FrameBufferType::Shadow {
-            Some(self.shadow_fb.calculate_light_space_matrix())
-        } else {
-            None
-        }
-    }
-
-    pub fn bind_shadow_texture(&self, texture_unit: u32) {
-        if let Some(texture) = self.shadow_fb.get_depth_texture() {
-            texture.bind(texture_unit);
+    pub fn get_shader(&self) -> Option<ShaderRef> {
+        match self.current_fb {
+            FrameBufferType::Mini => Some(self.mini_fb.normal_shader.clone()),
+            _ => None,
         }
     }
 

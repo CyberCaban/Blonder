@@ -1,6 +1,6 @@
 use crate::{
     render::{framebuffer::Framebuffer, shader::Shader},
-    state::Screen,
+    state::{Screen, State},
     texture::{Texture, TextureFilter, TextureFormatColor, TextureFormatDepth, TextureWrap},
 };
 use anyhow::Result;
@@ -63,20 +63,21 @@ impl ResolutionFramebuffer {
     pub fn begin_render(&self) {
         self.framebuffer.begin_render();
     }
-    pub fn end_scene_render(&self) {
+    pub fn end_scene_render(&self, state: &State) {
         self.framebuffer.unbind();
         unsafe {
             gl::ClearColor(0.0, 0.0, 0.0, 0.0);
             gl::Clear(gl::COLOR_BUFFER_BIT);
 
-            self.render_scene_to_screen();
+            self.render_scene_to_screen(state);
         }
     }
-    fn render_scene_to_screen(&self) {
+    fn render_scene_to_screen(&self, state: &State) {
         let (viewport_width, viewport_height, offset_x, offset_y) =
             self.calculate_viewport_params();
 
         self.framebuffer.render_to_screen(
+            state,
             &self.screen_shader,
             Some((offset_x, offset_y, viewport_width, viewport_height)),
         );
