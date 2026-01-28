@@ -1,9 +1,10 @@
-use cgmath::{Array, Deg, ElementWise, InnerSpace, Matrix4, Rad, Vector3, perspective};
+use cgmath::{perspective, Array, Deg, ElementWise, InnerSpace, Matrix4, Rad, Vector3};
 use log::info;
 use log::warn;
 use num::Zero;
 use std::collections::HashMap;
 use std::collections::VecDeque;
+use std::f32::consts::PI;
 use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
@@ -33,8 +34,8 @@ use crate::render::light::DirLight;
 use crate::render::light::PointLight;
 use crate::render::light::SpotLight;
 use crate::render::model::Model;
-use crate::render::shader::Shader;
 use crate::render::shader::pass_uniforms::PassUniforms;
+use crate::render::shader::Shader;
 use crate::state::Screen;
 use crate::texture::TextureConfig;
 use crate::{
@@ -750,6 +751,8 @@ impl Renderer {
         let spacing_x = 10.0;
         let margin_x = panel_x + panel_width * 0.1;
         let mut current_y = 20.0;
+        let slider_width = panel_width * 0.8;
+        let slider_height = 20.0;
 
         // bottom row
         if self.ui_manager.button(
@@ -857,13 +860,229 @@ impl Renderer {
         }
         current_y += button_height + spacing_y;
 
+        // Rotation controls
+        let rotation_label_y = current_y + button_height / 2.0 - font_height / 2.0;
+        self.ui_manager.draw_text(
+            current_font,
+            "ROTATION",
+            margin_x,
+            rotation_label_y,
+            scale,
+            Color::new(0.7, 0.7, 0.7, 1.0),
+        );
+        current_y += button_height + spacing_y / 2.0;
+
+        // Rotation X axis
+        if self.ui_manager.button(
+            7,
+            "-RX",
+            margin_x,
+            current_y,
+            button_width,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_rot.x -= 0.1 * state.delta_time * 8.55;
+        }
+
+        if self.ui_manager.button(
+            8,
+            "-RZ",
+            margin_x + button_width + spacing_x,
+            current_y,
+            button_width,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_rot.z -= 0.1 * state.delta_time * 8.55;
+        }
+
+        if self.ui_manager.button(
+            9,
+            "-RY",
+            margin_x + (button_width + spacing_x) * 2.0,
+            current_y,
+            button_width,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_rot.y -= 0.1 * state.delta_time * 8.55;
+        }
+        current_y += button_height + spacing_y;
+
+        // 2nd rotation row
+        if self.ui_manager.button(
+            10,
+            "+RX",
+            margin_x,
+            current_y,
+            button_width,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_rot.x += 0.1 * state.delta_time * 8.55;
+        }
+
+        if self.ui_manager.button(
+            11,
+            "+RZ",
+            margin_x + button_width + spacing_x,
+            current_y,
+            button_width,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_rot.z += 0.1 * state.delta_time * 8.55;
+        }
+
+        if self.ui_manager.button(
+            12,
+            "+RY",
+            margin_x + (button_width + spacing_x) * 2.0,
+            current_y,
+            button_width,
+            button_height,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.selected_item_rot.y += 0.1 * state.delta_time * 8.55;
+        }
+        current_y += button_height + spacing_y;
+
+        // Rotation sliders (-2PI to 2PI) with manual degree display
+        // Map current rotation to 0.0-1.0 slider range
+        let slider_x = (state.selected_item_rot.x / (4.0 * std::f32::consts::PI)) + 0.5;
+        if let Some(value) = self.ui_manager.slider_with_label(
+            13,
+            "Rot X",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            slider_x,
+            0.0,
+            1.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            // Map 0.0-1.0 to -2PI to 2PI
+            let rot_value = (value - 0.5) * 4.0 * std::f32::consts::PI;
+            state.selected_item_rot.x = rot_value;
+        }
+        let deg_x = state.selected_item_rot.x * 180.0 / std::f32::consts::PI;
+        self.ui_manager.draw_text(
+            current_font,
+            &format!("{:.1}°", deg_x),
+            margin_x + slider_width + 10.0,
+            current_y + slider_height / 2.0 - font_height / 2.0,
+            scale * 0.8,
+            Color::new(0.7, 0.7, 0.7, 1.0),
+        );
+        current_y += slider_height + spacing_y;
+
+        let slider_y = (state.selected_item_rot.y / (4.0 * std::f32::consts::PI)) + 0.5;
+        if let Some(value) = self.ui_manager.slider_with_label(
+            14,
+            "Rot Y",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            slider_y,
+            0.0,
+            1.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            let rot_value = (value - 0.5) * 4.0 * std::f32::consts::PI;
+            state.selected_item_rot.y = rot_value;
+        }
+        let deg_y = state.selected_item_rot.y * 180.0 / std::f32::consts::PI;
+        self.ui_manager.draw_text(
+            current_font,
+            &format!("{:.1}°", deg_y),
+            margin_x + slider_width + 10.0,
+            current_y + slider_height / 2.0 - font_height / 2.0,
+            scale * 0.8,
+            Color::new(0.7, 0.7, 0.7, 1.0),
+        );
+        current_y += slider_height + spacing_y;
+
+        let slider_z = (state.selected_item_rot.z / (4.0 * std::f32::consts::PI)) + 0.5;
+        if let Some(value) = self.ui_manager.slider_with_label(
+            15,
+            "Rot Z",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            slider_z,
+            0.0,
+            1.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_pressed,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            let rot_value = (value - 0.5) * 4.0 * std::f32::consts::PI;
+            state.selected_item_rot.z = rot_value;
+        }
+        let deg_z = state.selected_item_rot.z * 180.0 / std::f32::consts::PI;
+        self.ui_manager.draw_text(
+            current_font,
+            &format!("{:.1}°", deg_z),
+            margin_x + slider_width + 10.0,
+            current_y + slider_height / 2.0 - font_height / 2.0,
+            scale * 0.8,
+            Color::new(0.7, 0.7, 0.7, 1.0),
+        );
+        current_y += slider_height + spacing_y;
+
         if let Some(i) = state.selected_item {
             let tr = &mut self.drawables[i].transform;
             tr.set_position(state.selected_item_pos);
+            tr.set_rotation(state.selected_item_rot);
         }
 
-        let slider_width = panel_width * 0.8;
-        let slider_height = 20.0;
         if let Some(value) = self.ui_manager.slider_with_value(
             4,
             "Vertex snapping",
@@ -958,6 +1177,15 @@ impl Renderer {
                 state.selected_item = None;
             }
         }
+
+        // Update rotation for selected object
+        if let Some(i) = state.selected_item {
+            if let Some(dr) = self.drawables.get(i) {
+                let selected_item_rot = dr.transform.get_rotation();
+                state.selected_item_rot = selected_item_rot;
+            }
+        }
+
         state.mouse_free = true;
         self.ui_manager.end_frame();
     }
