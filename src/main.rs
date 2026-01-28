@@ -57,7 +57,7 @@ fn main() -> Result<()> {
     let (low, high) = (-r, r);
 
     let texture_pool = [
-        // ("assets/textures/transparency.png", true),
+        ("assets/textures/transparency.png", true),
         // ("assets/textures/colored_glass.png", true),
         ("assets/textures/liminal_space.png", false),
         ("assets/textures/white.png", false),
@@ -67,7 +67,7 @@ fn main() -> Result<()> {
     for _ in 0..10 {
         let position = [
             rng.gen_range(low, high),
-            rng.gen_range(low, high),
+            rng.gen_range(low, high) + r / 2.0,
             rng.gen_range(low, high),
         ];
 
@@ -189,7 +189,7 @@ fn main() -> Result<()> {
         specular: Vector3::from_value(0.0),
     });
 
-    let w = 10.0;
+    let w = 20.0;
     let y = -1.0;
     let plane = Plane::new(
         [[w, y, w], [-w, y, w], [w, y, -w], [-w, y, -w]],

@@ -21,7 +21,7 @@ impl ShadowFramebuffer {
         let mut framebuffer = Framebuffer::new(width, height)?;
         framebuffer.add_depth_attachment(
             TextureFormatDepth::Depth32F,
-            TextureFilter::Nearest,
+            TextureFilter::Linear,
             TextureWrap::ClampToBorder,
         )?;
         framebuffer.clear_color = (1.0, 1.0, 1.0, 1.0);

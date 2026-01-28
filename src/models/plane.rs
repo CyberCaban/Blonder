@@ -73,7 +73,7 @@ impl Drawable for Plane {
         Some(self.texture.to_string())
     }
     fn get_shader_name(&self) -> Option<ShaderInfo> {
-        Some(self.shader_info.clone())
+        None
     }
     fn get_blend_mode(&self) -> BlendMode {
         self.blend_mode

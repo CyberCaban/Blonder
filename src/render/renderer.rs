@@ -433,7 +433,6 @@ impl Renderer {
         }
 
         transparent_objects.sort_by(|a, b| (b.1).partial_cmp(&a.1).unwrap());
-
         // draw opaque objects
         for (key, objects) in &batches {
             self.apply_shaders(&key.shader_name, glfw, state);
@@ -601,13 +600,13 @@ impl Renderer {
     }
     pub fn render_checkerboard(&mut self, glfw: &mut glfw::Glfw, state: &mut State) {
         self.update_mvp(state);
-        // self.framebuffer.set_scale_strategy(state.scale_strategy);
 
         // render prepass
         // - picking texture
         self.ui_manager.picking_texture.enable_writing();
         self.render_unique(glfw, state);
         self.ui_manager.picking_texture.disable_writing();
+
         // - shadows
         self.framebuffer_manager
             .begin_frame(FrameBufferType::Shadow, state);
@@ -983,25 +982,31 @@ impl Renderer {
         if let Some(shadow_shader) = self.shaders.get(DEFAULT_SHADOW_SHADER_NAME) {
             shadow_shader.use_shader();
 
-            if let Some(light_matrix) = self.framebuffer_manager.get_current_shadow_matrix() {
-                let light_matrix = self
-                    .framebuffer_manager
-                    .shadow_fb
-                    .calculate_light_space_matrix();
-                shadow_shader.set_mat4("lightSpaceMatrix", &light_matrix);
+            let light_matrix = self
+                .framebuffer_manager
+                .shadow_fb
+                .calculate_light_space_matrix();
+            shadow_shader.set_mat4("lightSpaceMatrix", &light_matrix);
 
-                // Сохраняем матрицу для передачи в основной шейдер
-                // Нужно добавить поле в Renderer:
-                // shadow_light_matrix: Option<glm::Mat4>
-                self.shadow_light_matrix = Some(light_matrix);
-            }
+            self.shadow_light_matrix = Some(light_matrix);
 
-            // Рендерим только объекты, которые отбрасывают тени
+            // Рендерим только непрозрачные объекты
             for render_obj in &self.drawables {
-                let model = &render_obj.transform.calculate_model();
-                shadow_shader.set_mat4("model", &model);
+                if render_obj.drawable.get_blend_mode() == BlendMode::Opaque || true {
+                    if let Some(texture_name) = render_obj.drawable.get_texture_name()
+                        && let Some(texture) = self.textures.get(&texture_name)
+                    {
+                        unsafe {
+                            gl::ActiveTexture(gl::TEXTURE0);
+                            texture.use_texture();
+                        }
+                        shadow_shader.set_int("tex", 0);
+                    }
 
-                render_obj.drawable.draw(glfw, state);
+                    let model = &render_obj.transform.calculate_model();
+                    shadow_shader.set_mat4("model", &model);
+                    render_obj.drawable.draw(glfw, state);
+                }
             }
         }
     }

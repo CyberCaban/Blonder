@@ -53,8 +53,11 @@ fn main() {
         .parent()
         .unwrap(); // target
 
+    let assets_dir = current_dir.join("assets");
+    println!("cargo:rerun-if-changed={}", assets_dir.display());
+
     // копируем ассеты
-    if let Err(e) = copy_dir_all(&current_dir.join("assets"), &target_dir.join("assets")) {
+    if let Err(e) = copy_dir_all(&assets_dir, &target_dir.join("assets")) {
         panic!("Не удалось скопировать ассеты: {e}");
     }
 
