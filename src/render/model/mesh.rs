@@ -1,8 +1,12 @@
 use std::ptr;
 
 use crate::render::{
-    blend_mode::BlendMode, drawable::Drawable, helpers::set_buffer_data_with_indices,
-    renderer::TextureRef, shader::ShaderInfo, vertex::Vertex,
+    blend_mode::BlendMode,
+    drawable::Drawable,
+    helpers::{set_buffer_data, set_buffer_data_with_indices},
+    renderer::TextureRef,
+    shader::ShaderInfo,
+    vertex::Vertex,
 };
 
 #[derive(Debug)]
@@ -13,14 +17,21 @@ pub struct Mesh {
     vao: u32,
     vbo: u32,
     ebo: u32,
+    is_indexed: bool,
 }
 
 impl Mesh {
-    pub fn new(vertices: Vec<Vertex>, indices: Vec<u32>, textures: Vec<TextureRef>) -> Self {
+    pub fn new(
+        vertices: Vec<Vertex>,
+        indices: Vec<u32>,
+        textures: Vec<TextureRef>,
+        is_indexed: bool,
+    ) -> Self {
         let mut mesh = Self {
             indices,
             textures,
             vertices,
+            is_indexed,
             vao: 0,
             vbo: 0,
             ebo: 0,
@@ -32,9 +43,19 @@ impl Mesh {
         unsafe {
             gl::GenVertexArrays(1, &mut self.vao);
             gl::GenBuffers(1, &mut self.vbo);
-            gl::GenBuffers(1, &mut self.ebo);
+            if self.is_indexed {
+                gl::GenBuffers(1, &mut self.ebo);
+                set_buffer_data_with_indices(
+                    self.vao,
+                    self.vbo,
+                    self.ebo,
+                    &self.vertices,
+                    &self.indices,
+                );
+            } else {
+                set_buffer_data(self.vao, self.vbo, &self.vertices);
+            }
         }
-        set_buffer_data_with_indices(self.vao, self.vbo, self.ebo, &self.vertices, &self.indices);
     }
 }
 
@@ -51,12 +72,17 @@ impl Drawable for Mesh {
         }
         unsafe {
             gl::BindVertexArray(self.vao);
-            gl::DrawElements(
-                gl::TRIANGLES,
-                self.indices.len() as i32,
-                gl::UNSIGNED_INT,
-                ptr::null(),
-            );
+            if self.is_indexed {
+                gl::DrawElements(
+                    gl::TRIANGLES,
+                    self.indices.len() as i32,
+                    gl::UNSIGNED_INT,
+                    ptr::null(),
+                );
+            } else {
+                gl::DrawArrays(gl::TRIANGLES, 0, self.vertices.len() as i32);
+            }
+
             gl::BindVertexArray(0);
         }
     }

@@ -11,12 +11,13 @@ use crate::{
     log::setup_logger,
     models::{
         cube::{Cube, CubeSettings},
+        cubeworld::{block::{Block, BlockSettings}, chunk::Chunk},
         plane::Plane,
     },
     render::{
         blend_mode::BlendMode,
         helpers::init_window,
-        light::{DirLight, PointLight, SpotLight},
+        light::DirLight,
         renderer::{RenderMaterial, RenderObject, Renderer},
         shader::{Shader, ShaderInfo},
         transform::Transform,
@@ -77,7 +78,7 @@ fn main() -> Result<()> {
             0.0, // rng.r#gen::<f32>() * 360.0,
         ];
         let texture = texture_pool[rng.gen_range(0, texture_pool.len())];
-        let cube = Cube::new(CubeSettings {
+        let cube = Block::new(BlockSettings {
             position: [0.0, 0.0, 0.0],
             rotation: [0.0, 0.0, 0.0],
             texture_name: texture.0,
@@ -119,6 +120,9 @@ fn main() -> Result<()> {
         let id = renderer.add_render_object(render_object);
         objIds.push(id);
     }
+
+    let chunk = Chunk::new(&[0.0,0.0,0.0]);
+    let _ = renderer.add_static_drawable(chunk);
 
     let light_src = Cube::new(CubeSettings {
         texture_name: "assets/textures/white.png",

@@ -155,3 +155,57 @@ pub fn set_buffer_data_with_indices(
         gl::EnableVertexAttribArray(2);
     }
 }
+
+pub fn set_buffer_data_with_indices_u8(
+    vao: u32,
+    vbo: u32,
+    ebo: u32,
+    data: &[Vertex],
+    indices: &[u8],
+) {
+    unsafe {
+        gl::BindVertexArray(vao);
+
+        gl::BindBuffer(gl::ARRAY_BUFFER, vbo);
+        gl::BindBuffer(gl::ELEMENT_ARRAY_BUFFER, ebo);
+        gl::BufferData(
+            gl::ELEMENT_ARRAY_BUFFER,
+            std::mem::size_of_val(indices) as GLsizeiptr,
+            &indices[0] as *const u8 as *const c_void,
+            gl::STATIC_DRAW,
+        );
+        gl::BufferData(
+            gl::ARRAY_BUFFER,
+            std::mem::size_of_val(data) as GLsizeiptr,
+            &data[0] as *const _ as *const c_void,
+            gl::STATIC_DRAW,
+        );
+        gl::VertexAttribPointer(
+            0,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (std::mem::size_of::<Vertex>()) as GLsizei,
+            offset_of!(Vertex, position) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(0);
+        gl::VertexAttribPointer(
+            1,
+            3,
+            gl::FLOAT,
+            gl::FALSE,
+            (std::mem::size_of::<Vertex>()) as GLsizei,
+            offset_of!(Vertex, normal) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(1);
+        gl::VertexAttribPointer(
+            2,
+            2,
+            gl::FLOAT,
+            gl::FALSE,
+            (std::mem::size_of::<Vertex>()) as GLsizei,
+            offset_of!(Vertex, uv) as *const c_void,
+        );
+        gl::EnableVertexAttribArray(2);
+    }
+}

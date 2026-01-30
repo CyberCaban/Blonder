@@ -15,7 +15,7 @@ use crate::{
     texture::Texture,
 };
 
-mod mesh;
+pub mod mesh;
 
 #[derive(Error, Debug)]
 pub enum LoadModelError {
@@ -96,7 +96,7 @@ impl Model {
                 return Err(LoadModelError::InvalidModel.into());
             }
             self.meshes
-                .push(Mesh::new(vertices, mesh.indices.clone(), textures));
+                .push(Mesh::new(vertices, mesh.indices.clone(), textures, true));
         }
 
         Ok(())
