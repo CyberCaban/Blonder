@@ -9,6 +9,11 @@ pub struct Vertex {
 }
 
 impl Vertex {
+    pub fn scale(&mut self, scale: &[f32; 3]) {
+        self.position[0] *= scale[0];
+        self.position[1] *= scale[1];
+        self.position[2] *= scale[2];
+    }
     pub fn add_pos(&mut self, position: &[f32; 3]) {
         self.position[0] += position[0];
         self.position[1] += position[1];

@@ -17,6 +17,7 @@ use crate::{
 pub struct CubeSettings<'a> {
     pub position: [f32; 3],
     pub rotation: [f32; 3],
+    pub scale: [f32; 3],
     pub texture_name: &'a str,
     pub shader_name: ShaderInfo,
     pub blend_mode: BlendMode,
@@ -28,6 +29,7 @@ impl Default for CubeSettings<'_> {
         Self {
             position: [0.0, 0.0, 0.0],
             rotation: [0.0, 0.0, 0.0],
+            scale: [1.0, 1.0, 1.0],
             texture_name: "",
             shader_name: ShaderInfo {
                 name: "cube".to_string(),
@@ -40,6 +42,7 @@ impl Default for CubeSettings<'_> {
     }
 }
 
+#[derive(Debug)]
 pub struct Cube {
     pub points: Vec<Vertex>,
     pub position: Vector3<f32>,
@@ -100,6 +103,7 @@ impl Cube {
 
         ];
         points.iter_mut().for_each(|v| {
+            v.scale(&settings.scale);
             v.add_pos(&settings.position);
             v.rotate_around(&settings.position, &settings.rotation);
         });

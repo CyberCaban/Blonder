@@ -42,7 +42,7 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
             .map(|ptr| ptr as *const c_void)
             .unwrap_or(std::ptr::null())
     });
-    glfw.set_swap_interval(glfw::SwapInterval::Adaptive);
+    glfw.set_swap_interval(glfw::SwapInterval::Sync(1));
     unsafe {
         // depth buffer
         gl::Enable(gl::DEPTH_TEST);

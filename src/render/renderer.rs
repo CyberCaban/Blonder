@@ -1,10 +1,9 @@
-use cgmath::{Array, Deg, ElementWise, InnerSpace, Matrix4, Rad, Vector3, perspective};
-use log::info;
+use cgmath::{Array, Point3, ortho};
+use cgmath::{Deg, InnerSpace, Matrix4, Rad, Vector3, perspective};
 use log::warn;
 use num::Zero;
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::f32::consts::PI;
 use std::sync::Arc;
 use thiserror::Error;
 use uuid::Uuid;
@@ -26,8 +25,6 @@ use crate::render::consts::MAX_SPOT_LIGHTS;
 use crate::render::consts::{HEIGHT, WIDTH};
 use crate::render::framebuffer::manager::FrameBufferType;
 use crate::render::framebuffer::manager::FramebufferManager;
-use crate::render::framebuffer::resolution::ResolutionFramebuffer;
-use crate::render::framebuffer::resolution::ViewportScaleStrategy;
 use crate::render::gui::font::FontAtlas;
 use crate::render::gui::ui_manager::UIManager;
 use crate::render::light::DirLight;
@@ -617,6 +614,35 @@ impl Renderer {
         self.render_shadows(glfw, state);
         self.framebuffer_manager.end_frame(state);
 
+        // - compass
+        self.framebuffer_manager
+            .begin_frame(FrameBufferType::Compass, state);
+        let shader = &self.framebuffer_manager.compass_fb.primitive_shader;
+        if state.display_debug_info {
+            state.display_debug_info = false;
+            dbg!(&shader);
+        }
+        shader.use_shader();
+        shader.set_mat4(
+            "view",
+            &Matrix4::look_at(
+                Point3::new(
+                    state.camera.front.x,
+                    -state.camera.front.y,
+                    state.camera.front.z,
+                ),
+                Point3::from_value(0.0),
+                Vector3::unit_y(),
+            ),
+        );
+        shader.set_mat4("projection", &ortho(-1.0, 1.0, -1.0, 1.0, -1.0, 10.0));
+        shader.set_mat4("model", &self.model_matrix);
+        self.framebuffer_manager
+            .compass_fb
+            .primitive
+            .draw(glfw, state);
+        self.framebuffer_manager.end_frame(state);
+
         // - normals
         self.framebuffer_manager
             .begin_frame(FrameBufferType::Mini, state);
@@ -633,18 +659,8 @@ impl Renderer {
                 let transform = &render_obj.transform;
                 let model = transform.calculate_model();
                 shader.set_mat4("model", &model);
-                if let Some(texture_name) = render_obj.drawable.get_texture_name()
-                    && let Some(texture) = self.textures.get(&texture_name)
-                {
-                    unsafe {
-                        gl::ActiveTexture(gl::TEXTURE0);
-                        texture.use_texture();
-                    }
-                }
-
                 render_obj.drawable.draw(glfw, state);
             }
-            // self.render_shadows(glfw, state);
         }
         self.framebuffer_manager.end_frame(state);
 
@@ -663,10 +679,10 @@ impl Renderer {
                 if state.wireframe { gl::LINE } else { gl::FILL },
             );
 
-            if let Some(_) = &state.model_path_to_load {
-                if let Err(e) = self.load_model(state) {
-                    warn!("Failed to load model: [{e}]");
-                }
+            if state.model_path_to_load.is_some()
+                && let Err(e) = self.load_model(state)
+            {
+                warn!("Failed to load model: [{e}]");
             }
         }
 
@@ -680,6 +696,9 @@ impl Renderer {
         self.framebuffer_manager
             .mini_fb
             .render_scene_to_screen(state);
+        self.framebuffer_manager
+            .compass_fb
+            .render_scene_to_screen(state);
 
         if state.show_ui {
             self.render_ui(glfw, state);
@@ -689,7 +708,7 @@ impl Renderer {
                 .ui_manager
                 .picking_texture
                 .update_screen_size(state.screen.width as i32, state.screen.height as i32);
-            self.framebuffer_manager.update_screen_size(&state.screen);
+            let _ = self.framebuffer_manager.update_screen_size(&state.screen);
             state.window_size_changed = false;
         }
         unsafe {
@@ -1227,7 +1246,7 @@ impl Renderer {
             for render_obj in &self.drawables {
                 if render_obj.drawable.get_blend_mode() == BlendMode::Opaque || true {
                     let model = &render_obj.transform.calculate_model();
-                    shadow_shader.set_mat4("model", &model);
+                    shadow_shader.set_mat4("model", model);
                     render_obj.drawable.draw(glfw, state);
                 }
             }

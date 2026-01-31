@@ -21,7 +21,7 @@ impl Mini {
         let mut framebuffer = Framebuffer::new(width, height)?;
         framebuffer.add_color_attachment(
             0,
-            crate::texture::TextureFormatColor::RGB8,
+            crate::texture::TextureFormatColor::RGBA8,
             crate::texture::TextureFilter::Nearest,
             crate::texture::TextureWrap::ClampToEdge,
         )?;
@@ -30,7 +30,7 @@ impl Mini {
             crate::texture::TextureFilter::Nearest,
             crate::texture::TextureWrap::ClampToEdge,
         )?;
-        framebuffer.clear_color = (0.0, 0.0, 0.0, 1.0);
+        framebuffer.clear_color = (0.0, 0.0, 0.0, 0.4);
         framebuffer.check_complete()?;
         let screen_shader = Shader::new(
             "assets/shaders/screen/vert.glsl",

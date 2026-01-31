@@ -6,6 +6,8 @@ use anyhow::{Context, Result};
 use image::{DynamicImage, GenericImage};
 use log::info;
 
+use crate::render::color::Color;
+
 #[derive(Debug, Clone, Copy)]
 pub enum TextureFormatColor {
     RGBA8,
@@ -122,6 +124,32 @@ pub struct Texture {
 }
 
 impl Texture {
+    pub fn from_color(color: Color) -> Self {
+        unsafe {
+            let mut id = 0;
+            gl::GenTextures(1, &mut id);
+            gl::BindTexture(gl::TEXTURE_2D, id);
+
+            let color = color.as_array().map(|c| (c * 255.0) as u8);
+
+            gl::TexImage2D(
+                gl::TEXTURE_2D,
+                0,
+                gl::RGBA as i32,
+                1,
+                1,
+                0,
+                gl::RGBA,
+                gl::UNSIGNED_BYTE,
+                color.as_ptr() as *const _,
+            );
+
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MIN_FILTER, gl::NEAREST as i32);
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAG_FILTER, gl::NEAREST as i32);
+
+            Self { id }
+        }
+    }
     pub fn white() -> Self {
         unsafe {
             let mut id = 0;

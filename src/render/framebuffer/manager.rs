@@ -4,6 +4,7 @@ use cgmath::Matrix4;
 use crate::{
     render::{
         framebuffer::{
+            compass::{self, Compass, Viewport},
             mini::Mini,
             resolution::{ResolutionFramebuffer, ViewportScaleStrategy},
             shadow::ShadowFramebuffer,
@@ -21,6 +22,7 @@ pub struct FramebufferManager {
     pub shadow_fb: ShadowFramebuffer,
     pub current_fb: FrameBufferType,
     pub mini_fb: Mini,
+    pub compass_fb: Compass,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq)]
@@ -29,6 +31,7 @@ pub enum FrameBufferType {
     Resolution,
     Shadow,
     Mini,
+    Compass,
 }
 
 impl FramebufferManager {
@@ -46,11 +49,21 @@ impl FramebufferManager {
 
         let mini_fb = Mini::new(320, 320)?;
 
+        let compass = Compass::new(
+            Viewport {
+                x: 100,
+                y: 100,
+                width: 300,
+                height: 300,
+            },
+            screen,
+        )?;
         Ok(Self {
             resolution_fb,
             mini_fb,
             shadow_fb,
             current_fb: FrameBufferType::Default,
+            compass_fb: compass,
         })
     }
     pub fn begin_frame(&mut self, target: FrameBufferType, state: &crate::state::State) {
@@ -73,6 +86,9 @@ impl FramebufferManager {
             FrameBufferType::Mini => {
                 self.mini_fb.begin_render();
             }
+            FrameBufferType::Compass => {
+                self.compass_fb.begin_render();
+            }
         }
     }
     pub fn end_frame(&self, state: &crate::state::State) {
@@ -80,7 +96,6 @@ impl FramebufferManager {
             FrameBufferType::Resolution => {
                 if state.is_lowres {
                     self.resolution_fb.end_scene_render(state);
-                } else {
                 }
             }
             FrameBufferType::Shadow => {
@@ -89,7 +104,13 @@ impl FramebufferManager {
             FrameBufferType::Mini => {
                 self.mini_fb.end_scene_render();
             }
+            FrameBufferType::Compass => {
+                self.compass_fb.end_scene_render();
+            }
             _ => {}
+        }
+        unsafe {
+            gl::ClearColor(state.color.0, state.color.1, state.color.2, state.color.3);
         }
     }
     pub fn get_shader(&self) -> Option<ShaderRef> {
@@ -102,6 +123,7 @@ impl FramebufferManager {
     pub fn update_screen_size(&mut self, screen: &Screen) -> Result<()> {
         self.resolution_fb.update_screen_size(screen);
         self.shadow_fb.update_screen_size(screen);
+        self.compass_fb.update_screen_size(screen);
         Ok(())
     }
     pub fn get_shadow_depth_texture(&self) -> Option<&Texture> {

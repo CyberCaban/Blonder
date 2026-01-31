@@ -8,6 +8,7 @@ use crate::{
     texture::{Texture, TextureFilter, TextureFormatColor, TextureFormatDepth, TextureWrap},
 };
 
+pub mod compass;
 pub mod manager;
 pub mod mini;
 pub mod resolution;
@@ -297,13 +298,13 @@ impl Framebuffer {
         unsafe {
             gl::Viewport(0, 0, self.width, self.height);
 
-            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             gl::ClearColor(
                 self.clear_color.0,
                 self.clear_color.1,
                 self.clear_color.2,
                 self.clear_color.3,
             );
+            gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
             if self.use_depth_test {
                 gl::Enable(gl::DEPTH_TEST);
             } else {
@@ -361,9 +362,7 @@ impl Framebuffer {
 
             gl::Enable(gl::DEPTH_TEST);
             // reset viewport
-            unsafe {
-                gl::Viewport(0, 0, state.screen.width as i32, state.screen.height as i32);
-            }
+            gl::Viewport(0, 0, state.screen.width as i32, state.screen.height as i32);
         }
     }
 }
