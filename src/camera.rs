@@ -35,7 +35,7 @@ impl Camera {
             up: camera_up,
             front: camera_front,
             right: camera_right,
-            camera_speed: 3.55,
+            camera_speed: 10.0,
             sensitivity: 0.001,
             last_x: WIDTH as f32,
             last_y: HEIGHT as f32,

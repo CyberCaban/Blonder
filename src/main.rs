@@ -13,7 +13,9 @@ use crate::{
         cube::{Cube, CubeSettings},
         cubeworld::{
             block::{Block, BlockSettings},
-            chunk::Chunk, cube_render::CubeRenderer,
+            chunk::Chunk,
+            chunks::{Chunks, WorldDimensions},
+            cube_render::CubeRenderer,
         },
         plane::Plane,
     },
@@ -124,8 +126,12 @@ fn main() -> Result<()> {
         objIds.push(id);
     }
 
-    let chunk = Chunk::new(&[0.0, 0.0, 0.0]);
-    let chunk_renderer = CubeRenderer::new(chunk)?;
+    let chunks = Chunks::new(WorldDimensions {
+        depth_in_chunks: 8,
+        height_in_chunks: 3,
+        width_in_chunks: 8,
+    });
+    let chunk_renderer = CubeRenderer::new(chunks)?;
     let _ = renderer.add_static_drawable(chunk_renderer);
 
     let light_src = Cube::new(CubeSettings {

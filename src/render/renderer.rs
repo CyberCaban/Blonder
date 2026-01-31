@@ -409,7 +409,7 @@ impl Renderer {
         };
         let model_matrix =
             Matrix4::from_axis_angle(Vector3::new(1.0, 0.0, 0.0).normalize(), Rad(0.0));
-        let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 100.0);
+        let projection_matrix = perspective(Deg(45.0), aspect, 0.01, 1000.0);
 
         let view_matrix = state.camera.view_matrix();
         self.model_matrix = model_matrix;
@@ -609,10 +609,10 @@ impl Renderer {
         self.ui_manager.picking_texture.disable_writing();
 
         // - shadows
-        self.framebuffer_manager
-            .begin_frame(FrameBufferType::Shadow, state);
-        self.render_shadows(glfw, state);
-        self.framebuffer_manager.end_frame(state);
+        // self.framebuffer_manager
+        //     .begin_frame(FrameBufferType::Shadow, state);
+        // self.render_shadows(glfw, state);
+        // self.framebuffer_manager.end_frame(state);
 
         // - compass
         self.framebuffer_manager

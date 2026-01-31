@@ -62,6 +62,9 @@ pub fn init_window(glfw: &mut Glfw) -> Result<(PWindow, Events)> {
 }
 
 pub fn set_buffer_data(vao: u32, vbo: u32, data: &[Vertex]) {
+    if data.is_empty() {
+        return;
+    }
     unsafe {
         gl::BindVertexArray(vao);
 

@@ -4,7 +4,7 @@ use anyhow::Result;
 
 use crate::{
     models::cubeworld::{
-        chunk::{Chunk, is_blocked},
+        chunk::{Chunk, Voxel},
         consts::{ATLAS_SIDE, C, CHUNK_D, CHUNK_H, CHUNK_W, UV_SIZE},
     },
     render::{
@@ -15,8 +15,15 @@ use crate::{
         shader::ShaderInfo,
         vertex::{Vertex, calculate_normals},
     },
-    texture::Texture,
 };
+
+pub fn in_chunk_bounds(x: C, y: C, z: C) -> bool {
+    x >= 0 && x < CHUNK_W as C && y >= 0 && y < CHUNK_H as C && z >= 0 && z < CHUNK_D as C
+}
+pub fn is_blocked(voxels: &[Voxel], x: C, y: C, z: C) -> bool {
+    in_chunk_bounds(x, y, z)
+        && voxels[Chunk::get_voxel_index(x as usize, y as usize, z as usize)].id != 0
+}
 
 #[derive(Debug)]
 pub struct ChunkMesh {
@@ -44,10 +51,15 @@ impl ChunkMesh {
                         continue;
                     }
 
-                    let (x, y, z): (C, C, C) = (x as C, y as C, z as C);
+                    let (global_x, global_y, global_z): (C, C, C) = (
+                        x as C + chunk.position[0] * CHUNK_W as C,
+                        y as C + chunk.position[1] * CHUNK_H as C,
+                        z as C + chunk.position[2] * CHUNK_D as C,
+                    );
+                    let (local_x, local_y, local_z) = (x as C, y as C, z as C);
                     let u = (voxel_id % ATLAS_SIDE as u32) as f32 * UV_SIZE;
                     let v = (voxel_id / ATLAS_SIDE as u32) as f32 * UV_SIZE;
-                    if !is_blocked(voxels, x, y + 1, z) {
+                    if !is_blocked(voxels, local_x, local_y + 1, local_z) {
                         #[rustfmt::skip]
                         [
                             // top
@@ -60,11 +72,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[x as f32, y as f32, z as f32]);
+                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, x, y - 1, z) {
+                    if !is_blocked(voxels, local_x, local_y - 1, local_z) {
                         #[rustfmt::skip]
                         [
                             // bottom
@@ -77,11 +89,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[x as f32, y as f32, z as f32]);
+                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, x + 1, y, z) {
+                    if !is_blocked(voxels, local_x + 1, local_y, local_z) {
                         #[rustfmt::skip]
                         [
                             // right
@@ -94,11 +106,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[x as f32, y as f32, z as f32]);
+                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, x - 1, y, z) {
+                    if !is_blocked(voxels, local_x - 1, local_y, local_z) {
                         #[rustfmt::skip]
                         [
                             // left
@@ -111,11 +123,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[x as f32, y as f32, z as f32]);
+                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, x, y, z + 1) {
+                    if !is_blocked(voxels, local_x, local_y, local_z + 1) {
                         #[rustfmt::skip]
                         [
                             // front
@@ -128,11 +140,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[x as f32, y as f32, z as f32]);
+                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, x, y, z - 1) {
+                    if !is_blocked(voxels, local_x, local_y, local_z - 1) {
                         #[rustfmt::skip]
                         [
                             // back
@@ -145,7 +157,7 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[x as f32, y as f32, z as f32]);
+                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
                             vertices.push(v)
                         });
                     }
