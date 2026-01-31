@@ -11,7 +11,10 @@ use crate::{
     log::setup_logger,
     models::{
         cube::{Cube, CubeSettings},
-        cubeworld::{block::{Block, BlockSettings}, chunk::Chunk},
+        cubeworld::{
+            block::{Block, BlockSettings},
+            chunk::Chunk, cube_render::CubeRenderer,
+        },
         plane::Plane,
     },
     render::{
@@ -121,8 +124,9 @@ fn main() -> Result<()> {
         objIds.push(id);
     }
 
-    let chunk = Chunk::new(&[0.0,0.0,0.0]);
-    let _ = renderer.add_static_drawable(chunk);
+    let chunk = Chunk::new(&[0.0, 0.0, 0.0]);
+    let chunk_renderer = CubeRenderer::new(chunk)?;
+    let _ = renderer.add_static_drawable(chunk_renderer);
 
     let light_src = Cube::new(CubeSettings {
         texture_name: "assets/textures/white.png",

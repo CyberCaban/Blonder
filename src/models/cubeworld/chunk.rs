@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use crate::{
+    models::cubeworld::consts::{C, CHUNK_D, CHUNK_H, CHUNK_VOL, CHUNK_W},
     render::{
         drawable::Drawable,
         model::mesh::Mesh,
@@ -10,20 +11,16 @@ use crate::{
 };
 
 #[derive(Debug, Clone, Copy)]
-struct Voxel {
-    id: u32,
+pub struct Voxel {
+    pub id: u32,
 }
 
-const CHUNK_W: usize = 16;
-const CHUNK_H: usize = 16;
-const CHUNK_D: usize = 16;
-const CHUNK_VOL: usize = CHUNK_W * CHUNK_H * CHUNK_D;
-type C = i32;
-fn in_chunk_bounds(x: C, y: C, z: C) -> bool {
+pub fn in_chunk_bounds(x: C, y: C, z: C) -> bool {
     x >= 0 && x < CHUNK_W as C && y >= 0 && y < CHUNK_H as C && z >= 0 && z < CHUNK_D as C
 }
-fn is_blocked(voxels: &[Voxel], x: C, y: C, z: C) -> bool {
-    in_chunk_bounds(x, y, z) && voxels[Chunk::get_voxel_index(x as usize, y as usize, z as usize)].id != 0
+pub fn is_blocked(voxels: &[Voxel], x: C, y: C, z: C) -> bool {
+    in_chunk_bounds(x, y, z)
+        && voxels[Chunk::get_voxel_index(x as usize, y as usize, z as usize)].id != 0
 }
 
 #[derive(Debug)]
@@ -34,7 +31,7 @@ pub struct Chunk {
 
 impl Chunk {
     pub fn new(position: &[f32; 3]) -> Self {
-        let voxels = Self::init_voxels();
+        let voxels = Self::init_voxels(position);
         let mut vertices = vec![];
 
         for y in 0..CHUNK_H {
@@ -153,20 +150,18 @@ impl Chunk {
             }
         }
         calculate_normals(&mut vertices);
-        let textures = vec![Arc::new(Texture::white())];
+        let textures = vec![Arc::new(Texture::white()), Arc::new(Texture::black())];
 
         let mesh = Mesh::new(vertices, vec![], textures, false);
         Self { mesh, voxels }
     }
-    fn init_voxels() -> [Voxel; CHUNK_VOL] {
+    fn init_voxels(position: &[f32; 3]) -> [Voxel; CHUNK_VOL] {
         let mut voxels = [Voxel { id: 0 }; CHUNK_VOL];
         for y in 0..CHUNK_H {
             for z in 0..CHUNK_D {
                 for x in 0..CHUNK_W {
-                    if y >= 2 && y <= 5 {
-                        let id = 2 as u32;
-                        voxels[Self::get_voxel_index(x, y, z)].id = id;
-                    }
+                    let id = (((x + z) as f32).cos() + 1.0) as u32;
+                    voxels[Self::get_voxel_index(x, y, z)].id = id;
                 }
             }
         }
@@ -174,6 +169,16 @@ impl Chunk {
     }
     fn get_voxel_index(x: usize, y: usize, z: usize) -> usize {
         (y * CHUNK_D + z) * CHUNK_W + x
+    }
+    pub fn get_voxels(&self) -> &[Voxel; CHUNK_VOL] {
+        &self.voxels
+    }
+    pub fn get_voxel(&self, x: C, y: C, z: C) -> Option<Voxel> {
+        if in_chunk_bounds(x, y, z) {
+            Some(self.voxels[Self::get_voxel_index(x as usize, y as usize, z as usize)])
+        } else {
+            None
+        }
     }
 }
 
