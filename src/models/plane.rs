@@ -81,6 +81,7 @@ impl Drawable for Plane {
     fn get_texture_config(&self) -> Option<crate::texture::TextureConfig> {
         None
     }
+    fn update(&mut self, state: &State) {}
 }
 
 impl Drop for Plane {

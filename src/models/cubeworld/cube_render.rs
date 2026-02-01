@@ -1,9 +1,14 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use glfw::Glfw;
 
 use crate::{
-    models::cubeworld::{chunk::Chunk, chunk_mesh::ChunkMesh, chunks::Chunks},
+    models::cubeworld::{
+        chunk::{Chunk, Voxel},
+        chunk_mesh::ChunkMesh,
+        chunks::Chunks,
+    },
     render::{drawable::Drawable, renderer::TextureRef},
     texture::{Texture, TextureConfig},
 };
@@ -26,8 +31,8 @@ impl CubeRenderer {
             },
         )?);
         let mut chunk_meshes = Vec::with_capacity(chunks.get_volume());
-        for i in 0..chunks.get_volume() {
-            chunk_meshes.push(ChunkMesh::from_chunk(&chunks.chunks[i], atlas.clone())?);
+        for chunk in &chunks.chunks {
+            chunk_meshes.push(ChunkMesh::from_chunk(chunk, &chunks, atlas.clone())?);
         }
         Ok(Self {
             chunks,
@@ -41,6 +46,39 @@ impl Drawable for CubeRenderer {
     fn draw(&self, glfw: &glfw::Glfw, state: &crate::state::State) {
         for chunk in &self.chunk_meshes {
             chunk.draw(glfw, state);
+        }
+    }
+    fn update(&mut self, state: &crate::state::State) {
+        let raycast = self.chunks.raycast(
+            state.camera.position.into(),
+            state.camera.front.into(),
+            10.0,
+        );
+        if raycast.is_hit {
+            if state.mouse_left_just_pressed() {
+                self.chunks.set_voxel(
+                    raycast.hit_coords[0],
+                    raycast.hit_coords[1],
+                    raycast.hit_coords[2],
+                    Voxel { id: 0 },
+                );
+            }
+            if state.mouse_right_just_pressed() {
+                self.chunks.set_voxel(
+                    raycast.hit_coords[0] + raycast.normal[0] as i32,
+                    raycast.hit_coords[1] + raycast.normal[1] as i32,
+                    raycast.hit_coords[2] + raycast.normal[2] as i32,
+                    Voxel { id: 1 },
+                );
+            }
+        }
+        for (i, chunk) in self.chunks.chunks.iter().enumerate() {
+            if !chunk.is_modified() {
+                continue;
+            }
+            chunk.reset_modified();
+            self.chunk_meshes[i] =
+                ChunkMesh::from_chunk(chunk, &self.chunks, self.texture_atlas.clone()).unwrap();
         }
     }
     fn get_blend_mode(&self) -> crate::render::blend_mode::BlendMode {

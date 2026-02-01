@@ -1,7 +1,8 @@
 use glfw::{Action, Key, WindowEvent};
 
 use crate::{
-    render::framebuffer::resolution::ViewportScaleStrategy, state::{Events, State}
+    render::framebuffer::resolution::ViewportScaleStrategy,
+    state::{Events, State},
 };
 
 pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut State) {
@@ -34,10 +35,16 @@ pub fn process_events(window: &mut glfw::Window, events: &Events, state: &mut St
                 state.cursor_pos_y = (state.screen.height as f64 - y) as f32;
             }
             WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Press, _) => {
-                state.mouse_pressed = true;
+                state.mouse_left_click = true;
             }
             WindowEvent::MouseButton(glfw::MouseButtonLeft, Action::Release, _) => {
-                state.mouse_pressed = false;
+                state.mouse_left_click = false;
+            }
+            WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Press, _) => {
+                state.mouse_right_click = true;
+            }
+            WindowEvent::MouseButton(glfw::MouseButtonRight, Action::Release, _) => {
+                state.mouse_right_click = false;
             }
             WindowEvent::Key(Key::P, _, Action::Press | Action::Repeat, _) => {
                 state.display_debug_info = true;

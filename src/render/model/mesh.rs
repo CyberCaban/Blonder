@@ -86,6 +86,7 @@ impl Drawable for Mesh {
             gl::BindVertexArray(0);
         }
     }
+    fn update(&mut self, state: &crate::state::State) {}
     fn get_blend_mode(&self) -> BlendMode {
         BlendMode::Opaque
     }

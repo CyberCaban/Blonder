@@ -59,6 +59,7 @@ impl Drawable for CompassPrimitive {
             c.draw(glfw, state);
         }
     }
+    fn update(&mut self, state: &State) {}
     fn get_texture_name(&self) -> Option<String> {
         None
     }

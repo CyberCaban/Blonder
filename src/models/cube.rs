@@ -149,6 +149,7 @@ impl Drawable for Cube {
     fn get_blend_mode(&self) -> BlendMode {
         self.blend_mode
     }
+    fn update(&mut self, state: &State) {}
 }
 
 impl Drop for Cube {

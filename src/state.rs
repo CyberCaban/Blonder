@@ -1,3 +1,5 @@
+use std::default;
+
 use cgmath::{Array, Vector3};
 use glfw::{GlfwReceiver, WindowEvent};
 
@@ -60,10 +62,28 @@ pub struct State {
     pub camera: Camera,
     pub cursor_pos_x: f32,
     pub cursor_pos_y: f32,
-    pub mouse_pressed: bool,
+    pub mouse_left_click: bool,
+    pub mouse_right_click: bool,
+    pub mouse_left_previous: bool,
+    pub mouse_right_previous: bool,
     pub delta_time: f32,
     pub last_frame: f32,
     pub window_size_changed: bool,
+}
+
+impl State {
+    pub fn update_mouse_previous(&mut self) {
+        self.mouse_left_previous = self.mouse_left_click;
+        self.mouse_right_previous = self.mouse_right_click;
+    }
+
+    pub fn mouse_left_just_pressed(&self) -> bool {
+        self.mouse_left_click && !self.mouse_left_previous
+    }
+
+    pub fn mouse_right_just_pressed(&self) -> bool {
+        self.mouse_right_click && !self.mouse_right_previous
+    }
 }
 
 impl Default for State {
@@ -89,7 +109,10 @@ impl Default for State {
             camera: Camera::new(),
             cursor_pos_x: 0.0,
             cursor_pos_y: 0.0,
-            mouse_pressed: false,
+            mouse_left_click: false,
+            mouse_right_click: false,
+            mouse_left_previous: false,
+            mouse_right_previous: false,
             delta_time: 0.0,
             last_frame: 0.0,
         }

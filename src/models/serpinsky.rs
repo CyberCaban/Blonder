@@ -227,6 +227,7 @@ impl Drawable for Serpinsky {
             gl::Enable(gl::CULL_FACE);
         }
     }
+    fn update(&mut self, state: &crate::state::State) {}
     fn get_shader_name(&self) -> Option<ShaderInfo> {
         Some(self.shader.clone())
     }

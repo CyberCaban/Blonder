@@ -109,6 +109,7 @@ impl Drawable for Model {
             mesh.draw(glfw, state);
         }
     }
+    fn update(&mut self, state: &crate::state::State) {}
     fn get_blend_mode(&self) -> super::blend_mode::BlendMode {
         super::blend_mode::BlendMode::Opaque
     }

@@ -446,12 +446,15 @@ impl Renderer {
             self.apply_batch_textures(&key);
 
             for index in objects {
-                let render_obj = &self.drawables[*index];
-                // set transform
-                self.apply_transform(render_obj);
+                {
+                    // set transform
+                    let render_obj = &self.drawables[*index];
+                    self.apply_transform(render_obj);
 
-                // set material
-                self.apply_material(render_obj, &key);
+                    // set material
+                    self.apply_material(render_obj, &key);
+                }
+                let render_obj = &mut self.drawables[*index];
                 render_obj.drawable.draw(glfw, state);
             }
         }
@@ -471,12 +474,15 @@ impl Renderer {
             self.apply_batch_uniforms(&key, glfw, state);
             self.apply_batch_textures(&key);
 
-            let render_obj = &self.drawables[index];
-            // set transform
-            self.apply_transform(render_obj);
+            {
+                let render_obj = &self.drawables[index];
+                // set transform
+                self.apply_transform(render_obj);
 
-            // set material
-            self.apply_material(render_obj, &key);
+                // set material
+                self.apply_material(render_obj, &key);
+            }
+            let render_obj = &mut self.drawables[index];
             render_obj.drawable.draw(glfw, state);
         }
     }
@@ -609,10 +615,10 @@ impl Renderer {
         self.ui_manager.picking_texture.disable_writing();
 
         // - shadows
-        // self.framebuffer_manager
-        //     .begin_frame(FrameBufferType::Shadow, state);
-        // self.render_shadows(glfw, state);
-        // self.framebuffer_manager.end_frame(state);
+        self.framebuffer_manager
+            .begin_frame(FrameBufferType::Shadow, state);
+        self.render_shadows(glfw, state);
+        self.framebuffer_manager.end_frame(state);
 
         // - compass
         self.framebuffer_manager
@@ -655,7 +661,7 @@ impl Renderer {
             shader.set_mat4("view", &self.view_matrix);
             shader.set_mat4("projection", &self.projection_matrix);
             for index in 0..self.drawables.len() {
-                let render_obj = &self.drawables[index];
+                let render_obj = &mut self.drawables[index];
                 let transform = &render_obj.transform;
                 let model = transform.calculate_model();
                 shader.set_mat4("model", &model);
@@ -700,6 +706,22 @@ impl Renderer {
             .compass_fb
             .render_scene_to_screen(state);
 
+        // white crosshair
+        let screen = Screen {
+            width: state.screen.width,
+            height: state.screen.height,
+        };
+        self.ui_manager.begin_frame(state, &screen);
+        let w = 10.0;
+        self.ui_manager.draw_rect(
+            screen.width as f32 / 2.0 - w / 2.0,
+            screen.height as f32 / 2.0 - w / 2.0,
+            w,
+            w,
+            Color::white(),
+        );
+        self.ui_manager.end_frame();
+
         if state.show_ui {
             self.render_ui(glfw, state);
         }
@@ -718,6 +740,9 @@ impl Renderer {
         }
         self.framebuffer_manager.end_frame(state);
 
+        for ro in self.drawables.iter_mut() {
+            ro.drawable.update(state);
+        }
         if self.fps_samples.len() >= FPS_SAMPLES {
             self.fps_samples.pop_front();
         }
@@ -741,8 +766,7 @@ impl Renderer {
         };
 
         self.ui_manager.begin_frame(state, &screen);
-        // self.ui_manager
-        //     .draw_rect(100.0, 100.0, 20.0, 50.0, Color::blue());
+
         // let tex = self.get_or_load_texture(
         //     "assets/textures/transparency.png",
         //     Some(TextureConfig {
@@ -777,7 +801,7 @@ impl Renderer {
             Color::new(0.3, 0.3, 0.3, 0.5),
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -816,7 +840,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -833,7 +857,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -850,7 +874,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -869,7 +893,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -886,7 +910,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -903,7 +927,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -922,7 +946,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -939,7 +963,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -956,7 +980,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -975,7 +999,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -992,7 +1016,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -1009,7 +1033,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -1033,7 +1057,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -1066,7 +1090,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -1098,7 +1122,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -1135,7 +1159,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -1156,7 +1180,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -1177,7 +1201,7 @@ impl Renderer {
             current_font,
             mouse_x,
             mouse_y,
-            state.mouse_pressed,
+            state.mouse_left_click,
             state.camera.is_captured,
         ) {
             state.mouse_free = false;
@@ -1187,7 +1211,7 @@ impl Renderer {
 
         // Mouse coordinates always use full screen resolution for UI
         let (mouse_x, mouse_y) = (state.cursor_pos_x, state.cursor_pos_y);
-        if state.mouse_free && state.mouse_pressed {
+        if state.mouse_free && state.mouse_left_click {
             let p = self
                 .ui_manager
                 .picking_texture
@@ -1221,7 +1245,7 @@ impl Renderer {
         shader.set_mat4("view", &self.view_matrix);
         shader.set_mat4("projection", &self.projection_matrix);
         for index in 0..self.drawables.len() {
-            let render_obj = &self.drawables[index];
+            let render_obj = &mut self.drawables[index];
             let object_id = (index + 1) as u32;
             shader.set_uint("objectId", object_id);
             let transform = &render_obj.transform;
@@ -1243,7 +1267,7 @@ impl Renderer {
 
             self.shadow_light_matrix = Some(light_matrix);
 
-            for render_obj in &self.drawables {
+            for render_obj in &mut self.drawables {
                 if render_obj.drawable.get_blend_mode() == BlendMode::Opaque || true {
                     let model = &render_obj.transform.calculate_model();
                     shadow_shader.set_mat4("model", model);

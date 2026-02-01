@@ -127,9 +127,9 @@ fn main() -> Result<()> {
     }
 
     let chunks = Chunks::new(WorldDimensions {
-        depth_in_chunks: 8,
+        depth_in_chunks: 9,
         height_in_chunks: 3,
-        width_in_chunks: 8,
+        width_in_chunks: 9,
     });
     let chunk_renderer = CubeRenderer::new(chunks)?;
     let _ = renderer.add_static_drawable(chunk_renderer);
@@ -220,6 +220,7 @@ fn main() -> Result<()> {
 
         update_timer += state.delta_time;
 
+        state.update_mouse_previous();
         process_events(&mut window, &events, &mut state);
         state.camera.process_input(&mut window, state.delta_time);
 

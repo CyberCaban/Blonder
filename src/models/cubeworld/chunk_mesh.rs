@@ -5,12 +5,13 @@ use anyhow::Result;
 use crate::{
     models::cubeworld::{
         chunk::{Chunk, Voxel},
+        chunks::Chunks,
         consts::{ATLAS_SIDE, C, CHUNK_D, CHUNK_H, CHUNK_W, UV_SIZE},
     },
     render::{
         blend_mode::BlendMode,
         drawable::Drawable,
-        helpers::{set_buffer_data, set_buffer_data_with_indices},
+        helpers::set_buffer_data,
         renderer::TextureRef,
         shader::ShaderInfo,
         vertex::{Vertex, calculate_normals},
@@ -24,6 +25,75 @@ pub fn is_blocked(voxels: &[Voxel], x: C, y: C, z: C) -> bool {
     in_chunk_bounds(x, y, z)
         && voxels[Chunk::get_voxel_index(x as usize, y as usize, z as usize)].id != 0
 }
+pub fn chunk_div(value: C, chunk_size: usize) -> C {
+    if value < 0 {
+        value / chunk_size as C - 1
+    } else {
+        value / chunk_size as C
+    }
+}
+
+pub fn to_local_coord(global: C, chunk_size: usize) -> usize {
+    let size = chunk_size as C;
+    if global >= 0 {
+        (global % size) as usize
+    } else {
+        ((size + (global % size)) % size) as usize
+    }
+}
+
+pub fn is_blocked_with_neighbors(chunks: &Chunks, global_x: C, global_y: C, global_z: C) -> bool {
+    let chunk_x = chunk_div(global_x, CHUNK_W);
+    let chunk_y = chunk_div(global_y, CHUNK_H);
+    let chunk_z = chunk_div(global_z, CHUNK_D);
+
+    let chunk_x_idx = chunk_x;
+    let chunk_y_idx = chunk_y;
+    let chunk_z_idx = chunk_z;
+
+    if chunk_x_idx < 0
+        || chunk_y_idx < 0
+        || chunk_z_idx < 0
+        || chunk_x_idx >= chunks.dimensions.width_in_chunks as i32
+        || chunk_y_idx >= chunks.dimensions.height_in_chunks as i32
+        || chunk_z_idx >= chunks.dimensions.depth_in_chunks as i32
+    {
+        return false;
+    }
+
+    let chunk = chunks.get_chunk(chunk_x_idx, chunk_y_idx, chunk_z_idx);
+    if chunk.is_none() {
+        return false;
+    }
+    let chunk = chunk.unwrap();
+
+    let local_x = to_local_coord(global_x, CHUNK_W);
+    let local_y = to_local_coord(global_y, CHUNK_H);
+    let local_z = to_local_coord(global_z, CHUNK_D);
+
+    if let Some(voxel) = chunk.get_voxel(local_x as C, local_y as C, local_z as C) {
+        voxel.id != 0
+    } else {
+        false
+    }
+}
+
+pub fn is_neighbor_blocked(
+    chunk: &Chunk,
+    chunks: &Chunks,
+    local_x: C,
+    local_y: C,
+    local_z: C,
+    dx: C,
+    dy: C,
+    dz: C,
+) -> bool {
+    let global_x = local_x + chunk.position[0] * CHUNK_W as C + dx;
+    let global_y = local_y + chunk.position[1] * CHUNK_H as C + dy;
+    let global_z = local_z + chunk.position[2] * CHUNK_D as C + dz;
+
+    is_blocked_with_neighbors(chunks, global_x, global_y, global_z)
+}
 
 #[derive(Debug)]
 pub struct ChunkMesh {
@@ -34,7 +104,7 @@ pub struct ChunkMesh {
 }
 
 impl ChunkMesh {
-    pub fn from_chunk(chunk: &Chunk, atlas: TextureRef) -> Result<Self> {
+    pub fn from_chunk(chunk: &Chunk, chunks: &Chunks, atlas: TextureRef) -> Result<Self> {
         let mut vertices = vec![];
         let voxels = chunk.get_voxels();
 
@@ -59,7 +129,7 @@ impl ChunkMesh {
                     let (local_x, local_y, local_z) = (x as C, y as C, z as C);
                     let u = (voxel_id % ATLAS_SIDE as u32) as f32 * UV_SIZE;
                     let v = (voxel_id / ATLAS_SIDE as u32) as f32 * UV_SIZE;
-                    if !is_blocked(voxels, local_x, local_y + 1, local_z) {
+                    if !is_neighbor_blocked(chunk, chunks, local_x, local_y, local_z, 0, 1, 0) {
                         #[rustfmt::skip]
                         [
                             // top
@@ -72,11 +142,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
+                            v.add_pos(&[global_x as f32 + 0.5, global_y as f32 + 0.5, global_z as f32 + 0.5]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, local_x, local_y - 1, local_z) {
+                    if !is_neighbor_blocked(chunk, chunks, local_x, local_y, local_z, 0, -1, 0) {
                         #[rustfmt::skip]
                         [
                             // bottom
@@ -89,11 +159,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
+                            v.add_pos(&[global_x as f32 + 0.5, global_y as f32 + 0.5, global_z as f32 + 0.5]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, local_x + 1, local_y, local_z) {
+                    if !is_neighbor_blocked(chunk, chunks, local_x, local_y, local_z, 1, 0, 0) {
                         #[rustfmt::skip]
                         [
                             // right
@@ -106,11 +176,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
+                            v.add_pos(&[global_x as f32 + 0.5, global_y as f32 + 0.5, global_z as f32 + 0.5]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, local_x - 1, local_y, local_z) {
+                    if !is_neighbor_blocked(chunk, chunks, local_x, local_y, local_z, -1, 0, 0) {
                         #[rustfmt::skip]
                         [
                             // left
@@ -123,11 +193,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
+                            v.add_pos(&[global_x as f32 + 0.5, global_y as f32 + 0.5, global_z as f32 + 0.5]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, local_x, local_y, local_z + 1) {
+                    if !is_neighbor_blocked(chunk, chunks, local_x, local_y, local_z, 0, 0, 1) {
                         #[rustfmt::skip]
                         [
                             // front
@@ -140,11 +210,11 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
+                            v.add_pos(&[global_x as f32 + 0.5, global_y as f32 + 0.5, global_z as f32 + 0.5]);
                             vertices.push(v)
                         });
                     }
-                    if !is_blocked(voxels, local_x, local_y, local_z - 1) {
+                    if !is_neighbor_blocked(chunk, chunks, local_x, local_y, local_z, 0, 0, -1) {
                         #[rustfmt::skip]
                         [
                             // back
@@ -157,7 +227,7 @@ impl ChunkMesh {
                         ]
                         .into_iter()
                         .for_each(|mut v| {
-                            v.add_pos(&[global_x as f32, global_y as f32, global_z as f32]);
+                            v.add_pos(&[global_x as f32 + 0.5, global_y as f32 + 0.5, global_z as f32 + 0.5]);
                             vertices.push(v)
                         });
                     }
@@ -207,6 +277,7 @@ impl Drawable for ChunkMesh {
             gl::BindVertexArray(0);
         }
     }
+    fn update(&mut self, state: &crate::state::State) {}
     fn get_blend_mode(&self) -> BlendMode {
         BlendMode::Opaque
     }

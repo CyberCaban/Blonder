@@ -1,3 +1,5 @@
+use std::cell::RefCell;
+
 use crate::models::cubeworld::{
     chunk_mesh::in_chunk_bounds,
     consts::{C, CHUNK_D, CHUNK_H, CHUNK_VOL, CHUNK_W},
@@ -12,6 +14,7 @@ pub struct Voxel {
 pub struct Chunk {
     voxels: [Voxel; CHUNK_VOL],
     pub position: [i32; 3],
+    pub modified: RefCell<bool>,
 }
 
 impl Chunk {
@@ -21,6 +24,7 @@ impl Chunk {
         Self {
             voxels,
             position: *position,
+            modified: RefCell::new(true),
         }
     }
     fn init_voxels(position: &[i32; 3]) -> [Voxel; CHUNK_VOL] {
@@ -35,7 +39,7 @@ impl Chunk {
                         + (rz as f32 * 0.15).cos() * 8.0
                         + ((rx as f32 * 0.05) * (rz as f32 * 0.05)).sin() * 5.0)
                         as i32
-                        + 00;
+                        + 20;
                     let id = if ry < height {
                         // Разные типы блоков в зависимости от высоты
                         if ry == height - 1 {
@@ -68,5 +72,23 @@ impl Chunk {
         } else {
             None
         }
+    }
+    pub fn get_voxel_mut(&mut self, x: C, y: C, z: C) -> Option<&mut Voxel> {
+        if in_chunk_bounds(x, y, z) {
+            Some(&mut self.voxels[Self::get_voxel_index(x as usize, y as usize, z as usize)])
+        } else {
+            None
+        }
+    }
+    pub fn mark_modified(&self) {
+        *self.modified.borrow_mut() = true;
+    }
+
+    pub fn is_modified(&self) -> bool {
+        *self.modified.borrow()
+    }
+
+    pub fn reset_modified(&self) {
+        *self.modified.borrow_mut() = false;
     }
 }

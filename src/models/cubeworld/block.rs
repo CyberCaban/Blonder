@@ -143,6 +143,7 @@ impl Drawable for Block {
             gl::DrawElements(gl::TRIANGLES, 36, gl::UNSIGNED_BYTE, ptr::null());
         }
     }
+    fn update(&mut self, state: &State) {}
     fn get_texture_name(&self) -> Option<String> {
         Some(self.texture.to_string())
     }

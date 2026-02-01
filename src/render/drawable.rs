@@ -6,6 +6,7 @@ use crate::{
 
 pub trait Drawable {
     fn draw(&self, glfw: &glfw::Glfw, state: &State);
+    fn update(&mut self, state: &State);
     fn get_texture_name(&self) -> Option<String>;
     fn get_shader_name(&self) -> Option<ShaderInfo>;
     fn get_texture_config(&self) -> Option<TextureConfig>;
