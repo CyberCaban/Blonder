@@ -126,13 +126,15 @@ fn main() -> Result<()> {
         objIds.push(id);
     }
 
-    let chunks = Chunks::new(WorldDimensions {
-        depth_in_chunks: 9,
-        height_in_chunks: 3,
-        width_in_chunks: 9,
-    });
-    let chunk_renderer = CubeRenderer::new(chunks)?;
-    let _ = renderer.add_static_drawable(chunk_renderer);
+    {
+        let chunks = Chunks::new(WorldDimensions {
+            depth_in_chunks: 9,
+            height_in_chunks: 3,
+            width_in_chunks: 9,
+        });
+        let chunk_renderer = CubeRenderer::new(chunks)?;
+        // let _ = renderer.add_static_drawable(chunk_renderer);
+    }
 
     let light_src = Cube::new(CubeSettings {
         texture_name: "assets/textures/white.png",

@@ -96,7 +96,7 @@ impl Model {
                 return Err(LoadModelError::InvalidModel.into());
             }
             self.meshes
-                .push(Mesh::new(vertices, mesh.indices.clone(), textures, true));
+                .push(Mesh::new(vertices, mesh.indices.clone(), textures));
         }
 
         Ok(())

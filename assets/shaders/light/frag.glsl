@@ -82,7 +82,6 @@ vec3 applyScanlines(vec3 color, vec2 uv, float intensity);
 
 // shadows
 uniform sampler2D shadowMap;
-uniform mat4 lightSpaceMatrix;
 
 void main() {
     vec4 texColor = texture(tex, fs_in.TexCoords);
@@ -123,18 +122,19 @@ float ShadowCalculation(vec4 fragPosLightSpace, vec3 lightPos) {
     // get closest depth value from light's perspective (using [0,1] range fragPosLight as coords)
     // get depth of current fragment from light's perspective
     float currentDepth = projCoords.z;
+    float closestDepth = texture(shadowMap, projCoords.xy).r;
     // calculate bias (based on depth map resolution and slope)
     vec3 normal = normalize(fs_in.Normal);
     vec3 lightDir = normalize(lightPos - fs_in.FragPos);
     float cosTheta = clamp(dot(normal, lightDir), 0.0, 1.0);
-    float bias = 0.0005 * tan(acos(cosTheta));
-    bias = clamp(bias, 0.001, 0.05);
+    // float bias = 0.0005 * tan(acos(cosTheta));
+    // bias = clamp(bias, 0.001, 0.05);
+    float bias = max(0.005 * (1.0 - dot(normal, lightDir)), 0.0005);
 
-    float closestDepth = texture(shadowMap, projCoords.xy).r;
-    if(currentDepth - bias <= closestDepth)
-        return 0.0;
     // check whether current frag pos is in shadow
     // float shadow = currentDepth - bias > closestDepth  ? 1.0 : 0.0;
+    if(currentDepth - bias <= closestDepth)
+        return 0.0;
     // PCF
     float shadow = 0.0;
     vec2 texelSize = 1.0 / textureSize(shadowMap, 0);
@@ -144,18 +144,14 @@ float ShadowCalculation(vec4 fragPosLightSpace, vec3 lightPos) {
             shadow += currentDepth - bias > pcfDepth ? 1.0 : 0.0;
         }
     }
- // Адаптивный радиус на основе глубины
-    float depthFactor = 1.0 - currentDepth;
-    int radius = int(mix(1.0, 3.0, depthFactor)); // Больше размытия для дальних объектов
-    float samples = float((radius * 2 + 1) * (radius * 2 + 1));
     shadow /= 9.0;
 
-    float transition = 1.0 - smoothstep(0.8, 1.0, projCoords.z);
-    shadow *= transition;
+    // float transition = 1.0 - smoothstep(0.8, 1.0, projCoords.z);
+    // shadow *= transition;
 
     // keep the shadow at 0.0 when outside the far_plane region of the light's frustum.
-    if(projCoords.z > 1.0)
-        shadow = 0.0;
+    // if(projCoords.z > 1.0)
+    //     shadow = 0.0;
 
     return shadow;
 }
@@ -190,7 +186,7 @@ vec3 applyDither(vec3 color, vec2 uv, float intensity) {
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     vec3 lightDir = normalize(-light.direction);
     // float shadow = CalculateShadow(fs_in.FragPos, normal, lightDir);
-    // float shadow = ShadowCalculation(fs_in.FragPosLightSpace, lightDir);
+    float shadow = ShadowCalculation(fs_in.FragPosLightSpace, lightDir);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
     // specular shading
@@ -200,7 +196,7 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     vec3 ambient = light.ambient * vec3(texture(tex, fs_in.TexCoords));
     vec3 diffuse = light.diffuse * diff * vec3(texture(tex, fs_in.TexCoords));
     vec3 specular = light.specular * spec * vec3(texture(material.specular, fs_in.TexCoords));
-    return ambient + (1.0 - 0.0) * (diffuse + specular);
+    return ambient + (1.0 - shadow) * (diffuse + specular);
 }
 
 // calculates the color when using a point light.

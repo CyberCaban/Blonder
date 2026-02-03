@@ -8,7 +8,7 @@ use log::info;
 
 use crate::render::color::Color;
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextureFormatColor {
     RGBA8,
     RGBA16F,
@@ -16,7 +16,7 @@ pub enum TextureFormatColor {
     R8,
     R16F,
 }
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextureFormatDepth {
     Depth16,
     Depth24,
@@ -70,7 +70,7 @@ impl TextureFormatDepth {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextureFilter {
     Nearest,
     Linear,
@@ -84,7 +84,7 @@ impl TextureFilter {
     }
 }
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum TextureWrap {
     Repeat,
     ClampToEdge,
@@ -205,6 +205,9 @@ impl Texture {
     pub fn empty_texture() -> Self {
         Self { id: 0 }
     }
+    pub fn set_id(&mut self, id: u32) {
+        self.id = id;
+    }
     pub fn with_config(texture_path: &str, config: TextureConfig) -> Result<Self> {
         #[cfg(debug_assertions)]
         let now = Instant::now();
@@ -213,9 +216,28 @@ impl Texture {
         unsafe {
             gl::GenTextures(1, &mut texture);
             gl::BindTexture(gl::TEXTURE_2D, texture);
+            gl::PixelStorei(gl::UNPACK_ALIGNMENT, 1);
+            {
+                let image = image::open(texture_path)
+                    .context(format!("Cannot find texture [{texture_path}]"))?;
+                let (width, height) = (image.width(), image.height());
+                let raw_image = image.to_rgba().into_raw();
+                let data = raw_image.as_ptr() as *const c_void;
+                gl::TexImage2D(
+                    gl::TEXTURE_2D,
+                    0,
+                    gl::RGBA.try_into().unwrap(),
+                    width as i32,
+                    height as i32,
+                    0,
+                    gl::RGBA,
+                    gl::UNSIGNED_BYTE,
+                    data,
+                );
+            }
 
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, config.wrap_s);
-            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, config.wrap_t);
+            // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, config.wrap_s);
+            // gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, config.wrap_t);
             // texture filtering
             // LINEAR or NEAREST
             gl::TexParameteri(
@@ -234,22 +256,7 @@ impl Texture {
                 config.mipmap_filtering,
             );
 
-            let image = image::open(texture_path)
-                .context(format!("Cannot find texture [{texture_path}]"))?;
-            let (width, height) = (image.width(), image.height());
-            let raw_image = image.to_rgba().into_raw();
-            let data = raw_image.as_ptr() as *const c_void;
-            gl::TexImage2D(
-                gl::TEXTURE_2D,
-                0,
-                gl::RGBA.try_into().unwrap(),
-                width as i32,
-                height as i32,
-                0,
-                gl::RGBA,
-                gl::UNSIGNED_BYTE,
-                data,
-            );
+            gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_MAX_LEVEL, 4);
             gl::GenerateMipmap(gl::TEXTURE_2D);
         }
 

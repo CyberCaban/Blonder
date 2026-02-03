@@ -725,20 +725,25 @@ impl Renderer {
         if state.show_ui {
             self.render_ui(glfw, state);
         }
-        if state.window_size_changed {
-            let _ = self
-                .ui_manager
-                .picking_texture
-                .update_screen_size(state.screen.width as i32, state.screen.height as i32);
-            let _ = self.framebuffer_manager.update_screen_size(&state.screen);
-            state.window_size_changed = false;
-        }
+
         unsafe {
             gl::DepthMask(gl::TRUE);
             gl::Disable(gl::BLEND);
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
         }
         self.framebuffer_manager.end_frame(state);
+
+        if state.window_size_changed {
+            let _ = self
+                .ui_manager
+                .picking_texture
+                .update_screen_size(state.screen.width as i32, state.screen.height as i32);
+            let _ = self.framebuffer_manager.update_screen_size(&state.screen);
+            self.framebuffer_manager
+                .resolution_fb
+                .set_render_size(state.screen.width, state.screen.height);
+            state.window_size_changed = false;
+        }
 
         for ro in self.drawables.iter_mut() {
             ro.drawable.update(state);
