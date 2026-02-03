@@ -25,8 +25,9 @@ impl CubeRenderer {
             "assets/textures/blocks/TextureAtlas.png",
             TextureConfig {
                 texture_filtering: gl::NEAREST as i32,
-                wrap_s: gl::REPEAT as i32,
-                wrap_t: gl::REPEAT as i32,
+                wrap_s: gl::CLAMP_TO_EDGE as i32,
+                wrap_t: gl::CLAMP_TO_EDGE as i32,
+                mipmap_filtering: gl::LINEAR_MIPMAP_NEAREST as i32,
                 ..Default::default()
             },
         )?);
@@ -44,8 +45,15 @@ impl CubeRenderer {
 
 impl Drawable for CubeRenderer {
     fn draw(&self, glfw: &glfw::Glfw, state: &crate::state::State) {
+        unsafe {
+            gl::Enable(gl::POLYGON_OFFSET_FILL);
+            gl::PolygonOffset(0.0, 2.0);
+        }
         for chunk in &self.chunk_meshes {
             chunk.draw(glfw, state);
+        }
+        unsafe {
+            gl::Disable(gl::POLYGON_OFFSET_FILL);
         }
     }
     fn update(&mut self, state: &crate::state::State) {

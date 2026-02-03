@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use anyhow::{Result, bail};
+use log::error;
 
 use crate::{
     render::shader::Shader,
@@ -15,11 +16,26 @@ pub mod resolution;
 pub mod shadow;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-pub enum AttachmentType {
-    Color(u32), // color attachment index
+enum DepthSubtype {
     Depth,
     Stencil,
     DepthStencil,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
+pub enum AttachmentType {
+    Color {
+        index: u32,
+        format: TextureFormatColor,
+        filter: TextureFilter,
+        wrap: TextureWrap,
+    },
+    Depth {
+        subtype: DepthSubtype,
+        format: TextureFormatDepth,
+        filter: TextureFilter,
+        wrap: TextureWrap,
+    },
 }
 #[derive(Debug)]
 pub struct Framebuffer {
@@ -150,8 +166,15 @@ impl Framebuffer {
         }
 
         let texture = Texture::from_id(texture_id);
-        self.attachments
-            .insert(AttachmentType::Color(index), texture);
+        self.attachments.insert(
+            AttachmentType::Color {
+                index,
+                format,
+                filter,
+                wrap,
+            },
+            texture,
+        );
         Ok(())
     }
     pub fn add_depth_attachment(
@@ -210,10 +233,25 @@ impl Framebuffer {
 
         let texture = Texture::from_id(texture_id);
         if format == TextureFormatDepth::Depth24Stencil8 {
-            self.attachments
-                .insert(AttachmentType::DepthStencil, texture);
+            self.attachments.insert(
+                AttachmentType::Depth {
+                    subtype: DepthSubtype::DepthStencil,
+                    filter,
+                    format,
+                    wrap,
+                },
+                texture,
+            );
         } else {
-            self.attachments.insert(AttachmentType::Depth, texture);
+            self.attachments.insert(
+                AttachmentType::Depth {
+                    subtype: DepthSubtype::Depth,
+                    filter,
+                    format,
+                    wrap,
+                },
+                texture,
+            );
         }
         Ok(())
     }
@@ -250,6 +288,7 @@ impl Framebuffer {
         }
     }
     pub fn resize(&mut self, width: i32, height: i32) -> Result<()> {
+        self.bind();
         self.width = width;
         self.height = height;
 
@@ -260,36 +299,123 @@ impl Framebuffer {
                 gl::BindTexture(gl::TEXTURE_2D, texture_id);
 
                 match attachment_type {
-                    AttachmentType::Color(_) => {
+                    AttachmentType::Color {
+                        index,
+                        filter,
+                        format,
+                        wrap,
+                        ..
+                    } => {
+                        let mut texture_id = 0;
+                        gl::GenTextures(1, &mut texture_id);
+                        gl::BindTexture(gl::TEXTURE_2D, texture_id);
+                        let (internal_format, data_format, data_type) = format.to_gl_enums();
+                        let (min_filter, mag_filter) = filter.to_gl_enums();
+                        let wrap_mode = wrap.to_gl_enums();
                         gl::TexImage2D(
                             gl::TEXTURE_2D,
                             0,
-                            gl::RGBA as i32,
+                            internal_format as i32,
                             width,
                             height,
                             0,
-                            gl::RGBA,
-                            gl::UNSIGNED_BYTE,
+                            data_format,
+                            data_type,
                             std::ptr::null(),
                         );
+
+                        gl::TexParameteri(
+                            gl::TEXTURE_2D,
+                            gl::TEXTURE_MIN_FILTER,
+                            min_filter as i32,
+                        );
+                        gl::TexParameteri(
+                            gl::TEXTURE_2D,
+                            gl::TEXTURE_MAG_FILTER,
+                            mag_filter as i32,
+                        );
+                        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, wrap_mode as i32);
+                        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, wrap_mode as i32);
+                        gl::FramebufferTexture2D(
+                            gl::FRAMEBUFFER,
+                            gl::COLOR_ATTACHMENT0 + index,
+                            gl::TEXTURE_2D,
+                            texture_id,
+                            0,
+                        );
+                        gl::DeleteTextures(1, &texture.id());
+                        texture.set_id(texture_id);
                     }
-                    AttachmentType::Depth | AttachmentType::DepthStencil => {
+                    AttachmentType::Depth {
+                        subtype,
+                        wrap,
+                        filter,
+                        format,
+                        ..
+                    } => {
+                        let (internal_format, attachment_type, data_format, data_type) =
+                            format.to_gl_enums();
+                        let (min_filter, mag_filter) = filter.to_gl_enums();
+                        let wrap_mode = wrap.to_gl_enums();
+                        let mut texture_id = 0;
+                        gl::GenTextures(1, &mut texture_id);
+                        gl::BindTexture(gl::TEXTURE_2D, texture_id);
                         gl::TexImage2D(
                             gl::TEXTURE_2D,
                             0,
-                            gl::DEPTH_COMPONENT as i32,
+                            internal_format as i32,
                             width,
                             height,
                             0,
-                            gl::DEPTH_COMPONENT,
-                            gl::FLOAT,
+                            data_format,
+                            data_type,
                             std::ptr::null(),
                         );
+                        gl::TexParameteri(
+                            gl::TEXTURE_2D,
+                            gl::TEXTURE_MIN_FILTER,
+                            min_filter as i32,
+                        );
+                        gl::TexParameteri(
+                            gl::TEXTURE_2D,
+                            gl::TEXTURE_MAG_FILTER,
+                            mag_filter as i32,
+                        );
+                        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_S, wrap_mode as i32);
+                        gl::TexParameteri(gl::TEXTURE_2D, gl::TEXTURE_WRAP_T, wrap_mode as i32);
+                        if matches!(
+                            format,
+                            TextureFormatDepth::Depth16
+                                | TextureFormatDepth::Depth24
+                                | TextureFormatDepth::Depth32F
+                        ) {
+                            gl::TexParameteri(
+                                gl::TEXTURE_2D,
+                                gl::TEXTURE_COMPARE_MODE,
+                                gl::COMPARE_REF_TO_TEXTURE as i32,
+                            );
+                            gl::TexParameteri(
+                                gl::TEXTURE_2D,
+                                gl::TEXTURE_COMPARE_FUNC,
+                                gl::LEQUAL as i32,
+                            );
+                        }
+                        gl::FramebufferTexture2D(
+                            gl::FRAMEBUFFER,
+                            attachment_type,
+                            gl::TEXTURE_2D,
+                            texture_id,
+                            0,
+                        );
+                        gl::DeleteTextures(1, &texture.id());
+                        texture.set_id(texture_id);
                     }
                     _ => {}
                 }
             }
         }
+
+        self.check_complete().map_err(|e| error!("{}", e));
 
         Ok(())
     }
@@ -313,12 +439,26 @@ impl Framebuffer {
         }
     }
     pub fn get_color_texture(&self, index: u32) -> Option<&Texture> {
-        self.attachments.get(&AttachmentType::Color(index))
+        self.attachments
+            .iter()
+            .find_map(|(attachment_type, texture)| {
+                if let AttachmentType::Color { index: idx, .. } = attachment_type {
+                    if *idx == index {
+                        return Some(texture);
+                    }
+                }
+                None
+            })
     }
     pub fn get_depth_texture(&self) -> Option<&Texture> {
         self.attachments
-            .get(&AttachmentType::Depth)
-            .or_else(|| self.attachments.get(&AttachmentType::DepthStencil))
+            .iter()
+            .find_map(|(attachment_type, texture)| {
+                if matches!(attachment_type, AttachmentType::Depth { .. }) {
+                    return Some(texture);
+                }
+                None
+            })
     }
     pub fn render_to_screen(
         &self,

@@ -127,18 +127,23 @@ impl ChunkMesh {
                         z as C + chunk.position[2] * CHUNK_D as C,
                     );
                     let (local_x, local_y, local_z) = (x as C, y as C, z as C);
+                    let pad = 0.0005;
                     let u = (voxel_id % ATLAS_SIDE as u32) as f32 * UV_SIZE;
                     let v = (voxel_id / ATLAS_SIDE as u32) as f32 * UV_SIZE;
+                    let u_min = u + pad;
+                    let u_max = u + UV_SIZE - pad;
+                    let v_min = v + pad;
+                    let v_max = v + UV_SIZE - pad;
                     if !is_neighbor_blocked(chunk, chunks, local_x, local_y, local_z, 0, 1, 0) {
                         #[rustfmt::skip]
                         [
                             // top
-                            Vertex { position: [-0.5, 0.5, -0.5], uv: [u+UV_SIZE, v],normal: [0.0, 0.0, 0.0] }, // 2
-                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u+UV_SIZE, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 6
-                            Vertex { position: [0.5, 0.5, -0.5], uv: [u, v], normal: [0.0, 0.0, 0.0] }, // 3
-                            Vertex { position: [0.5, 0.5, -0.5], uv: [u, v], normal: [0.0, 0.0, 0.0] }, // 3
-                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u+UV_SIZE, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 6
-                            Vertex { position: [0.5, 0.5, 0.5], uv: [u, v+UV_SIZE],  normal: [0.0, 0.0, 0.0] }, // 7
+                            Vertex { position: [-0.5, 0.5, -0.5], uv: [u_max, v_min],normal: [0.0, 0.0, 0.0] }, // 2
+                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u_max, v_max], normal: [0.0, 0.0, 0.0] }, // 6
+                            Vertex { position: [0.5, 0.5, -0.5], uv: [u_min, v_min], normal: [0.0, 0.0, 0.0] }, // 3
+                            Vertex { position: [0.5, 0.5, -0.5], uv: [u_min, v_min], normal: [0.0, 0.0, 0.0] }, // 3
+                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u_max, v_max], normal: [0.0, 0.0, 0.0] }, // 6
+                            Vertex { position: [0.5, 0.5, 0.5], uv: [u_min, v_max],  normal: [0.0, 0.0, 0.0] }, // 7
                         ]
                         .into_iter()
                         .for_each(|mut v| {
@@ -150,12 +155,12 @@ impl ChunkMesh {
                         #[rustfmt::skip]
                         [
                             // bottom
-                            Vertex { position: [-0.5, -0.5, -0.5], uv: [u, v],normal: [0.0, 0.0, 0.0] }, // 0
-                            Vertex { position: [0.5, -0.5, -0.5], uv: [u+UV_SIZE, v], normal: [0.0, 0.0, 0.0] }, // 1
-                            Vertex { position: [-0.5, -0.5, 0.5], uv: [u, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 4
-                            Vertex { position: [-0.5, -0.5, 0.5], uv: [u, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 4
-                            Vertex { position: [0.5, -0.5, -0.5], uv: [u+UV_SIZE, v], normal: [0.0, 0.0, 0.0] }, // 1
-                            Vertex { position: [0.5, -0.5, 0.5], uv: [u+UV_SIZE, v+UV_SIZE],  normal: [0.0, 0.0, 0.0] }, // 5
+                            Vertex { position: [-0.5, -0.5, -0.5], uv: [u_min, v_min],normal: [0.0, 0.0, 0.0] }, // 0
+                            Vertex { position: [0.5, -0.5, -0.5], uv: [u_max, v_min], normal: [0.0, 0.0, 0.0] }, // 1
+                            Vertex { position: [-0.5, -0.5, 0.5], uv: [u_min, v_max], normal: [0.0, 0.0, 0.0] }, // 4
+                            Vertex { position: [-0.5, -0.5, 0.5], uv: [u_min, v_max], normal: [0.0, 0.0, 0.0] }, // 4
+                            Vertex { position: [0.5, -0.5, -0.5], uv: [u_max, v_min], normal: [0.0, 0.0, 0.0] }, // 1
+                            Vertex { position: [0.5, -0.5, 0.5], uv: [u_max, v_max],  normal: [0.0, 0.0, 0.0] }, // 5
                         ]
                         .into_iter()
                         .for_each(|mut v| {
@@ -167,12 +172,12 @@ impl ChunkMesh {
                         #[rustfmt::skip]
                         [
                             // right
-                            Vertex { position: [0.5, -0.5, -0.5], uv: [u, v],normal: [0.0, 0.0, 0.0] }, // 1
-                            Vertex { position: [0.5, 0.5, -0.5], uv: [u+UV_SIZE, v], normal: [0.0, 0.0, 0.0] }, // 3
-                            Vertex { position: [0.5, -0.5, 0.5], uv: [u, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 5
-                            Vertex { position: [0.5, -0.5, 0.5], uv: [u, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 5
-                            Vertex { position: [0.5, 0.5, -0.5], uv: [u+UV_SIZE, v], normal: [0.0, 0.0, 0.0] }, // 3
-                            Vertex { position: [0.5, 0.5, 0.5], uv: [u+UV_SIZE, v+UV_SIZE],  normal: [0.0, 0.0, 0.0] }, // 7
+                            Vertex { position: [0.5, -0.5, -0.5], uv: [u_min, v_min],normal: [0.0, 0.0, 0.0] }, // 1
+                            Vertex { position: [0.5, 0.5, -0.5], uv: [u_max, v_min], normal: [0.0, 0.0, 0.0] }, // 3
+                            Vertex { position: [0.5, -0.5, 0.5], uv: [u_min, v_max], normal: [0.0, 0.0, 0.0] }, // 5
+                            Vertex { position: [0.5, -0.5, 0.5], uv: [u_min, v_max], normal: [0.0, 0.0, 0.0] }, // 5
+                            Vertex { position: [0.5, 0.5, -0.5], uv: [u_max, v_min], normal: [0.0, 0.0, 0.0] }, // 3
+                            Vertex { position: [0.5, 0.5, 0.5], uv: [u_max, v_max],  normal: [0.0, 0.0, 0.0] }, // 7
                         ]
                         .into_iter()
                         .for_each(|mut v| {
@@ -184,12 +189,12 @@ impl ChunkMesh {
                         #[rustfmt::skip]
                         [
                             // left
-                            Vertex { position: [-0.5, 0.5, -0.5], uv: [u, v], normal: [0.0, 0.0, 0.0] }, // 2
-                            Vertex { position: [-0.5, -0.5, -0.5], uv: [u+UV_SIZE, v],normal: [0.0, 0.0, 0.0] }, // 0
-                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u, v+UV_SIZE],  normal: [0.0, 0.0, 0.0] }, // 6
-                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u, v+UV_SIZE],  normal: [0.0, 0.0, 0.0] }, // 6
-                            Vertex { position: [-0.5, -0.5, -0.5], uv: [u+UV_SIZE, v],normal: [0.0, 0.0, 0.0] }, // 0
-                            Vertex { position: [-0.5, -0.5, 0.5], uv: [u+UV_SIZE, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 4
+                            Vertex { position: [-0.5, 0.5, -0.5], uv: [u_min, v_min], normal: [0.0, 0.0, 0.0] }, // 2
+                            Vertex { position: [-0.5, -0.5, -0.5], uv: [u_max, v_min],normal: [0.0, 0.0, 0.0] }, // 0
+                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u_min, v_max],  normal: [0.0, 0.0, 0.0] }, // 6
+                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u_min, v_max],  normal: [0.0, 0.0, 0.0] }, // 6
+                            Vertex { position: [-0.5, -0.5, -0.5], uv: [u_max, v_min],normal: [0.0, 0.0, 0.0] }, // 0
+                            Vertex { position: [-0.5, -0.5, 0.5], uv: [u_max, v_max], normal: [0.0, 0.0, 0.0] }, // 4
                         ]
                         .into_iter()
                         .for_each(|mut v| {
@@ -201,12 +206,12 @@ impl ChunkMesh {
                         #[rustfmt::skip]
                         [
                             // front
-                            Vertex { position: [-0.5, -0.5, 0.5], uv: [u, v],normal: [0.0, 0.0, 0.0] }, // 4
-                            Vertex { position: [0.5, -0.5, 0.5], uv: [u+UV_SIZE, v], normal: [0.0, 0.0, 0.0] }, // 5
-                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 6
-                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 6
-                            Vertex { position: [0.5, -0.5, 0.5], uv: [u+UV_SIZE, v], normal: [0.0, 0.0, 0.0] }, // 5
-                            Vertex { position: [0.5, 0.5, 0.5], uv: [u+UV_SIZE, v+UV_SIZE],  normal: [0.0, 0.0, 0.0] }, // 7
+                            Vertex { position: [-0.5, -0.5, 0.5], uv: [u_min, v_min],normal: [0.0, 0.0, 0.0] }, // 4
+                            Vertex { position: [0.5, -0.5, 0.5], uv: [u_max, v_min], normal: [0.0, 0.0, 0.0] }, // 5
+                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u_min, v_max], normal: [0.0, 0.0, 0.0] }, // 6
+                            Vertex { position: [-0.5, 0.5, 0.5], uv: [u_min, v_max], normal: [0.0, 0.0, 0.0] }, // 6
+                            Vertex { position: [0.5, -0.5, 0.5], uv: [u_max, v_min], normal: [0.0, 0.0, 0.0] }, // 5
+                            Vertex { position: [0.5, 0.5, 0.5], uv: [u_max, v_max],  normal: [0.0, 0.0, 0.0] }, // 7
                         ]
                         .into_iter()
                         .for_each(|mut v| {
@@ -218,12 +223,12 @@ impl ChunkMesh {
                         #[rustfmt::skip]
                         [
                             // back
-                            Vertex { position: [-0.5, -0.5, -0.5], uv: [u+UV_SIZE, v],normal: [0.0, 0.0, 0.0] }, // 0
-                            Vertex { position: [-0.5, 0.5, -0.5], uv: [u+UV_SIZE, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 2
-                            Vertex { position: [0.5, -0.5, -0.5], uv: [u, v], normal: [0.0, 0.0, 0.0] }, // 1
-                            Vertex { position: [0.5, -0.5, -0.5], uv: [u, v], normal: [0.0, 0.0, 0.0] }, // 1
-                            Vertex { position: [-0.5, 0.5, -0.5], uv: [u+UV_SIZE, v+UV_SIZE], normal: [0.0, 0.0, 0.0] }, // 2
-                            Vertex { position: [0.5, 0.5, -0.5], uv: [u, v+UV_SIZE],  normal: [0.0, 0.0, 0.0] }, // 3
+                            Vertex { position: [-0.5, -0.5, -0.5], uv: [u_max, v_min],normal: [0.0, 0.0, 0.0] }, // 0
+                            Vertex { position: [-0.5, 0.5, -0.5], uv: [u_max, v_max], normal: [0.0, 0.0, 0.0] }, // 2
+                            Vertex { position: [0.5, -0.5, -0.5], uv: [u_min, v_min], normal: [0.0, 0.0, 0.0] }, // 1
+                            Vertex { position: [0.5, -0.5, -0.5], uv: [u_min, v_min], normal: [0.0, 0.0, 0.0] }, // 1
+                            Vertex { position: [-0.5, 0.5, -0.5], uv: [u_max, v_max], normal: [0.0, 0.0, 0.0] }, // 2
+                            Vertex { position: [0.5, 0.5, -0.5], uv: [u_min, v_max],  normal: [0.0, 0.0, 0.0] }, // 3
                         ]
                         .into_iter()
                         .for_each(|mut v| {
