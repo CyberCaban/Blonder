@@ -68,6 +68,7 @@ uniform Material material;
 uniform int isSelected;
 uniform vec3 highlightColor;
 uniform float highlightIntensity;
+uniform float specularIntensity;
 
 vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir);
 vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir);
@@ -91,9 +92,9 @@ void main() {
 
     vec3 norm = normalize(fs_in.Normal);
     vec3 viewDir = normalize(cameraPos - fs_in.FragPos);
-    vec3 emission = vec3(texture(material.emission, fs_in.TexCoords));
+    vec3 emission = vec3(texture(material.emission, fs_in.TexCoords)) * 5.5;
 
-    vec3 result = emission;
+    vec3 result = vec3(0.0);
 
     for(int i = 0; i < numDirLights; i++) result += CalcDirLight(dirLights[i], norm, viewDir);
 
@@ -108,11 +109,14 @@ void main() {
         edge = pow(edge, 3.0) * 2.0;
         result = mix(result, highlightColor, edge * highlightIntensity);
     }
+    result = result * texColor.rgb;
+    result = clamp(result, 0.0, 1.0);
+    result += emission;
 
     result = applyDither(result, texColor.xy, ditherIntensity);
     result = applyScanlines(result, texColor.xy, scanlineIntensity);
 
-    FragColor = vec4(result, 1.0) * texColor;
+    FragColor = vec4(result, 1.0);
 }
 
 float ShadowCalculation(vec4 fragPosLightSpace, vec3 lightPos) {
@@ -190,13 +194,13 @@ vec3 CalcDirLight(DirLight light, vec3 normal, vec3 viewDir) {
     float shadow = ShadowCalculation(fs_in.FragPosLightSpace, lightDir);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
-    // specular shading
+    // specular shading (reduced intensity to minimize bloom artifacts)
     vec3 halfwayDir = normalize(lightDir + viewDir);
     float spec = pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
     // combine results
-vec3 ambient = light.ambient * vec3(texture(material.diffuse, fs_in.TexCoords));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, fs_in.TexCoords));
-    vec3 specular = light.specular * spec * vec3(texture(material.specular, fs_in.TexCoords));
+    vec3 ambient = clamp(light.ambient * vec3(texture(material.diffuse, fs_in.TexCoords)), 0.0, 1.0);
+    vec3 diffuse = clamp(light.diffuse * diff * vec3(texture(material.diffuse, fs_in.TexCoords)), 0.0, 1.0);
+    vec3 specular = clamp(light.specular * spec * vec3(texture(material.specular, fs_in.TexCoords)) * specularIntensity, 0.0, 1.0);
     return ambient + (1.0 - shadow) * (diffuse + specular);
 }
 
@@ -205,16 +209,16 @@ vec3 CalcPointLight(PointLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     vec3 lightDir = normalize(light.position - fragPos);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
-    // specular shading
+    // specular shading (reduced intensity to minimize bloom artifacts)
     vec3 halfwayDir = normalize(lightDir + viewDir);
     float spec = pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
     // attenuation
     float distance = length(light.position - fragPos);
     float attenuation = 1.0 / (light.constant + light.linear * distance + light.quadratic * (distance * distance));
     // combine results
-vec3 ambient = light.ambient * vec3(texture(material.diffuse, fs_in.TexCoords));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, fs_in.TexCoords));
-    vec3 specular = light.specular * spec * vec3(texture(material.specular, fs_in.TexCoords));
+vec3 ambient = clamp(light.ambient * vec3(texture(material.diffuse, fs_in.TexCoords)), 0.0, 1.0);
+    vec3 diffuse = clamp(light.diffuse * diff * vec3(texture(material.diffuse, fs_in.TexCoords)), 0.0, 1.0);
+    vec3 specular = clamp(light.specular * spec * vec3(texture(material.specular, fs_in.TexCoords)) * specularIntensity, 0.0, 1.0);
     ambient *= attenuation;
     diffuse *= attenuation;
     specular *= attenuation;
@@ -226,7 +230,7 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     vec3 lightDir = normalize(light.position - fragPos);
     // diffuse shading
     float diff = max(dot(normal, lightDir), 0.0);
-    // specular shading
+    // specular shading (reduced intensity to minimize bloom artifacts)
     vec3 halfwayDir = normalize(lightDir + viewDir);
     float spec = pow(max(dot(normal, halfwayDir), 0.0), material.shininess);
     // attenuation
@@ -237,9 +241,9 @@ vec3 CalcSpotLight(SpotLight light, vec3 normal, vec3 fragPos, vec3 viewDir) {
     float epsilon = light.cutOff - light.outerCutOff;
     float intensity = clamp((theta - light.outerCutOff) / epsilon, 0.0, 1.0);
     // combine results
-vec3 ambient = light.ambient * vec3(texture(material.diffuse, fs_in.TexCoords));
-    vec3 diffuse = light.diffuse * diff * vec3(texture(material.diffuse, fs_in.TexCoords));
-    vec3 specular = light.specular * spec * vec3(texture(material.specular, fs_in.TexCoords));
+vec3 ambient = clamp(light.ambient * vec3(texture(material.diffuse, fs_in.TexCoords)), 0.0, 1.0);
+    vec3 diffuse = clamp(light.diffuse * diff * vec3(texture(material.diffuse, fs_in.TexCoords)), 0.0, 1.0);
+    vec3 specular = clamp(light.specular * spec * vec3(texture(material.specular, fs_in.TexCoords)) * specularIntensity, 0.0, 1.0);
     ambient *= attenuation * intensity;
     diffuse *= attenuation * intensity;
     specular *= attenuation * intensity;

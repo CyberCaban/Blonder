@@ -22,7 +22,7 @@ enum TextureFiltering {
     Bilinear = (gl::LINEAR),
 }
 
-#[derive(Debug, Default)]
+#[derive(Debug)]
 pub struct ShaderSettings {
     // vertex snapping
     pub snapping_factor: f32,
@@ -30,12 +30,21 @@ pub struct ShaderSettings {
     pub dither_intensity: f32,
     // scanlines
     pub scanline_intensity: f32,
+    // bloom
+    pub bloom_enabled: bool,
+    pub bloom_intensity: f32,
+    pub bloom_iterations: i32,
+    pub bloom_threshold: f32,
+    pub exposure: f32,
+    // specular
+    pub specular_intensity: f32,
 }
 impl ShaderSettings {
     pub fn apply(&self, shader: &Shader) {
         shader.set_float("snapFactor", self.snapping_factor);
         shader.set_float("ditherIntensity", self.dither_intensity);
         shader.set_float("scanlineIntensity", self.scanline_intensity);
+        shader.set_float("specularIntensity", self.specular_intensity);
     }
 }
 
@@ -83,6 +92,22 @@ impl State {
 
     pub fn mouse_right_just_pressed(&self) -> bool {
         self.mouse_right_click && !self.mouse_right_previous
+    }
+}
+
+impl Default for ShaderSettings {
+    fn default() -> Self {
+        Self {
+            snapping_factor: 0.0,
+            dither_intensity: 0.0,
+            scanline_intensity: 0.0,
+            bloom_enabled: true,
+            bloom_intensity: 0.3,
+            bloom_iterations: 3,
+            bloom_threshold: 0.8,
+            exposure: 1.0,
+            specular_intensity: 0.3,
+        }
     }
 }
 

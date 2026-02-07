@@ -22,7 +22,7 @@ use crate::{
     render::{
         blend_mode::BlendMode,
         helpers::init_window,
-        light::DirLight,
+        light::{DirLight, PointLight},
         renderer::{RenderMaterial, RenderObject, Renderer},
         shader::{Shader, ShaderInfo},
         transform::Transform,
@@ -115,8 +115,8 @@ fn main() -> Result<()> {
             material: RenderMaterial {
                 diffuse: Some(texture.0.to_string()),
                 // specular: Some("assets/textures/specular.png".to_string()),
-                // specular: Some(texture.0.to_string()),
-                specular: None,
+                specular: Some(texture.0.to_string()),
+                // specular: None,
                 // emission: Some("assets/textures/emission.jpg".to_string()),
                 emission: None,
                 shininess: 128.0,
@@ -161,43 +161,43 @@ fn main() -> Result<()> {
     // let _ = renderer.set_light_src(&light_id);
 
     // Точечный свет 1 (теплый, слева)
-    // let _ = renderer.add_point_light(PointLight {
-    //     position: Vector3::new(-3.0, 2.0, 0.0), // Слева сверху
-    //     constant: 1.0,
-    //     linear: 0.09,
-    //     quadratic: 0.032,
-    //     ambient: Vector3::new(0.05, 0.03, 0.01), // Теплый ambient
-    //     diffuse: Vector3::new(1.0, 0.8, 0.6) * 0.4, // Теплый оранжевый
-    //     specular: Vector3::new(1.0, 0.9, 0.8) * 0.6, // Теплые блики
-    // });
+    let _ = renderer.add_point_light(PointLight {
+        position: Vector3::new(-3.0, 2.0, 0.0), // Слева сверху
+        constant: 1.0,
+        linear: 0.09,
+        quadratic: 0.032,
+        ambient: Vector3::new(0.05, 0.03, 0.01), // Теплый ambient
+        diffuse: Vector3::new(1.0, 0.8, 0.6) * 0.4, // Теплый оранжевый
+        specular: Vector3::new(1.0, 0.9, 0.8) * 0.6, // Теплые блики
+    });
 
-    // // 3. Точечный свет 2 (холодный, справа)
-    // let _ = renderer.add_point_light(PointLight {
-    //     position: Vector3::new(3.0, 2.0, 1.0), // Справа сверху, немного вперед
-    //     constant: 1.0,
-    //     linear: 0.07, // Меньше затухание
-    //     quadratic: 0.017,
-    //     ambient: Vector3::new(0.01, 0.02, 0.05), // Холодный ambient
-    //     diffuse: Vector3::new(0.6, 0.8, 1.0) * 0.4, // Холодный синий
-    //     specular: Vector3::new(0.8, 0.9, 1.0) * 0.5, // Холодные блики
-    // });
+    // 3. Точечный свет 2 (холодный, справа)
+    let _ = renderer.add_point_light(PointLight {
+        position: Vector3::new(3.0, 2.0, 1.0), // Справа сверху, немного вперед
+        constant: 1.0,
+        linear: 0.07, // Меньше затухание
+        quadratic: 0.017,
+        ambient: Vector3::new(0.01, 0.02, 0.05), // Холодный ambient
+        diffuse: Vector3::new(0.6, 0.8, 1.0) * 0.4, // Холодный синий
+        specular: Vector3::new(0.8, 0.9, 1.0) * 0.5, // Холодные блики
+    });
 
-    // // // 4. Точечный свет 3 (нейтральный, сзади)
-    // let _ = renderer.add_point_light(PointLight {
-    //     position: Vector3::new(0.0, 1.5, -3.0), // Сзади сверху
-    //     constant: 1.0,
-    //     linear: 0.14, // Больше затухание
-    //     quadratic: 0.07,
-    //     ambient: Vector3::new(0.03, 0.03, 0.03), // Нейтральный ambient
-    //     diffuse: Vector3::new(0.9, 0.9, 0.9) * 0.4, // Нейтральный белый
-    //     specular: Vector3::new(1.0, 1.0, 1.0) * 0.5, // Белые блики
-    // });
+    // // 4. Точечный свет 3 (нейтральный, сзади)
+    let _ = renderer.add_point_light(PointLight {
+        position: Vector3::new(0.0, 1.5, -3.0), // Сзади сверху
+        constant: 1.0,
+        linear: 0.14, // Больше затухание
+        quadratic: 0.07,
+        ambient: Vector3::new(0.03, 0.03, 0.03), // Нейтральный ambient
+        diffuse: Vector3::new(0.9, 0.9, 0.9) * 0.4, // Нейтральный белый
+        specular: Vector3::new(1.0, 1.0, 1.0) * 0.5, // Белые блики
+    });
 
     let _ = renderer.add_dir_light(DirLight {
         direction: Vector3::new(0.5, -0.3, -0.4).normalize(),
         ambient: Vector3::from_value(0.15),
         diffuse: Vector3::from_value(0.3),
-        specular: Vector3::from_value(0.5),
+        specular: Vector3::from_value(1.7),
     });
     let _ = renderer.add_dir_light(DirLight {
         direction: Vector3::new(-0.8, 0.3, 0.2).normalize(),
@@ -213,6 +213,62 @@ fn main() -> Result<()> {
         [0.0, 0.0, 0.0],
     )?;
     let _ = renderer.add_static_drawable(plane);
+
+    // Светящийся куб с emission текстурой
+    let glowing_cube = Cube::new(CubeSettings {
+        texture_name: "assets/textures/white.png",
+        shader_name: ShaderInfo {
+            name: "light".to_string(),
+            vertex_path: "assets/shaders/light/vert.glsl".to_string(),
+            fragment_path: "assets/shaders/light/frag.glsl".to_string(),
+        },
+        position: [3.0, 1.0, 3.0],
+        rotation: [0.0, 0.0, 0.0],
+        ..Default::default()
+    })?;
+    let glowing_ro = RenderObject {
+        drawable: Box::new(glowing_cube),
+        transform: Transform::new(
+            Some(Vector3::new(3.0, 1.0, 3.0)),
+            None,
+            Some(Vector3::from_value(1.0)),
+        ),
+        material: RenderMaterial {
+            diffuse: Some("assets/textures/white.png".to_string()),
+            specular: Some("assets/textures/specular.png".to_string()),
+            emission: Some("assets/textures/emission.jpg".to_string()),
+            shininess: 128.0,
+        },
+    };
+    let _glowing_id = renderer.add_render_object(glowing_ro)?;
+
+    // Второй светящийся объект (куб с другой emission текстурой)
+    let glowing_cube2 = Cube::new(CubeSettings {
+        texture_name: "assets/textures/skebob.png",
+        shader_name: ShaderInfo {
+            name: "light".to_string(),
+            vertex_path: "assets/shaders/light/vert.glsl".to_string(),
+            fragment_path: "assets/shaders/light/frag.glsl".to_string(),
+        },
+        position: [-3.0, 1.0, -3.0],
+        rotation: [0.0, 45.0, 0.0],
+        ..Default::default()
+    })?;
+    let glowing_ro2 = RenderObject {
+        drawable: Box::new(glowing_cube2),
+        transform: Transform::new(
+            Some(Vector3::new(-3.0, 1.0, -3.0)),
+            Some(Vector3::new(0.0, 45.0, 0.0)),
+            Some(Vector3::from_value(1.0)),
+        ),
+        material: RenderMaterial {
+            diffuse: Some("assets/textures/skebob.png".to_string()),
+            specular: Some("assets/textures/specular.png".to_string()),
+            emission: Some("assets/textures/emission2.png".to_string()),
+            shininess: 64.0,
+        },
+    };
+    let _glowing_id2 = renderer.add_render_object(glowing_ro2)?;
 
     let mut update_timer = 0.0;
     while !window.should_close() {

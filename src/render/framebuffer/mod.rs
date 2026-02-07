@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 use log::error;
 
 use crate::{
@@ -9,6 +9,7 @@ use crate::{
     texture::{Texture, TextureFilter, TextureFormatColor, TextureFormatDepth, TextureWrap},
 };
 
+pub mod bloom;
 pub mod compass;
 pub mod manager;
 pub mod mini;

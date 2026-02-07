@@ -56,7 +56,7 @@ impl Default for RenderMaterial {
             diffuse: None,
             specular: None,
             emission: None,
-            shininess: 32.0,
+            shininess: 128.0,
         }
     }
 }
@@ -703,13 +703,12 @@ impl Renderer {
             }
         }
 
-        self.framebuffer_manager.begin_frame(fb_type, state);
-        if let Err(e) = self.use_current_shader() {
-            warn!("Rendering error: [{e}]");
-        }
         // render pass
+        self.framebuffer_manager.begin_frame(fb_type, state);
         self.bind_shadows(state);
         self.batch_render(glfw, state);
+
+        // additional framebuffer passes (postprocessing, mini view, compass)
         self.framebuffer_manager
             .mini_fb
             .render_scene_to_screen(state);
@@ -733,6 +732,7 @@ impl Renderer {
         );
         self.ui_manager.end_frame();
 
+        self.framebuffer_manager.end_frame(state);
         if state.show_ui {
             self.render_ui(glfw, state);
         }
@@ -742,7 +742,6 @@ impl Renderer {
             gl::Disable(gl::BLEND);
             gl::PolygonMode(gl::FRONT_AND_BACK, gl::FILL);
         }
-        self.framebuffer_manager.end_frame(state);
 
         if state.window_size_changed {
             let _ = self
@@ -750,7 +749,8 @@ impl Renderer {
                 .picking_texture
                 .update_screen_size(state.screen.width as i32, state.screen.height as i32);
             let _ = self.framebuffer_manager.update_screen_size(&state.screen);
-            self.framebuffer_manager
+            let _ = self
+                .framebuffer_manager
                 .resolution_fb
                 .set_render_size(state.screen.width, state.screen.height);
             state.window_size_changed = false;
@@ -1222,6 +1222,96 @@ impl Renderer {
         ) {
             state.mouse_free = false;
             state.shader_settings.scanline_intensity = value;
+        }
+        current_y += slider_height + spacing_y;
+
+        // Bloom controls
+        if let Some(value) = self.ui_manager.slider_with_value(
+            7,
+            "Bloom Intensity",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            state.shader_settings.bloom_intensity,
+            0.0,
+            2.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_left_click,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.shader_settings.bloom_intensity = value;
+            self.framebuffer_manager.resolution_fb.bloom.bloom_intensity = value;
+        }
+        current_y += slider_height + spacing_y;
+
+        if let Some(value) = self.ui_manager.slider_with_value(
+            8,
+            "Exposure",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            state.shader_settings.exposure,
+            0.1,
+            5.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_left_click,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.shader_settings.exposure = value;
+            self.framebuffer_manager.resolution_fb.bloom.exposure = value;
+        }
+        current_y += slider_height + spacing_y;
+
+        // Bloom threshold control (filters out specular reflections)
+        if let Some(value) = self.ui_manager.slider_with_value(
+            10,
+            "Bloom Threshold",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            state.shader_settings.bloom_threshold,
+            0.3,
+            1.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_left_click,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.shader_settings.bloom_threshold = value;
+            self.framebuffer_manager.resolution_fb.bloom.threshold = value;
+        }
+        current_y += slider_height + spacing_y;
+
+        // Specular intensity control
+        if let Some(value) = self.ui_manager.slider_with_value(
+            9,
+            "Specular (Bloom)",
+            margin_x,
+            current_y,
+            slider_width,
+            slider_height,
+            state.shader_settings.specular_intensity,
+            0.0,
+            1.0,
+            current_font,
+            mouse_x,
+            mouse_y,
+            state.mouse_left_click,
+            state.camera.is_captured,
+        ) {
+            state.mouse_free = false;
+            state.shader_settings.specular_intensity = value;
         }
         current_y += slider_height + spacing_y;
 
