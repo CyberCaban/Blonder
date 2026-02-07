@@ -12,7 +12,7 @@ use crate::{
 pub mod compass;
 pub mod manager;
 pub mod mini;
-pub mod resolution;
+pub mod postprocessing;
 pub mod shadow;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -415,7 +415,7 @@ impl Framebuffer {
             }
         }
 
-        self.check_complete().map_err(|e| error!("{}", e));
+        let _ = self.check_complete().map_err(|e| error!("{}", e));
 
         Ok(())
     }
@@ -474,8 +474,10 @@ impl Framebuffer {
                 self.clear_color.3,
             );
             gl::Disable(gl::DEPTH_TEST);
+
             shader.use_shader();
 
+            state.shader_settings.apply(shader);
             // Биндим все цветовые текстуры
             let mut color_count = 0;
             for i in 0..4 {

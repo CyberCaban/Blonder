@@ -1,7 +1,7 @@
 use glfw::{Action, Key, WindowEvent};
 
 use crate::{
-    render::framebuffer::resolution::ViewportScaleStrategy,
+    render::framebuffer::postprocessing::ViewportScaleStrategy,
     state::{Events, State},
 };
 

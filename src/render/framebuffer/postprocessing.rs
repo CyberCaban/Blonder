@@ -13,7 +13,7 @@ pub enum ViewportScaleStrategy {
 }
 
 #[derive(Debug)]
-pub struct ResolutionFramebuffer {
+pub struct PostprocessingFramebuffer {
     framebuffer: Framebuffer,
     pub render_width: i32,
     pub render_height: i32,
@@ -21,7 +21,7 @@ pub struct ResolutionFramebuffer {
     screen_shader: Shader,
 }
 
-impl ResolutionFramebuffer {
+impl PostprocessingFramebuffer {
     pub fn new(width: i32, height: i32, screen: &Screen) -> Result<Self> {
         let mut framebuffer = Framebuffer::new(width, height)?;
         framebuffer.add_color_attachment(
@@ -35,7 +35,7 @@ impl ResolutionFramebuffer {
             TextureFilter::Nearest,
             TextureWrap::ClampToEdge,
         )?;
-        framebuffer.clear_color = (0.1, 0.1, 0.1, 0.1);
+        framebuffer.clear_color = (0.1, 0.1, 0.1, 0.0);
         framebuffer.use_depth_test = true;
         framebuffer.check_complete()?;
 

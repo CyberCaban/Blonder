@@ -7,7 +7,7 @@ use crate::{
     camera::Camera,
     render::{
         consts::{HEIGHT, WIDTH},
-        framebuffer::resolution::ViewportScaleStrategy,
+        framebuffer::postprocessing::ViewportScaleStrategy,
         shader::Shader,
     },
 };

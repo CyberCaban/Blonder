@@ -6,7 +6,7 @@ use crate::{
         framebuffer::{
             compass::{self, Compass, Viewport},
             mini::Mini,
-            resolution::{ResolutionFramebuffer, ViewportScaleStrategy},
+            postprocessing::{PostprocessingFramebuffer, ViewportScaleStrategy},
             shadow::ShadowFramebuffer,
         },
         renderer::ShaderRef,
@@ -18,7 +18,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct FramebufferManager {
-    pub resolution_fb: ResolutionFramebuffer,
+    pub resolution_fb: PostprocessingFramebuffer,
     pub shadow_fb: ShadowFramebuffer,
     pub current_fb: FrameBufferType,
     pub mini_fb: Mini,
@@ -28,7 +28,7 @@ pub struct FramebufferManager {
 #[derive(Debug, Clone, Copy, PartialEq)]
 pub enum FrameBufferType {
     Default,
-    Resolution,
+    Postprocessing,
     Shadow,
     Mini,
     Compass,
@@ -43,7 +43,7 @@ impl FramebufferManager {
         screen: &Screen,
     ) -> Result<Self> {
         let resolution_fb =
-            ResolutionFramebuffer::new(resolution_width, resolution_height, screen)?;
+            PostprocessingFramebuffer::new(resolution_width, resolution_height, screen)?;
 
         let shadow_fb = ShadowFramebuffer::new(shadow_width, shadow_height, screen)?;
 
@@ -77,7 +77,7 @@ impl FramebufferManager {
                 gl::Clear(gl::COLOR_BUFFER_BIT | gl::DEPTH_BUFFER_BIT);
                 gl::Enable(gl::DEPTH_TEST);
             },
-            FrameBufferType::Resolution => {
+            FrameBufferType::Postprocessing => {
                 self.resolution_fb.begin_render();
             }
             FrameBufferType::Shadow => {
@@ -93,7 +93,7 @@ impl FramebufferManager {
     }
     pub fn end_frame(&self, state: &crate::state::State) {
         match self.current_fb {
-            FrameBufferType::Resolution => {
+            FrameBufferType::Postprocessing => {
                 if state.is_lowres {
                     self.resolution_fb.end_scene_render(state);
                 }

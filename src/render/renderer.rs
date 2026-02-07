@@ -435,6 +435,9 @@ impl Renderer {
 
         transparent_objects.sort_by(|a, b| (b.1).partial_cmp(&a.1).unwrap());
         // draw opaque objects
+        unsafe {
+            gl::Enable(gl::FRAMEBUFFER_SRGB);
+        }
         for (key, objects) in &batches {
             self.apply_shaders(&key.shader_name, glfw, state);
             if self.current_shader.is_none() {
@@ -484,6 +487,9 @@ impl Renderer {
             }
             let render_obj = &mut self.drawables[index];
             render_obj.drawable.draw(glfw, state);
+        }
+        unsafe {
+            gl::Disable(gl::FRAMEBUFFER_SRGB);
         }
     }
     fn apply_uniforms(&self, shader: &Shader, glfw: &mut glfw::Glfw, state: &State) {
@@ -671,7 +677,7 @@ impl Renderer {
         self.framebuffer_manager.end_frame(state);
 
         let fb_type = if state.is_lowres {
-            FrameBufferType::Resolution
+            FrameBufferType::Postprocessing
         } else {
             FrameBufferType::Default
         };
