@@ -10,7 +10,7 @@ use crate::{
         helpers::{set_buffer_data, set_buffer_data_with_indices, set_buffer_data_with_indices_u8},
         shader::ShaderInfo,
         vertex::{
-            Vertex, calculate_normals, calculate_normals_indexed, calculate_normals_indexed_u8,
+            calculate_normals, calculate_normals_indexed, calculate_normals_indexed_u8, Vertex,
         },
     },
     state::State,

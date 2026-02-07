@@ -1,10 +1,10 @@
 use std::cell::RefCell;
 
 use noise::{
-    NoiseFn, Perlin, Vector3,
     core::perlin::{perlin_2d, perlin_3d},
     permutationtable::PermutationTable,
     utils::{NoiseMapBuilder, PlaneMapBuilder},
+    NoiseFn, Perlin, Vector3,
 };
 
 use crate::models::cubeworld::{
@@ -42,9 +42,11 @@ impl Chunk {
             for x in 0..CHUNK_W {
                 let rz = z as i32 + position[2] * CHUNK_D as i32;
                 let rx = x as i32 + position[0] * CHUNK_W as i32;
-                let height =
-                    perlin_3d(Vector3::new(rx as f64 * 0.05, rz as f64 * 0.05, 0.0), &hasher) * 10.0
-                        + 20.0;
+                let height = perlin_3d(
+                    Vector3::new(rx as f64 * 0.05, rz as f64 * 0.05, 0.0),
+                    &hasher,
+                ) * 10.0
+                    + 20.0;
                 for y in 0..CHUNK_H {
                     let ry = y as i32 + position[1] * CHUNK_H as i32;
                     let id = if (ry as f64) < height {

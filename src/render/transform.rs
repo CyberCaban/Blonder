@@ -12,7 +12,11 @@ pub struct Transform {
 }
 
 impl Transform {
-    pub fn new(position: Option<Vector3<f32>>, rotation: Option<Vector3<f32>>, scale: Option<Vector3<f32>>) -> Self {
+    pub fn new(
+        position: Option<Vector3<f32>>,
+        rotation: Option<Vector3<f32>>,
+        scale: Option<Vector3<f32>>,
+    ) -> Self {
         let t = Transform {
             position: position.unwrap_or(Vector3::zero()),
             rotation: rotation.unwrap_or(Vector3::zero()),

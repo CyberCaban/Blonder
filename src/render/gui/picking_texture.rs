@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use anyhow::{Result, bail};
+use anyhow::{bail, Result};
 
 use crate::render::{renderer::ShaderRef, shader::Shader};
 

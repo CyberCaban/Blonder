@@ -9,7 +9,7 @@ use crate::{
         drawable::Drawable,
         helpers::set_buffer_data,
         shader::ShaderInfo,
-        vertex::{Vertex, calculate_normals},
+        vertex::{calculate_normals, Vertex},
     },
     state::State,
     texture::Texture,

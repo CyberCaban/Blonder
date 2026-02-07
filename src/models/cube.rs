@@ -7,7 +7,7 @@ use crate::{
         blend_mode::BlendMode,
         drawable::Drawable,
         helpers::set_buffer_data,
-        vertex::{Vertex, calculate_normals},
+        vertex::{calculate_normals, Vertex},
     },
     state::State,
     texture::TextureConfig,

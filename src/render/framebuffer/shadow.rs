@@ -4,7 +4,7 @@ use crate::{
     texture::{Texture, TextureFilter, TextureFormatDepth, TextureWrap},
 };
 use anyhow::Result;
-use cgmath::{Array, InnerSpace, Matrix4, Point3, Vector3, ortho};
+use cgmath::{ortho, Array, InnerSpace, Matrix4, Point3, Vector3};
 
 #[derive(Debug)]
 pub struct ShadowFramebuffer {
@@ -76,7 +76,7 @@ impl ShadowFramebuffer {
             self.far_plane,
         );
 
-        let pos = Vector3::new(-20.0, 21.0, 18.0) ;
+        let pos = Vector3::new(-20.0, 21.0, 18.0);
         let light_view = Matrix4::look_at(
             Point3::new(pos.x, pos.y, pos.z),
             Point3::from_value(0.0),

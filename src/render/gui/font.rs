@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs, time::Instant};
 use anyhow::{Context, Result};
 use image::{DynamicImage::ImageRgba8, Rgba, RgbaImage};
 use log::info;
-use rusttype::{Font, Scale, point};
+use rusttype::{point, Font, Scale};
 
 use crate::texture::{Texture, TextureConfig};
 

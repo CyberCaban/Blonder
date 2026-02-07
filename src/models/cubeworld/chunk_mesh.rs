@@ -14,7 +14,7 @@ use crate::{
         helpers::set_buffer_data,
         renderer::TextureRef,
         shader::ShaderInfo,
-        vertex::{Vertex, calculate_normals},
+        vertex::{calculate_normals, Vertex},
     },
 };
 

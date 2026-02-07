@@ -229,7 +229,11 @@ impl UIManager {
             is_dragging,
         );
 
-        if value_changed { Some(new_value) } else { None }
+        if value_changed {
+            Some(new_value)
+        } else {
+            None
+        }
     }
     pub fn slider_with_label(
         &mut self,
@@ -290,7 +294,14 @@ impl UIManager {
         let label_x = x - 10.0;
         let label_y = y + (height);
 
-        self.draw_text(font, &format!("{label}: {current_value:.2}"), label_x, label_y, scale, Color::white());
+        self.draw_text(
+            font,
+            &format!("{label}: {current_value:.2}"),
+            label_x,
+            label_y,
+            scale,
+            Color::white(),
+        );
 
         let result = self.slider(
             id,

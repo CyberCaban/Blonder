@@ -10,7 +10,7 @@ use crate::{
         model::mesh::Mesh,
         renderer::TextureRef,
         shader::ShaderInfo,
-        vertex::{Vertex, calculate_normals, calculate_normals_indexed},
+        vertex::{calculate_normals, calculate_normals_indexed, Vertex},
     },
     texture::Texture,
 };
