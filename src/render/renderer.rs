@@ -1,5 +1,5 @@
-use cgmath::{Array, Point3, ortho};
-use cgmath::{Deg, InnerSpace, Matrix4, Rad, Vector3, perspective};
+use cgmath::{ortho, Array, Point3};
+use cgmath::{perspective, Deg, InnerSpace, Matrix4, Rad, Vector3};
 use log::warn;
 use num::Zero;
 use std::collections::HashMap;
@@ -31,8 +31,8 @@ use crate::render::light::DirLight;
 use crate::render::light::PointLight;
 use crate::render::light::SpotLight;
 use crate::render::model::Model;
-use crate::render::shader::Shader;
 use crate::render::shader::pass_uniforms::PassUniforms;
+use crate::render::shader::Shader;
 use crate::state::Screen;
 use crate::texture::TextureConfig;
 use crate::{
@@ -45,6 +45,7 @@ use anyhow::Result;
 static FPS_SAMPLES: usize = 100;
 
 pub struct RenderMaterial {
+    pub diffuse: Option<String>,  // path to diffuse texture
     pub specular: Option<String>, // path to specular texture
     pub emission: Option<String>, // path to emission texture
     pub shininess: f32,
@@ -52,6 +53,7 @@ pub struct RenderMaterial {
 impl Default for RenderMaterial {
     fn default() -> Self {
         Self {
+            diffuse: None,
             specular: None,
             emission: None,
             shininess: 32.0,
@@ -446,15 +448,13 @@ impl Renderer {
             let shader = self.current_shader.as_ref().unwrap();
 
             self.apply_batch_uniforms(&key, glfw, state);
-            self.apply_batch_textures(&key);
-
             for index in objects {
                 {
                     // set transform
                     let render_obj = &self.drawables[*index];
                     self.apply_transform(render_obj);
 
-                    // set material
+                    // set material (includes texture binding)
                     self.apply_material(render_obj, &key);
                 }
                 let render_obj = &mut self.drawables[*index];
@@ -475,14 +475,13 @@ impl Renderer {
             let shader = self.current_shader.as_ref().unwrap();
 
             self.apply_batch_uniforms(&key, glfw, state);
-            self.apply_batch_textures(&key);
 
             {
                 let render_obj = &self.drawables[index];
                 // set transform
                 self.apply_transform(render_obj);
 
-                // set material
+                // set material (includes texture binding)
                 self.apply_material(render_obj, &key);
             }
             let render_obj = &mut self.drawables[index];
@@ -538,21 +537,7 @@ impl Renderer {
         };
         shader.is_some()
     }
-    fn apply_batch_textures(&self, key: &BatchKey) {
-        if let Some(texture_name) = &key.texture_name
-            && let Some(texture) = self.textures.get(texture_name.as_ref())
-        {
-            unsafe {
-                gl::ActiveTexture(gl::TEXTURE0);
-                texture.use_texture();
-            }
-        } else if let Some(default_texture) = self.textures.get(DEFAULT_WHITE_TEXTURE) {
-            unsafe {
-                gl::ActiveTexture(gl::TEXTURE0);
-                default_texture.use_texture();
-            }
-        }
-    }
+
     fn apply_batch_uniforms(&self, key: &BatchKey, glfw: &mut glfw::Glfw, state: &mut State) {
         let shader = self.current_shader.as_ref().unwrap();
         if key.is_selected {
@@ -575,6 +560,26 @@ impl Renderer {
     fn apply_material(&self, render_obj: &RenderObject, key: &BatchKey) {
         let shader = self.current_shader.as_ref().unwrap();
         let obj_material = &render_obj.material;
+
+        // set diffuse
+        shader.set_int("material.diffuse", 0);
+        unsafe {
+            gl::ActiveTexture(gl::TEXTURE0);
+        }
+        if let Some(diffuse) = &obj_material.diffuse
+            && let Some(diffuse_texture) = self.textures.get(diffuse)
+        {
+            diffuse_texture.use_texture();
+        }
+        // load batch texture as diffuse texture if one's missing
+        else if let Some(texture_name) = &key.texture_name
+            && let Some(texture) = self.textures.get(texture_name.as_ref())
+        {
+            texture.use_texture();
+        } else if let Some(default_texture) = self.textures.get(DEFAULT_WHITE_TEXTURE) {
+            default_texture.use_texture();
+        }
+
         shader.set_float("material.shininess", obj_material.shininess);
 
         // set specular

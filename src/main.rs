@@ -1,9 +1,9 @@
 use std::{thread, time::Duration};
 
-use ::log::info;
 use anyhow::{Context as _, Result};
 use cgmath::{Angle, Array, Deg, InnerSpace, Vector3};
 use glfw::Context;
+
 use rand::Rng;
 
 use crate::{
@@ -44,7 +44,7 @@ mod texture;
 
 fn main() -> Result<()> {
     setup_logger()?;
-    info!("Hello, world!");
+
     let mut glfw = glfw::init_no_callbacks().context("Failed to init glfw")?;
     let (mut window, events) = init_window(&mut glfw)?;
     let mut state = State::default();
@@ -113,6 +113,7 @@ fn main() -> Result<()> {
         let render_object = RenderObject {
             drawable: Box::new(cube),
             material: RenderMaterial {
+                diffuse: Some(texture.0.to_string()),
                 // specular: Some("assets/textures/specular.png".to_string()),
                 // specular: Some(texture.0.to_string()),
                 specular: None,
